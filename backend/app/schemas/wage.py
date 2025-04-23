@@ -1,0 +1,30 @@
+from pydantic import BaseModel
+from typing import Optional
+
+
+# Shared properties
+class WageBase(BaseModel):
+    wage_per_hour: int
+
+
+# Properties to receive via API on creation
+class WageCreate(WageBase):
+    worker_type: int
+
+
+# Properties to receive via API on update
+class WageUpdate(WageBase):
+    pass
+
+
+# Properties shared by models stored in DB
+class WageInDBBase(WageBase):
+    worker_type: int
+
+    class Config:
+        orm_mode = True
+
+
+# Properties to return via API
+class Wage(WageInDBBase):
+    pass
