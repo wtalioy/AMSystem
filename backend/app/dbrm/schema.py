@@ -1,5 +1,4 @@
-from .types import DTYPE_MAPPING, String, StringType, get_sql_type
-from typing import Any, TypeVar, Optional, List, Dict, Generic, Type, Union
+from typing import TypeVar
 
 T = TypeVar('T')
 
@@ -31,7 +30,6 @@ class Column:
         self.default = default
         self.autoincrement = autoincrement
         self.foreign_key = foreign_key
-        self.length = length
         self.comment = comment
         self.index = index
         self.name = None
@@ -91,13 +89,7 @@ class TableBase:
         indexes = []
         
         for name, column in cls._columns.items():
-            type_name = column.type.__name__ if hasattr(column.type, '__name__') else str(column.type)
-            
-            # Handle string type length settings
-            if type_name == 'str' and column.length:
-                sql_type = String(column.length)
-            else:
-                sql_type = DTYPE_MAPPING.get(type_name, String)
+            sql_type = column.type.__name__ if hasattr(column.type, '__name__') else str(column.type)
                 
             nullable = "NOT NULL" if not column.nullable else "NULL"
             pk = "PRIMARY KEY" if column.primary_key else ""

@@ -1,7 +1,7 @@
 """
 Database type definition module, providing SQL type mapping.
 """
-from typing import Any, Dict, Callable, Union
+from typing import Any
 
 class SqlType:
     """SQL type base class, can be represented as a string"""
