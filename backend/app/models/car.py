@@ -1,14 +1,12 @@
-from app.dbrm.schema import TableBase, Column, Relationship
+from app.dbrm.schema import TableBase, Column
 from app.dbrm import String, Integer
 
 class Car(TableBase):
     __tablename__ = "car"
     
-    car_id = Column(String, primary_key=True, length=10, index=True, comment='车辆ID')
+    car_id = Column(String(10), primary_key=True, comment='车辆ID')
     car_type = Column(Integer, nullable=False, comment='车辆类型')
-    customer_id = Column(String, length=10, foreign_key='customer.user_id', comment='客户ID')
-    
-    customer = Relationship('Customer', foreign_key='customer_id', backref='cars')
+    customer_id = Column(String(10), foreign_key='customer.user_id', comment='客户ID')
     
     def get_customer(self, session):
         from app.dbrm.query import Select

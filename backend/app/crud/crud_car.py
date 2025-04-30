@@ -9,14 +9,11 @@ from app.dbrm.query import Select, Insert, Condition
 
 class CRUDCar(CRUDBase[Car, CarCreate, CarUpdate]):
     def get_by_car_id(self, db: Session, car_id: str) -> Optional[Car]:
-        """通过车辆ID获取车辆信息"""
-        # 使用查询构建器
         query = db.query(self.model).filter_by(car_id=car_id).first()
         return query
         
     def get_cars_by_customer(self, db: Session, customer_id: str) -> List[Car]:
         """获取客户的所有车辆"""
-        # 使用条件构建器
         query = Select().from_(self.model).where(
             Condition.eq("customer_id", customer_id)
         )
