@@ -91,19 +91,22 @@ class TableBase:
         columns = []
         foreign_keys = []
         indexes = []
+        pk_columns = []
         
         for name, column in cls._columns.items():
             sql_type = column.type.__name__ if hasattr(column.type, '__name__') else str(column.type)
                 
             nullable = "NOT NULL" if not column.nullable else "NULL"
-            pk = "PRIMARY KEY" if column.primary_key else ""
             autoinc = "AUTO_INCREMENT" if column.autoincrement else ""
             unique = "UNIQUE" if column.unique else ""
             default = f"DEFAULT {column.default}" if column.default is not None else ""
             comment = f"COMMENT '{column.comment}'" if column.comment else ""
             
-            column_def = f"{name} {sql_type} {nullable} {pk} {autoinc} {unique} {default} {comment}".strip()
+            column_def = f"{name} {sql_type} {nullable} {autoinc} {unique} {default} {comment}".strip()
             columns.append(column_def)
+            
+            if column.primary_key:
+                pk_columns.append(name)
             
             if column.foreign_key:
                 # "table.column" | "table(column)"
@@ -129,6 +132,10 @@ class TableBase:
             if column.index and not column.primary_key:
                 index_def = f"INDEX idx_{cls.__tablename__}_{name} ({name})"
                 indexes.append(index_def)
+        
+        if pk_columns:
+            pk_def = f"PRIMARY KEY ({', '.join(pk_columns)})"
+            columns.append(pk_def)
         
         # Combine all column definitions and constraints
         all_defs = columns + foreign_keys + indexes
@@ -157,39 +164,51 @@ class TableBase:
     
     @classmethod
     def _get_primary_key_info(cls):
-        pk_name = None
+        pk_names = []
         
         for name, column in cls._columns.items():
             if column.primary_key:
-                pk_name = name
-                break
+                pk_names.append(name)
         
-        if not pk_name:
+        if not pk_names:
             raise ValueError(f"No primary key defined for table {cls.__tablename__}")
             
-        return pk_name
+        return pk_names
     
     def _get_primary_key_value(self):
-        pk_name = self.__class__._get_primary_key_info()
-        pk_value = getattr(self, pk_name, None)
+        pk_names = self.__class__._get_primary_key_info()
+        pk_values = {}
         
-        if pk_value is None:
-            raise ValueError("Cannot operate on object with None primary key")
+        for pk_name in pk_names:
+            pk_value = getattr(self, pk_name, None)
+            if pk_value is None:
+                raise ValueError(f"Primary key column '{pk_name}' has None value")
+            pk_values[pk_name] = pk_value
             
-        return pk_name, pk_value
+        return pk_values
     
     @classmethod
-    def get(cls, session, id_value):
-        """Get a single record by primary key"""
-        pk_column = cls._get_primary_key_info()
+    def get(cls, session, *args, **kwargs):
+        """
+        Get a single record by primary key(s)
+        
+        - Model.get(session, id_value)
+        - Model.get(session, column1=value1, column2=value2)
+        """
+        pk_columns = cls._get_primary_key_info()
         
         from .query import Select, Condition
+        query = Select(session=session).from_(cls)
         
-        query = Select(session=session).from_(cls).where(
-            Condition.eq(pk_column, id_value)
-        ).limit(1)
-        
-        return query.first()
+        if args and len(args) == 1 and len(pk_columns) == 1:
+            query.where(Condition.eq(pk_columns[0], args[0]))
+        elif kwargs:
+            for column, value in kwargs.items():
+                query.where(Condition.eq(column, value))
+        else:
+            raise ValueError("Please provide primary key value(s)")
+            
+        return query.limit(1).first()
     
     @classmethod
     def get_all(cls, session, limit=None, offset=None):
@@ -222,14 +241,17 @@ class TableBase:
     
     def save(self, session):
         """Save instance to database (Insert or Update)"""
-        pk_name, pk_value = self._get_primary_key_value()
+        pk_values = self._get_primary_key_value()
+        pk_names = self.__class__._get_primary_key_info()
         
         from .query import Select, Condition
-        exists_query = Select(session=session).from_(self.__class__).where(
-            Condition.eq(pk_name, pk_value)
-        ).limit(1)
+        exists_query = Select(session=session).from_(self.__class__)
         
-        exists = exists_query.exists()
+        # 使用所有主键列构建查询条件
+        for name, value in pk_values.items():
+            exists_query.where(Condition.eq(name, value))
+        
+        exists = exists_query.limit(1).exists()
         
         data = {}
         for name, column in self.__class__._columns.items():
@@ -238,14 +260,18 @@ class TableBase:
                 data[name] = value
         
         if exists:
-            from .query import Update
+            from .query import Update, Condition
             
-            update_data = {k: v for k, v in data.items() if k != pk_name}
+            # 更新时从数据中排除所有主键列
+            update_data = {k: v for k, v in data.items() if k not in pk_names}
             
             if update_data:
-                update_query = Update().table_(self.__class__.__tablename__).set_(**update_data).where(
-                    Condition.eq(pk_name, pk_value)
-                )
+                update_query = Update().table_(self.__class__.__tablename__).set_(**update_data)
+                
+                # 使用所有主键列构建WHERE条件
+                for name, value in pk_values.items():
+                    update_query.where(Condition.eq(name, value))
+                
                 session.execute(update_query)
                 session.commit()
         else:
@@ -259,13 +285,14 @@ class TableBase:
     
     def delete(self, session):
         """Delete object from database"""
-        pk_name, pk_value = self._get_primary_key_value()
+        pk_values = self._get_primary_key_value()
         
         from .query import Delete, Condition
         
-        delete_query = Delete().from_(self.__class__.__tablename__).where(
-            Condition.eq(pk_name, pk_value)
-        )
+        delete_query = Delete().from_(self.__class__.__tablename__)
+        
+        for name, value in pk_values.items():
+            delete_query.where(Condition.eq(name, value))
         
         session.execute(delete_query)
         session.commit()
