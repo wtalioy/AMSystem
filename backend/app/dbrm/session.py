@@ -140,6 +140,16 @@ class Session:
         if hasattr(obj, 'delete'):
             obj.delete(self)
         return self
+    
+    def refresh(self, obj):
+        if hasattr(obj, 'refresh'):
+            obj.refresh(self)
+        return self
+    
+    def add_and_refresh(self, obj):
+        self.add(obj)
+        self.commit()
+        return self.refresh(obj)
         
     def bulk_insert(self, table, data_list):
         if not data_list:
@@ -170,3 +180,4 @@ class Session:
         for model in models:
             if hasattr(model, 'drop'):
                 model.drop(self)
+
