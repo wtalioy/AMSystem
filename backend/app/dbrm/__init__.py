@@ -1,6 +1,6 @@
 from .engine import Engine
 from .session import Session
-from .schema import Table, Column, Relationship, TableBase
+from .schema import Table, Column, Relationship
 from .query import Select, Insert, Update, Delete, Condition
 from .remote import transfer_csv, export_query_to_csv, import_data
 from .utils import (
@@ -8,7 +8,7 @@ from .utils import (
 )
 from .types import (
     Integer, String, Float, Double, Boolean, Text, DateTime, Date, Time, Timestamp,
-    JSON, BLOB, LongText, SmallInt, BigInt, Decimal, Interval,
+    JSON, BLOB, LongText, SmallInt, BigInt, Decimal, Interval, Numeric
 )
 
 __version__ = '0.2.0'
@@ -21,7 +21,6 @@ __all__ = [
     'Engine', 
     'Session',
     'Table', 
-    'TableBase',
     'Column',
     'Relationship',
     
@@ -63,4 +62,5 @@ __all__ = [
     'Time',
     'Timestamp',
     'Interval',
+    'Numeric',
 ]

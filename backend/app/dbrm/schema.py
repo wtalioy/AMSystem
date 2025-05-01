@@ -250,5 +250,4 @@ class TableBase:
         session.commit()
         return True
         
-# Create a base class for declarative table definitions
 Table = TableBase
