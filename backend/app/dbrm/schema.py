@@ -43,6 +43,9 @@ class Column:
     def __set_name__(self, owner, name):
         self.name = name
 
+    def __str__(self):
+        return self.name if self.name else "Column"
+
 
 class Relationship:
     
@@ -72,6 +75,16 @@ class Relationship:
 
 class TableBase:
     """Base class for all table definitions."""
+    
+    def __init__(self, **kwargs):
+        """
+        Initialize a table instance with attribute values.
+        
+        Args:
+            **kwargs: Attribute values to set on the instance.
+        """
+        for name, value in kwargs.items():
+            setattr(self, name, value)
     
     @classmethod
     def __init_subclass__(cls):
@@ -247,11 +260,9 @@ class TableBase:
         pk_values = self._get_primary_key_value()
         pk_names = self.__class__._get_primary_key_info()
         
-        from .query import Select, Condition
-        exists_query = Select(session=session).from_(self.__class__)
-        
+        query = session.query(self.__class__)
         for name, value in pk_values.items():
-            exists_query.where(Condition.eq(name, value))
+            exists_query = query.filter_by(**{name: value})
         
         exists = exists_query.limit(1).exists()
         
@@ -297,5 +308,23 @@ class TableBase:
         session.execute(delete_query)
         session.commit()
         return True
+    
+    def refresh(self, session):
+        """Refresh object from database"""
+        pk_values = self._get_primary_key_value()
+        
+        query = session.query(self.__class__)
+        for name, value in pk_values.items():
+            query = query.filter_by(**{name: value})
+            
+        # Get the latest data
+        result = query.limit(1).first()
+        
+        if result and result != self:
+            for name, column in self.__class__._columns.items():
+                if hasattr(result, name):
+                    setattr(self, name, getattr(result, name))
+        
+        return self
         
 Table = TableBase
