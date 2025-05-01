@@ -8,7 +8,7 @@ class Column:
     def __init__(self, type_=None, primary_key=False, nullable=True, 
                  unique=False, default=None, autoincrement=False, 
                  foreign_key=None, on_delete=None, on_update=None,
-                 comment=None, index=False):
+                 comment=None, index=False, check=None):
         """
         Create a database column definition.
         
@@ -24,6 +24,7 @@ class Column:
             on_update: ON UPDATE action (CASCADE, SET NULL, RESTRICT, NO ACTION)
             comment: Column comment
             index: Whether to create an index
+            check: CHECK constraint (e.g., "BETWEEN 1 AND 5" or "IN ('Customer', 'Worker', 'Administrator')")
         """
         self.type = type_
         self.primary_key = primary_key
@@ -36,6 +37,7 @@ class Column:
         self.on_update = on_update
         self.comment = comment
         self.index = index
+        self.check = check
         self.name = None
         
     def __set_name__(self, owner, name):
@@ -101,8 +103,9 @@ class TableBase:
             unique = "UNIQUE" if column.unique else ""
             default = f"DEFAULT {column.default}" if column.default is not None else ""
             comment = f"COMMENT '{column.comment}'" if column.comment else ""
+            check = f"CHECK ({name} {column.check})" if column.check else ""
             
-            column_def = f"{name} {sql_type} {nullable} {autoinc} {unique} {default} {comment}".strip()
+            column_def = f"{name} {sql_type} {nullable} {autoinc} {unique} {default} {check} {comment}".strip()
             columns.append(column_def)
             
             if column.primary_key:
