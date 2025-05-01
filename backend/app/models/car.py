@@ -1,38 +1,23 @@
-from app.dbrm.schema import TableBase, Column
-from app.dbrm import String, Integer
+from app.dbrm import Table, Column, Char, Integer
 
-class Car(TableBase):
-    __tablename__ = "car"
+class Car(Table):
+    __tablename__ = "Car"
     
-    car_id = Column(String(10), primary_key=True, comment='车辆ID')
-    car_type = Column(Integer, nullable=False, comment='车辆类型')
-    customer_id = Column(String(10), foreign_key='customer.user_id', comment='客户ID')
+    car_id = Column(Char(10), primary_key=True)
+    car_type = Column(Integer, nullable=False, on_delete="SET NULL", on_update="CASCADE")
     
-    def get_customer(self, session):
-        from app.dbrm.query import Select
-        
-        if not self.customer_id:
-            return None
-            
-        query = Select().from_('customer').where(f"user_id = '{self.customer_id}'")
-        session.execute(query)
-        customer_data = session.fetch_as_dict()
-        
-        if not customer_data:
-            return None
-            
+    customer_id = Column(Char(10), foreign_key='Customer.user_id')
+    
+    def get_customers(self, session):
         from app.models.user import Customer
-        return Customer._from_row(customer_data)
+        customers_data = session.query(Customer).filter_by(user_id=self.customer_id).all()
+        if not customers_data:
+            return []
+        return customers_data
         
     def get_orders(self, session):
-        from app.dbrm.query import Select
-        
-        query = Select().from_('order').where(f"car_id = '{self.car_id}'")
-        session.execute(query)
-        orders_data = session.fetchall_as_dict()
-        
+        from app.models.order import Order
+        orders_data = session.query(Order).filter_by(car_id=self.car_id).all()
         if not orders_data:
             return []
-            
-        from app.models.order import Order
-        return [Order._from_row(order_data) for order_data in orders_data]
+        return orders_data

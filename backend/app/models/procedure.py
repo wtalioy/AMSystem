@@ -1,13 +1,10 @@
-from sqlalchemy import Column, String, Text, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from app.dbrm import Table, Column, Char, TinyText, Integer
 
-from app.db.base_class import Base
+class Procedure(Table):
+    __tablename__ = "Procedure"
 
-class Procedure(Base):
     procedure_id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(String(10), ForeignKey('order.order_id'), nullable=False)
-    procedure_text = Column(Text, nullable=False)
-    current_status = Column(Integer, nullable=False, default=0)  # 0: 待处理, 1: 进行中, 2: 已完成
+    procedure_text = Column(TinyText, nullable=False)
+    current_status = Column(Integer, nullable=False, default=1)  # 1: ongoing, 2: finished
     
-    # 关系
-    order = relationship("Order", back_populates="procedures")
+    order_id = Column(Char(10), primary_key=True, foreign_key='Order.order_id')

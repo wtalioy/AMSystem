@@ -1,11 +1,7 @@
-from sqlalchemy import Column, Integer
-from sqlalchemy.orm import relationship
+from app.dbrm import Table, Column, TinyInt, Integer
 
-from app.db.base_class import Base
-
-class Wage(Base):
-    worker_type = Column(Integer, primary_key=True)
-    wage_per_hour = Column(Integer, nullable=False)
+class Wage(Table):
+    __tablename__ = 'Wage'
     
-    # 关系
-    workers = relationship("Worker", back_populates="wage")
+    worker_type = Column(TinyInt, primary_key=True, autoincrement=True, on_delete="SET NULL", on_update="CASCADE")
+    wage_per_hour = Column(Integer, nullable=False)
