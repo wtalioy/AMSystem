@@ -124,7 +124,7 @@ class TableBase:
         session.execute(drop_sql)
         session.commit()
         return True
-        
+    
     @classmethod
     def table_exists(cls, session):
         """Check if this table exists in the database."""
@@ -135,40 +135,54 @@ class TableBase:
             return False
     
     @classmethod
-    def get(cls, session, id_value):
-        """Get a single record by primary key"""
-        pk_column = None
+    def _get_primary_key_info(cls):
+        pk_name = None
+        
         for name, column in cls._columns.items():
             if column.primary_key:
-                pk_column = name
+                pk_name = name
                 break
         
-        if not pk_column:
+        if not pk_name:
             raise ValueError(f"No primary key defined for table {cls.__tablename__}")
+            
+        return pk_name
+    
+    def _get_primary_key_value(self):
+        pk_name = self.__class__._get_primary_key_info()
+        pk_value = getattr(self, pk_name, None)
         
-        id_value_str = f"'{id_value}'" if isinstance(id_value, str) else str(id_value)
-        query = f"SELECT * FROM {cls.__tablename__} WHERE {pk_column} = {id_value_str}"
+        if pk_value is None:
+            raise ValueError("Cannot operate on object with None primary key")
+            
+        return pk_name, pk_value
+    
+    @classmethod
+    def get(cls, session, id_value):
+        """Get a single record by primary key"""
+        pk_column = cls._get_primary_key_info()
         
-        session.execute(query)
-        row = session.fetchone()
-        if not row:
-            return None
+        from .query import Select, Condition
         
-        return cls._from_row(row)
+        query = Select(session=session).from_(cls).where(
+            Condition.eq(pk_column, id_value)
+        ).limit(1)
+        
+        return query.first()
     
     @classmethod
     def get_all(cls, session, limit=None, offset=None):
         """Get all records"""
-        query = f"SELECT * FROM {cls.__tablename__}"
+        from .query import Select
+        
+        query = Select(session=session).from_(cls)
         
         if limit is not None:
-            query += f" LIMIT {limit}"
+            query.limit(limit)
         if offset is not None:
-            query += f" OFFSET {offset}"
+            query.offset(offset)
             
-        session.execute(query)
-        rows = session.fetchall()
-        return [cls._from_row(row) for row in rows]
+        return query.all()
     
     @classmethod
     def _from_row(cls, row):
@@ -187,23 +201,14 @@ class TableBase:
     
     def save(self, session):
         """Save instance to database (Insert or Update)"""
-        pk_name = None
-        pk_value = None
+        pk_name, pk_value = self._get_primary_key_value()
         
-        for name, column in self.__class__._columns.items():
-            if column.primary_key:
-                pk_name = name
-                pk_value = getattr(self, name, None)
-                break
+        from .query import Select, Condition
+        exists_query = Select(session=session).from_(self.__class__).where(
+            Condition.eq(pk_name, pk_value)
+        ).limit(1)
         
-        if pk_value is None:
-            raise ValueError("Cannot save object with None primary key")
-        
-        exists_query = f"SELECT 1 FROM {self.__class__.__tablename__} WHERE {pk_name} = "
-        exists_query += f"'{pk_value}'" if isinstance(pk_value, str) else str(pk_value)
-        
-        session.execute(exists_query)
-        exists = session.fetchone() is not None
+        exists = exists_query.exists()
         
         data = {}
         for name, column in self.__class__._columns.items():
@@ -212,30 +217,20 @@ class TableBase:
                 data[name] = value
         
         if exists:
-            # Update
-            set_clauses = []
-            for name, value in data.items():
-                if name != pk_name:
-                    value_str = f"'{value}'" if isinstance(value, str) else str(value)
-                    set_clauses.append(f"{name} = {value_str}")
-                    
-            if set_clauses:
-                update_query = f"UPDATE {self.__class__.__tablename__} SET {', '.join(set_clauses)} WHERE {pk_name} = "
-                update_query += f"'{pk_value}'" if isinstance(pk_value, str) else str(pk_value)
+            from .query import Update
+            
+            update_data = {k: v for k, v in data.items() if k != pk_name}
+            
+            if update_data:
+                update_query = Update().table_(self.__class__.__tablename__).set_(**update_data).where(
+                    Condition.eq(pk_name, pk_value)
+                )
                 session.execute(update_query)
                 session.commit()
         else:
-            # Insert
-            columns = list(data.keys())
-            values = []
+            from .query import Insert
             
-            for value in data.values():
-                if isinstance(value, str):
-                    values.append(f"'{value}'")
-                else:
-                    values.append(str(value))
-            
-            insert_query = f"INSERT INTO {self.__class__.__tablename__} ({', '.join(columns)}) VALUES ({', '.join(values)})"
+            insert_query = Insert().into(self.__class__.__tablename__).columns_(*data.keys()).values_(*data.values())
             session.execute(insert_query)
             session.commit()
         
@@ -243,20 +238,13 @@ class TableBase:
     
     def delete(self, session):
         """Delete object from database"""
-        pk_name = None
-        pk_value = None
+        pk_name, pk_value = self._get_primary_key_value()
         
-        for name, column in self.__class__._columns.items():
-            if column.primary_key:
-                pk_name = name
-                pk_value = getattr(self, name, None)
-                break
-                
-        if pk_value is None:
-            raise ValueError("Cannot delete object with None primary key")
-            
-        delete_query = f"DELETE FROM {self.__class__.__tablename__} WHERE {pk_name} = "
-        delete_query += f"'{pk_value}'" if isinstance(pk_value, str) else str(pk_value)
+        from .query import Delete, Condition
+        
+        delete_query = Delete().from_(self.__class__.__tablename__).where(
+            Condition.eq(pk_name, pk_value)
+        )
         
         session.execute(delete_query)
         session.commit()
