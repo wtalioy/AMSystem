@@ -8,7 +8,7 @@ from .utils import (
 )
 from .types import (
     Integer, String, Float, Double, Boolean, Text, DateTime, Date, Time, Timestamp,
-    JSON, BLOB, LongText, SmallInt, BigInt, Decimal, Interval, Numeric
+    JSON, BLOB, LongText, SmallInt, BigInt, Decimal, Interval, Numeric, Char, VarChar
 )
 
 __version__ = '0.2.0'
@@ -63,4 +63,6 @@ __all__ = [
     'Timestamp',
     'Interval',
     'Numeric',
+    'Char',
+    'VarChar',
 ]
