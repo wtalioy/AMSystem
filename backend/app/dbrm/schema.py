@@ -7,7 +7,8 @@ class Column:
     
     def __init__(self, type_=None, primary_key=False, nullable=True, 
                  unique=False, default=None, autoincrement=False, 
-                 foreign_key=None, length=None, comment=None, index=False):
+                 foreign_key=None, on_delete=None, on_update=None,
+                 comment=None, index=False):
         """
         Create a database column definition.
         
@@ -18,8 +19,9 @@ class Column:
             unique: Whether the column has a unique constraint
             default: Default value
             autoincrement: Whether the column auto-increments
-            foreign_key: Foreign key relationship (table.column format)
-            length: Length for string type
+            foreign_key: Foreign key relationship (table.column, table(column) or just table name)
+            on_delete: ON DELETE action (CASCADE, SET NULL, RESTRICT, NO ACTION)
+            on_update: ON UPDATE action (CASCADE, SET NULL, RESTRICT, NO ACTION)
             comment: Column comment
             index: Whether to create an index
         """
@@ -30,6 +32,8 @@ class Column:
         self.default = default
         self.autoincrement = autoincrement
         self.foreign_key = foreign_key
+        self.on_delete = on_delete
+        self.on_update = on_update
         self.comment = comment
         self.index = index
         self.name = None
@@ -80,7 +84,7 @@ class TableBase:
             elif isinstance(attr, Relationship):
                 attr.__set_name__(cls, name)
                 cls._relationships[name] = attr
-    
+                
     @classmethod
     def create(cls, session):
         """Create this table in the database."""
@@ -102,7 +106,24 @@ class TableBase:
             columns.append(column_def)
             
             if column.foreign_key:
-                fk_def = f"FOREIGN KEY ({name}) REFERENCES {column.foreign_key}"
+                # "table.column" | "table(column)"
+                if "(" in column.foreign_key and ")" in column.foreign_key:
+                    # table(column)
+                    table_name, ref_column = column.foreign_key.split("(")
+                    ref_column = ref_column.rstrip(")")
+                    fk_def = f"FOREIGN KEY ({name}) REFERENCES {table_name}({ref_column})"
+                elif "." in column.foreign_key:
+                    # table.column
+                    table_name, ref_column = column.foreign_key.split(".")
+                    fk_def = f"FOREIGN KEY ({name}) REFERENCES {table_name}({ref_column})"
+                else:
+                    raise ValueError(f"Invalid foreign key format: {column.foreign_key}")
+                
+                if hasattr(column, 'on_delete') and column.on_delete:
+                    fk_def += f" ON DELETE {column.on_delete}"
+                if hasattr(column, 'on_update') and column.on_update:
+                    fk_def += f" ON UPDATE {column.on_update}"
+                    
                 foreign_keys.append(fk_def)
             
             if column.index and not column.primary_key:
