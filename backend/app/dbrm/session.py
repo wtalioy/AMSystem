@@ -46,12 +46,9 @@ class Session:
         return self._query_log
         
     def execute(self, query, params=None):
-        """Execute raw SQL query."""
-        # Dynamically import query classes to avoid circular imports
         from .query import Select, Insert, Update, Delete
         
         if isinstance(query, (Select, Insert, Update, Delete)):
-            # 如果是查询对象，转换为SQL字符串
             query_str = str(query)
         else:
             query_str = query
@@ -79,7 +76,6 @@ class Session:
         return row[0] if row else None
         
     def fetch_as_dict(self) -> Optional[Dict]:
-        """将当前行结果作为字典返回。"""
         row = self.fetchone()
         if not row:
             return None
@@ -88,7 +84,6 @@ class Session:
         return dict(zip(column_names, row))
         
     def fetchall_as_dict(self) -> List[Dict]:
-        """将所有结果行作为字典列表返回。"""
         results = self.fetchall()
         if not results:
             return []
@@ -113,10 +108,9 @@ class Session:
             except Exception as e:
                 logger.error(f"Fail to rollback transaction: {e}")
                 raise
-    
+
     @contextmanager
     def begin(self):
-        """开始一个事务。"""
         self._transaction_level += 1
         if self._transaction_level == 1:
             self._connection.autocommit = False
@@ -135,16 +129,14 @@ class Session:
             
     def query(self, model_class) -> 'Select':
         from .query import Select
-        return Select().from_(model_class)
+        return Select(session=self).from_(model_class)
             
     def add(self, obj):
-        """添加对象到会话。"""
         if hasattr(obj, 'save'):
             obj.save(self)
         return self
         
     def delete(self, obj):
-        """从会话删除对象。"""
         if hasattr(obj, 'delete'):
             obj.delete(self)
         return self

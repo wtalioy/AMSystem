@@ -1,6 +1,3 @@
-from typing import List, Any, Union, TypeVar, Generic, Type, Optional, Dict, Tuple
-
-
 class Condition:
     
     @staticmethod
@@ -66,7 +63,7 @@ class Condition:
 
 class Select:
     
-    def __init__(self, *columns):
+    def __init__(self, *columns, session=None):
         self.columns = columns or ["*"]
         self.from_table = None
         self.where_clauses = []
@@ -78,11 +75,12 @@ class Select:
         self.join_clauses = []
         self._params = []
         self._model_class = None
+        self._session = session
     
     def from_(self, table):
         if hasattr(table, '__tablename__'):
             self.from_table = table.__tablename__
-            self._model_class = table  # 保存模型类引用，用于结果转换
+            self._model_class = table
         else:
             self.from_table = table
         return self
@@ -172,11 +170,17 @@ class Select:
         
         return sql
     
-    def execute(self, session):
+    def execute(self, session=None):
+        session = session or self._session
+        if not session:
+            raise ValueError("No session provided for query execution")
         sql = self.build()
         return session.execute(sql)
         
-    def first(self, session):
+    def first(self, session=None):
+        session = session or self._session
+        if not session:
+            raise ValueError("No session provided for query execution")
         self.limit(1)
         self.execute(session)
         row = session.fetchone()
@@ -188,7 +192,10 @@ class Select:
             return self._model_class._from_row(row)
         return row
         
-    def all(self, session):
+    def all(self, session=None):
+        session = session or self._session
+        if not session:
+            raise ValueError("No session provided for query execution")
         self.execute(session)
         rows = session.fetchall()
         
@@ -196,7 +203,10 @@ class Select:
             return [self._model_class._from_row(row) for row in rows]
         return rows
     
-    def count(self, session):
+    def count(self, session=None):
+        session = session or self._session
+        if not session:
+            raise ValueError("No session provided for query execution")
         original_columns = self.columns
         self.columns = ["COUNT(*)"]
         self.execute(session)
