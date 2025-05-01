@@ -1,10 +1,8 @@
 from datetime import timedelta
 from typing import Optional
+from app.dbrm import Session
 
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-
-from app import crud
+from app.crud.crud_user import user
 from app.core import security
 from app.core.config import settings
 from app.schemas.token import Token
@@ -15,10 +13,10 @@ def authenticate_user(db: Session, user_id: str, password: str) -> Optional[User
     """
     Authenticate a user by checking username and password
     """
-    user = crud.user.authenticate(db, user_id=user_id, password=password)
-    if not user:
+    user_obj = user.authenticate(db, user_id=user_id, password=password)
+    if not user_obj:
         return None
-    return user
+    return user_obj
 
 
 def create_access_token(user_id: str) -> Token:
