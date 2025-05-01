@@ -7,8 +7,8 @@ from .utils import (
     format_value_for_sql, parse_sql_value, export_to_csv, import_from_csv, get_table_info
 )
 from .types import (
-    Integer, String, Float, Double, Boolean, Text, DateTime, Date, Time, Timestamp,
-    JSON, BLOB, LongText, SmallInt, BigInt, Decimal, Interval, Numeric, Char, VarChar
+    Integer, String, Float, Double, Boolean, Text, DateTime, Date, Time, Timestamp, TinyText,
+    JSON, BLOB, LongText, TinyInt, SmallInt, BigInt, Decimal, Interval, Numeric, Char, VarChar
 )
 
 __version__ = '0.2.0'
@@ -51,11 +51,13 @@ __all__ = [
     'Double',
     'Boolean',
     'DateTime',
-    'Text',
     'Date',
     'JSON',
     'BLOB',
+    'TinyText',
+    'Text',
     'LongText',
+    'TinyInt',
     'SmallInt',
     'BigInt',
     'Decimal',
