@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Union, List
 
-from sqlalchemy.orm import Session
+from app.dbrm import Session
 
 from app.core.security import get_password_hash, verify_password
 from app.crud.base import CRUDBase
@@ -9,7 +9,7 @@ from app.schemas.user import UserCreate, UserUpdate, CustomerCreate, WorkerCreat
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     def get_by_id(self, db: Session, user_id: str) -> Optional[User]:
-        return db.query(User).filter(User.id == user_id).first()
+        return db.query(User).filter_by(id=user_id).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         db_obj = User(
@@ -29,7 +29,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
-            update_data = obj_in.dict(exclude_unset=True)
+            update_data = obj_in.model_dump(exclude_unset=True)
         if update_data.get("user_pwd"):
             hashed_password = get_password_hash(update_data["user_pwd"])
             del update_data["user_pwd"]
@@ -58,10 +58,9 @@ class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
             id=obj_in.id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
-            user_type="customer"
+            user_type="Customer"
         )
         db.add(user_obj)
-        db.commit()
         
         # Now create the Customer
         db_obj = Customer(
@@ -83,10 +82,9 @@ class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
             id=obj_in.id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
-            user_type="worker"
+            user_type="Worker"
         )
         db.add(user_obj)
-        db.commit()
         
         # Now create the Worker
         db_obj = Worker(
@@ -115,7 +113,6 @@ class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):
             user_type="administrator"
         )
         db.add(user_obj)
-        db.commit()
         
         # Now create the Administrator
         db_obj = Administrator(

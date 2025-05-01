@@ -63,10 +63,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for field, value in update_data.items():
             setattr(db_obj, field, value)
             
-        if hasattr(db_obj, 'save'):
-            db_obj.save(db)
-        else:
-            raise AttributeError(f"Model class {self.model.__name__} must implement 'save' class method")
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
             
         return db_obj
 
@@ -75,10 +74,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         obj = self.get(db, id)
         if not obj:
             return None
-        if hasattr(obj, 'delete'):
-            obj.delete(db)
-        else:
-            raise AttributeError(f"Model class {self.model.__name__} must implement 'delete' class method")
+        db.delete(obj)
+        db.commit()
             
         return obj
         

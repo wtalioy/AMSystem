@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from app.dbrm import Session
 
 from app.crud.base import CRUDBase
 from app.models.procedure import Procedure
@@ -14,9 +14,7 @@ class CRUDProcedure(CRUDBase[Procedure, ProcedureCreate, ProcedureUpdate]):
     def get_procedures_by_order(
         self, db: Session, order_id: str
     ) -> List[Procedure]:
-        return db.query(Procedure).filter(
-            Procedure.order_id == order_id
-        ).order_by(Procedure.procedure_id).all()
+        return db.query(Procedure).filter_by(order_id=order_id).order_by(Procedure.procedure_id).all()
     
     def create_procedure_for_order(
         self, db: Session, *, obj_in: ProcedureCreate

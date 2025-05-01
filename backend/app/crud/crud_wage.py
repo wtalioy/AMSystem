@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from app.dbrm import Session
 
 from app.crud.base import CRUDBase
 from app.models.wage import Wage
@@ -9,7 +9,7 @@ from app.schemas.wage import WageCreate, WageUpdate
 
 class CRUDWage(CRUDBase[Wage, WageCreate, WageUpdate]):
     def get_by_type(self, db: Session, worker_type: int) -> Optional[Wage]:
-        return db.query(Wage).filter(Wage.worker_type == worker_type).first()
+        return db.query(Wage).filter_by(worker_type=worker_type).first()
     
     def get_all_wages(self, db: Session) -> List[Wage]:
         return db.query(Wage).all()
