@@ -26,6 +26,18 @@ class StringType(SqlType):
         return StringType(length)
 
 
+class NumericType(SqlType):
+    """NUMERIC type, supports specifying precision and scale"""
+    def __init__(self, precision=10, scale=2):
+        self.precision = precision
+        self.scale = scale
+        super().__init__(f"NUMERIC({precision},{scale})")
+    
+    def __call__(self, precision, scale=2):
+        """Supports usage like Numeric(15,4)"""
+        return NumericType(precision, scale)
+
+
 Integer = SqlType('INTEGER')
 Float = SqlType('FLOAT')
 Double = SqlType('DOUBLE')
@@ -42,6 +54,7 @@ LongText = SqlType('LONGTEXT')
 SmallInt = SqlType('SMALLINT')
 BigInt = SqlType('BIGINT')
 Decimal = SqlType('DECIMAL')
+Numeric = NumericType()
 Interval = SqlType('INTERVAL')
 
 DTYPE_MAPPING = {
@@ -76,6 +89,7 @@ DTYPE_MAPPING = {
     'smallint': SmallInt,
     'bigint': BigInt,
     'decimal': Decimal,
+    'numeric': Numeric,
     'time': Time,
     'timestamp': Timestamp,
 }
