@@ -250,7 +250,6 @@ class TableBase:
         from .query import Select, Condition
         exists_query = Select(session=session).from_(self.__class__)
         
-        # 使用所有主键列构建查询条件
         for name, value in pk_values.items():
             exists_query.where(Condition.eq(name, value))
         
@@ -265,13 +264,11 @@ class TableBase:
         if exists:
             from .query import Update, Condition
             
-            # 更新时从数据中排除所有主键列
             update_data = {k: v for k, v in data.items() if k not in pk_names}
             
             if update_data:
                 update_query = Update().table_(self.__class__.__tablename__).set_(**update_data)
                 
-                # 使用所有主键列构建WHERE条件
                 for name, value in pk_values.items():
                     update_query.where(Condition.eq(name, value))
                 
