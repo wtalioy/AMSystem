@@ -38,6 +38,18 @@ class NumericType(SqlType):
         return NumericType(precision, scale)
 
 
+class DecimalType(SqlType):
+    """DECIMAL type, supports specifying precision and scale"""
+    def __init__(self, precision=10, scale=2):
+        self.precision = precision
+        self.scale = scale
+        super().__init__(f"DECIMAL({precision},{scale})")
+    
+    def __call__(self, precision, scale=2):
+        """Supports usage like Decimal(15,4)"""
+        return DecimalType(precision, scale)
+
+
 Integer = SqlType('INTEGER')
 Float = SqlType('FLOAT')
 Double = SqlType('DOUBLE')
@@ -53,7 +65,7 @@ BLOB = SqlType('BLOB')
 LongText = SqlType('LONGTEXT')
 SmallInt = SqlType('SMALLINT')
 BigInt = SqlType('BIGINT')
-Decimal = SqlType('DECIMAL')
+Decimal = DecimalType()
 Numeric = NumericType()
 Interval = SqlType('INTERVAL')
 
@@ -105,7 +117,7 @@ def get_sql_type(python_type: Any) -> str:
     Returns:
         str: SQL type string
     """
-    if isinstance(python_type, (SqlType, StringType)):
+    if isinstance(python_type, (SqlType, StringType, NumericType, DecimalType)):
         return str(python_type)
     
     type_name = python_type.__name__ if hasattr(python_type, '__name__') else str(python_type)
