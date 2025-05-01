@@ -214,6 +214,28 @@ class Select:
         self.columns = original_columns
         return result[0] if result else 0
     
+    def sum(self, column, session=None):
+        session = session or self._session
+        if not session:
+            raise ValueError("No session provided for query execution")
+        original_columns = self.columns
+        self.columns = [f"SUM({column})"]
+        self.execute(session)
+        result = session.fetchone()
+        self.columns = original_columns
+        return result[0] if result else 0
+    
+    def avg(self, column, session=None):
+        session = session or self._session
+        if not session:
+            raise ValueError("No session provided for query execution")
+        original_columns = self.columns
+        self.columns = [f"AVG({column})"]
+        self.execute(session)
+        result = session.fetchone()
+        self.columns = original_columns
+        return result[0] if result else 0
+    
     def exists(self, session):
         return self.limit(1).count(session) > 0
     
