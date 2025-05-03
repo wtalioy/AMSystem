@@ -26,7 +26,6 @@ class LogUpdate(BaseModel):
 
 # Properties shared by models stored in DB
 class LogInDBBase(LogBase):
-    id: str
     log_time: datetime
     worker_id: str
 
