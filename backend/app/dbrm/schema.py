@@ -80,17 +80,17 @@ class TableBase:
         pk_columns = []
         
         for name, column in cls._columns.items():
-            sql_type = column.type.__name__ if hasattr(column.type, '__name__') else str(column.type)
-                
-            nullable = "NOT NULL" if not column.nullable else "NULL"
-            autoinc = "AUTO_INCREMENT" if column.autoincrement else ""
-            unique = "UNIQUE" if column.unique else ""
-            default = f"DEFAULT {column.default}" if column.default is not None else ""
-            comment = f"COMMENT '{column.comment}'" if column.comment else ""
-            check = f"CHECK ({name} {column.check})" if column.check else ""
+            column_def = name + ' '
             
-            column_def = f"{name} {sql_type} {nullable} {autoinc} {unique} {default} {check} {comment}".strip()
-            columns.append(column_def)
+            column_def += column.type.__name__ if hasattr(column.type, '__name__') else str(column.type)
+            column_def += " NOT NULL" if not column.nullable else ""
+            column_def += " AUTO_INCREMENT" if column.autoincrement else ""
+            column_def += " UNIQUE" if column.unique else ""
+            column_def += f" DEFAULT {column.default}" if column.default is not None else ""
+            column_def += f" COMMENT '{column.comment}'" if column.comment else ""
+            column_def += f" CHECK ({name} {column.check})" if column.check else ""
+            
+            columns.append(column_def.strip())
             
             if column.primary_key:
                 pk_columns.append(name)
@@ -214,16 +214,35 @@ class TableBase:
     @classmethod
     def _from_row(cls, row):
         """Create instance from database row"""
-        if isinstance(row, tuple):
-            column_names = list(cls._columns.keys())
-            row_dict = dict(zip(column_names, row))
-        else:
-            row_dict = row
-            
         instance = cls()
-        for key, value in row_dict.items():
-            if hasattr(instance, key):
-                setattr(instance, key, value)
+        
+        if isinstance(row, tuple):
+            # Handle tuple results
+            column_names = list(cls._columns.keys())
+            for i, column_name in enumerate(column_names):
+                if i < len(row):
+                    setattr(instance, column_name, row[i])
+        elif hasattr(row, 'items'):
+            # Handle dict-like objects with items() method
+            for key, value in row.items():
+                if hasattr(instance, key):
+                    setattr(instance, key, value)
+        elif hasattr(row, 'cursor_description'):
+            # Handle pyodbc.Row or similar cursor row objects
+            column_names = [column[0] for column in row.cursor_description]
+            for i, column_name in enumerate(column_names):
+                if hasattr(instance, column_name):
+                    setattr(instance, column_name, row[i])
+        else:
+            # Try to handle other types of row objects that support indexing
+            try:
+                column_names = list(cls._columns.keys())
+                for i, column_name in enumerate(column_names):
+                    if i < len(row):
+                        setattr(instance, column_name, row[i])
+            except (IndexError, TypeError):
+                raise TypeError(f"Unsupported row type: {type(row)}")
+                
         return instance
     
     def save(self, session):
@@ -235,7 +254,7 @@ class TableBase:
         for name, value in pk_values.items():
             exists_query = query.filter_by(**{name: value})
         
-        exists = exists_query.limit(1).exists()
+        exists = exists_query.limit(1).exists(session)
         
         data = {}
         for name, column in self.__class__._columns.items():
