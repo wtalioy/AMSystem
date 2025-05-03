@@ -33,6 +33,9 @@ def generate_unique_id(db: Session, user_type: str) -> str:
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):    
     def get_by_id(self, db: Session, user_id: str) -> Optional[User]:
         return db.query(User).filter_by(user_id=user_id).first()
+    
+    def get_by_name(self, db: Session, user_name: str) -> Optional[User]:
+        return db.query(User).filter_by(user_name=user_name).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         unique_id = generate_unique_id(db, obj_in.user_type)
@@ -111,6 +114,9 @@ class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
 class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
     def get_by_id(self, db: Session, worker_id: str) -> Optional[Worker]:
         return db.query(Worker).filter_by(user_id=worker_id).first()
+    
+    def get_by_name(self, db: Session, user_name: str) -> Optional[Worker]:
+        return db.query(Worker).filter_by(user_name=user_name).first()
 
     def create(self, db: Session, *, obj_in: WorkerCreate) -> Worker:
         unique_id = generate_unique_id(db, "worker")

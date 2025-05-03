@@ -23,14 +23,14 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         ).order_by_desc(Log.log_time).offset(skip).limit(limit).all()
     
     def calculate_avg_cost_by_car_type(self, db: Session, car_type: int) -> float:
-        from app.models.order import Order
+        from app.models.order import ServiceOrder
         from app.models.car import Car
         from app.dbrm import Condition
         
         cost_result = db.query(func.avg(Log.cost)).join(
-            Order, on=(Order.order_id, Log.order_id)
+            ServiceOrder, on=(ServiceOrder.order_id, Log.order_id)
         ).join(
-            Car, on=(Car.car_id, Order.car_id)
+            Car, on=(Car.car_id, ServiceOrder.car_id)
         ).where(
             Condition.eq(Car.car_type, car_type)
         ).scalar()

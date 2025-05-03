@@ -3,24 +3,24 @@ from typing import List, Optional, Dict
 from app.dbrm import Session
 
 from app.crud.base import CRUDBase
-from app.models.procedure import Procedure
+from app.models.procedure import ServiceProcedure
 from app.schemas.procedure import ProcedureCreate, ProcedureUpdate
 
 
-class CRUDProcedure(CRUDBase[Procedure, ProcedureCreate, ProcedureUpdate]):
-    def get_by_id(self, db: Session, procedure_id: int) -> Optional[Procedure]:
-        return db.query(Procedure).filter(Procedure.procedure_id == procedure_id).first()
+class CRUDProcedure(CRUDBase[ServiceProcedure, ProcedureCreate, ProcedureUpdate]):
+    def get_by_id(self, db: Session, procedure_id: int) -> Optional[ServiceProcedure]:
+        return db.query(ServiceProcedure).filter(ServiceProcedure.procedure_id == procedure_id).first()
     
     def get_procedures_by_order(
         self, db: Session, order_id: str
-    ) -> List[Procedure]:
-        return db.query(Procedure).filter_by(order_id=order_id).order_by(Procedure.procedure_id).all()
+    ) -> List[ServiceProcedure]:
+        return db.query(ServiceProcedure).filter_by(order_id=order_id).order_by(ServiceProcedure.procedure_id).all()
     
 
     def create_procedure_for_order(
         self, db: Session, *, obj_in: ProcedureCreate
-    ) -> Procedure:
-        db_obj = Procedure(
+    ) -> ServiceProcedure:
+        db_obj = ServiceProcedure(
             order_id=obj_in.order_id,
             procedure_text=obj_in.procedure_text,
             current_status=obj_in.current_status
@@ -33,7 +33,7 @@ class CRUDProcedure(CRUDBase[Procedure, ProcedureCreate, ProcedureUpdate]):
 
     def create_procedures(
         self, db: Session, *, obj_in_list: List[ProcedureCreate]
-    ) -> List[Procedure]:
+    ) -> List[ServiceProcedure]:
         """
         Batch create multiple procedures for orders
         
@@ -48,7 +48,7 @@ class CRUDProcedure(CRUDBase[Procedure, ProcedureCreate, ProcedureUpdate]):
         
         # Create all procedure objects but don't commit yet
         for obj_in in obj_in_list:
-            db_obj = Procedure(
+            db_obj = ServiceProcedure(
                 order_id=obj_in.order_id,
                 procedure_text=obj_in.procedure_text,
                 current_status=obj_in.current_status
@@ -68,7 +68,7 @@ class CRUDProcedure(CRUDBase[Procedure, ProcedureCreate, ProcedureUpdate]):
 
     def update_procedure_status(
         self, db: Session, *, updates: List[dict]
-    ) -> List[Optional[Procedure]]:
+    ) -> List[Optional[ServiceProcedure]]:
         """
         Update status for procedures, implemented by updating each one
         and committing once at the end
@@ -124,4 +124,4 @@ class CRUDProcedure(CRUDBase[Procedure, ProcedureCreate, ProcedureUpdate]):
         }
 
 
-procedure = CRUDProcedure(Procedure)
+procedure = CRUDProcedure(ServiceProcedure)
