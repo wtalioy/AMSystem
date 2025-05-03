@@ -1,6 +1,6 @@
 from .engine import Engine
 from .session import Session
-from .schema import Table, Column, Relationship
+from .schema import Table, Column
 from .query import Select, Insert, Update, Delete, Condition
 from .remote import transfer_csv, export_query_to_csv, import_data
 from .functions import func
@@ -19,7 +19,6 @@ __all__ = [
     'Session',
     'Table', 
     'Column',
-    'Relationship',
 
     # Query builders
     'Select',
