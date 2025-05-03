@@ -1,7 +1,7 @@
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException
-from dbrm import Session
+from app.dbrm import Session
 
 from app.api import deps
 from app.services import car_service

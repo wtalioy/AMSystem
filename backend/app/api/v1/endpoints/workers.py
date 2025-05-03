@@ -2,7 +2,7 @@ from typing import Any, List
 from decimal import Decimal
 
 from fastapi import APIRouter, Body, Depends, HTTPException
-from dbrm import Session
+from app.dbrm import Session
 
 from app.services import worker_service
 from app.api import deps

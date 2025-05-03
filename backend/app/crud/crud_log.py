@@ -25,7 +25,7 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
     def calculate_avg_cost_by_car_type(self, db: Session, car_type: int) -> float:
         from app.models.order import Order
         from app.models.car import Car
-        from dbrm import Condition
+        from app.dbrm import Condition
         
         cost_result = db.query(func.avg(Log.cost)).join(
             Order, on=(Order.order_id, Log.order_id)
@@ -36,10 +36,10 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         ).scalar()
         
         return float(cost_result) if cost_result else 0
-    
+
     def count_tasks_by_worker_type(self, db: Session, worker_type: int) -> int:
         from app.models.user import Worker
-        from dbrm import Condition
+        from app.dbrm import Condition
         
         return db.query(func.count(Log.id)).join(
             Worker, on=(Worker.user_id, Log.worker_id)
@@ -49,7 +49,7 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
     
     def calculate_total_hours_by_worker_type(self, db: Session, worker_type: int) -> float:
         from app.models.user import Worker
-        from dbrm import Condition
+        from app.dbrm import Condition
 
         hours_result = db.query(func.sum(Log.duration)).join(
             Worker, on=(Worker.user_id, Log.worker_id)
