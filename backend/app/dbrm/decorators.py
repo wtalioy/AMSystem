@@ -126,7 +126,7 @@ def _resolve_dependencies() -> List[str]:
         if model not in visited:
             visit(model)
     
-    return result[::-1]
+    return result
 
 def create_all_tables(session) -> List[str]:
     """
