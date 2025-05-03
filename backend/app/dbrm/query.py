@@ -2,34 +2,41 @@ class Condition:
     
     @staticmethod
     def eq(column, value):
+        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
         return f"{column} = {value_str}"
     
     @staticmethod
     def ne(column, value):
+        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
         return f"{column} != {value_str}"
     
     @staticmethod
     def gt(column, value):
+        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
         return f"{column} > {value}"
-    
+
     @staticmethod
     def gte(column, value):
+        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
         return f"{column} >= {value}"
     
     @staticmethod
     def lt(column, value):
+        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
         return f"{column} < {value}"
-    
+
     @staticmethod
     def lte(column, value):
+        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
         return f"{column} <= {value}"
     
     @staticmethod
     def like(column, pattern):
+        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
         return f"{column} LIKE '{pattern}'"
-    
+
     @staticmethod
     def in_(column, values):
         formatted_values = []
@@ -59,6 +66,12 @@ class Condition:
     @staticmethod
     def and_(*conditions):
         return f"({' AND '.join(conditions)})"
+    
+    @staticmethod
+    def coleq(left_column, right_column):
+        left_table = left_column.parent
+        right_table = right_column.parent
+        return f"{left_table.__tablename__}.{left_column.name} = {right_table.__tablename__}.{right_column.name}"
 
 
 class Select:
@@ -123,11 +136,22 @@ class Select:
         self.having_clauses.append(condition)
         return self
     
-    def join(self, table, condition, join_type="INNER"):
+    def join(self, table, condition=None, join_type="INNER", on=None, left_col=None, right_col=None):
         if hasattr(table, '__tablename__'):
             table_name = table.__tablename__
         else:
             table_name = table
+        if condition is None:
+            if on:
+                if isinstance(on, tuple) and len(on) == 2:
+                    condition = Condition.coleq(on[0], on[1])
+                else:
+                    condition = on
+            elif left_col and right_col:
+                condition = Condition.coleq(left_col, right_col)
+            else:
+                raise ValueError("Join condition must be specified")
+                
         self.join_clauses.append((join_type, table_name, condition))
         return self
         
@@ -203,41 +227,21 @@ class Select:
             return [self._model_class._from_row(row) for row in rows]
         return rows
     
-    def count(self, session=None):
-        session = session or self._session
-        if not session:
-            raise ValueError("No session provided for query execution")
-        original_columns = self.columns
-        self.columns = ["COUNT(*)"]
-        self.execute(session)
-        result = session.fetchone()
-        self.columns = original_columns
-        return result[0] if result else 0
-    
-    def sum(self, column, session=None):
-        session = session or self._session
-        if not session:
-            raise ValueError("No session provided for query execution")
-        original_columns = self.columns
-        self.columns = [f"SUM({column})"]
-        self.execute(session)
-        result = session.fetchone()
-        self.columns = original_columns
-        return result[0] if result else 0
-    
-    def avg(self, column, session=None):
-        session = session or self._session
-        if not session:
-            raise ValueError("No session provided for query execution")
-        original_columns = self.columns
-        self.columns = [f"AVG({column})"]
-        self.execute(session)
-        result = session.fetchone()
-        self.columns = original_columns
-        return result[0] if result else 0
-    
     def exists(self, session):
         return self.limit(1).count(session) > 0
+    
+    def scalar(self, session=None):
+        session = session or self._session
+        if not session:
+            raise ValueError("No session provided for query execution")
+        
+        self.execute(session)
+        row = session.fetchone()
+        
+        if not row:
+            return None
+            
+        return row[0] if row else None
     
     def __str__(self):
         return self.build()
