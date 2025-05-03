@@ -42,35 +42,10 @@ class Column:
         
     def __set_name__(self, owner, name):
         self.name = name
+        self.parent = owner
 
     def __str__(self):
         return self.name if self.name else "Column"
-
-
-class Relationship:
-    
-    def __init__(self, target_model, foreign_key=None, backref=None, lazy='select', cascade=None):
-        """
-        Create table relationship.
-        
-        Args:
-            target_model: Target model class or class name
-            foreign_key: Foreign key column name
-            backref: Back reference name
-            lazy: Loading strategy ('select', 'joined', 'subquery')
-            cascade: Cascade operations
-        """
-        self.target_model = target_model
-        self.foreign_key = foreign_key
-        self.backref = backref
-        self.lazy = lazy
-        self.cascade = cascade
-        self.name = None
-        self.parent = None
-    
-    def __set_name__(self, owner, name):
-        self.name = name
-        self.parent = owner
 
 
 class TableBase:
@@ -90,15 +65,11 @@ class TableBase:
     def __init_subclass__(cls):
         cls.__tablename__ = getattr(cls, '__tablename__', cls.__name__.lower())
         cls._columns = {}
-        cls._relationships = {}
         
         for name, attr in cls.__dict__.items():
             if isinstance(attr, Column):
                 attr.__set_name__(cls, name)
                 cls._columns[name] = attr
-            elif isinstance(attr, Relationship):
-                attr.__set_name__(cls, name)
-                cls._relationships[name] = attr
                 
     @classmethod
     def create(cls, session):
