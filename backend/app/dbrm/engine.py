@@ -43,7 +43,6 @@ class Engine:
             conn.close()
             
     def execute_raw(self, sql, params=None):
-        """执行原始SQL并返回结果。"""
         with self.begin() as conn:
             cursor = conn.cursor()
             try:
@@ -64,6 +63,5 @@ class Engine:
                 cursor.close()
                 
     def create_session(self):
-        """创建新会话。"""
         from .session import Session
         return Session(self)
