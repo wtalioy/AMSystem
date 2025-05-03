@@ -1,4 +1,7 @@
 from typing import Any, Dict, Optional, Union, List, Tuple
+import time
+import random
+import string
 
 from app.dbrm import Session, func
 
@@ -7,13 +10,35 @@ from app.crud.base import CRUDBase
 from app.models.user import User, Customer, Worker, Administrator
 from app.schemas.user import UserCreate, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate
 
-class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
+def generate_unique_id(db: Session, user_type: str) -> str:
+    prefix_map = {
+        "customer": "C",
+        "worker": "W", 
+        "administrator": "A",
+        "user": "U"
+    }
+    
+    prefix = prefix_map.get(user_type.lower(), "U")
+    timestamp = str(int(time.time()))[-6:]
+    random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
+    
+    user_id = f"{prefix}{timestamp}{random_chars}"
+    
+    while db.query(User).filter_by(user_id=user_id).first():
+        random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
+        user_id = f"{prefix}{timestamp}{random_chars}"
+    
+    return user_id
+
+class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):    
     def get_by_id(self, db: Session, user_id: str) -> Optional[User]:
-        return db.query(User).filter_by(id=user_id).first()
+        return db.query(User).filter_by(user_id=user_id).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
+        unique_id = generate_unique_id(db, obj_in.user_type)
+        
         db_obj = User(
-            id=obj_in.id,
+            user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
             user_type=obj_in.user_type
@@ -62,18 +87,20 @@ class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
         return db.query(Customer).filter_by(user_id=customer_id).first()
 
     def create(self, db: Session, *, obj_in: CustomerCreate) -> Customer:
+        unique_id = generate_unique_id(db, "customer")
+        
         # First create a User object
         user_obj = User(
-            id=obj_in.id,
+            user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
-            user_type="Customer"
+            user_type="customer"
         )
         db.add(user_obj)
         
         # Now create the Customer
         db_obj = Customer(
-            user_id=obj_in.id
+            user_id=unique_id
         )
         db.add(db_obj)
         db.commit()
@@ -86,18 +113,20 @@ class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
         return db.query(Worker).filter_by(user_id=worker_id).first()
 
     def create(self, db: Session, *, obj_in: WorkerCreate) -> Worker:
+        unique_id = generate_unique_id(db, "worker")
+        
         # First create a User object
         user_obj = User(
-            id=obj_in.id,
+            user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
-            user_type="Worker"
+            user_type="worker"
         )
         db.add(user_obj)
         
         # Now create the Worker
         db_obj = Worker(
-            user_id=obj_in.id,
+            user_id=unique_id,
             worker_type=obj_in.worker_type
         )
         db.add(db_obj)
@@ -114,9 +143,11 @@ class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):
         return db.query(Administrator).filter_by(user_id=admin_id).first()
 
     def create(self, db: Session, *, obj_in: AdminCreate) -> Administrator:
+        unique_id = generate_unique_id(db, "administrator")
+        
         # First create a User object
         user_obj = User(
-            id=obj_in.id,
+            user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
             user_type="administrator"
@@ -125,7 +156,7 @@ class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):
         
         # Now create the Administrator
         db_obj = Administrator(
-            user_id=obj_in.id
+            user_id=unique_id
         )
         db.add(db_obj)
         db.commit()
