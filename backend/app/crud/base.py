@@ -3,7 +3,7 @@ from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
-from app.dbrm.session import Session
+from app.dbrm import Session
 
 ModelType = TypeVar("ModelType", bound=Any)  # Updated to allow any model type
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 
-from app.dbrm import Session
+from app.dbrm import Session, func
 
 from app.crud.base import CRUDBase
 from app.models.order import Order
@@ -75,6 +75,21 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, OrderUpdate]):
             db.commit()
             db.refresh(db_obj)
         return db_obj
+
+    def count_orders_by_car_type(self, db: Session, car_type: int) -> int:
+        from app.models.car import Car
+        from app.dbrm import Condition
+        return db.query(func.count(Order.order_id)).join(
+            Car, on=(Car.car_id, Order.car_id)
+        ).where(
+            Condition.eq(Car.car_type, car_type)
+        ).scalar() or 0
+    
+    def get_pending_orders(self, db: Session) -> List[Order]:
+        from app.dbrm import Condition
+        return db.query(Order).where(
+            Condition.lt(Order.status, 2)  # Status < 2 means not completed
+        ).all()
 
 
 order = CRUDOrder(Order)

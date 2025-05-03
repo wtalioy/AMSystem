@@ -1,6 +1,6 @@
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, Optional, Union, List, Tuple
 
-from app.dbrm import Session
+from app.dbrm import Session, func
 
 from app.core.security import get_password_hash, verify_password
 from app.crud.base import CRUDBase
@@ -46,6 +46,15 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     def is_active(self, user: User) -> bool:
         return True
+
+    def get_all_worker_types(self, db: Session) -> List[Tuple[int]]:
+        return db.query(func.distinct(Worker.worker_type)).all()
+    
+    def count_workers_by_type(self, db: Session, worker_type: int) -> int:
+        from app.dbrm import Condition
+        return db.query(func.count(Worker.user_id)).where(
+            Condition.eq(Worker.worker_type, worker_type)
+        ).scalar() or 0
 
 
 class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):

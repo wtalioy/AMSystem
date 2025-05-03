@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional, Tuple, Dict, Any, Union
 
-from app.dbrm import Session
+from app.dbrm import Session, func
 
 from app.crud.base import CRUDBase
 from app.models.log import Log
@@ -21,6 +21,43 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         return db.query(Log).filter_by(
             worker_id=worker_id
         ).order_by_desc(Log.log_time).offset(skip).limit(limit).all()
+    
+    def calculate_avg_cost_by_car_type(self, db: Session, car_type: int) -> float:
+        from app.models.order import Order
+        from app.models.car import Car
+        from dbrm import Condition
+        
+        cost_result = db.query(func.avg(Log.cost)).join(
+            Order, on=(Order.order_id, Log.order_id)
+        ).join(
+            Car, on=(Car.car_id, Order.car_id)
+        ).where(
+            Condition.eq(Car.car_type, car_type)
+        ).scalar()
+        
+        return float(cost_result) if cost_result else 0
+    
+    def count_tasks_by_worker_type(self, db: Session, worker_type: int) -> int:
+        from app.models.user import Worker
+        from dbrm import Condition
+        
+        return db.query(func.count(Log.id)).join(
+            Worker, on=(Worker.user_id, Log.worker_id)
+        ).where(
+            Condition.eq(Worker.worker_type, worker_type)
+        ).scalar() or 0
+    
+    def calculate_total_hours_by_worker_type(self, db: Session, worker_type: int) -> float:
+        from app.models.user import Worker
+        from dbrm import Condition
+
+        hours_result = db.query(func.sum(Log.duration)).join(
+            Worker, on=(Worker.user_id, Log.worker_id)
+        ).where(
+            Condition.eq(Worker.worker_type, worker_type)
+        ).scalar()
+        
+        return float(hours_result) if hours_result else 0
 
     def create_log_for_order(
         self, db: Session, *, obj_in: LogCreate, worker_id: str
@@ -44,16 +81,16 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
     
     def get_total_duration_by_worker(self, db: Session, worker_id: str) -> float:
         """Get total working hours for a worker"""
-        result = db.query(Log.duration).filter_by(
+        result = db.query(func.sum(Log.duration)).filter_by(
             worker_id=worker_id
-        ).sum(Log.duration)
+        ).scalar()
         return float(result) if result else 0.0
     
     def get_total_cost_by_order(self, db: Session, order_id: str) -> float:
         """Get total material cost for an order"""
-        result = db.query(Log.cost).filter_by(
+        result = db.query(func.sum(Log.cost)).filter_by(
             order_id=order_id
-        ).sum(Log.cost)
+        ).scalar()
         return float(result) if result else 0.0
 
 

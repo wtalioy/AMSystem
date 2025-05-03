@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
-from app.dbrm.session import Session
+from app.dbrm import Session, func
 
 from app.crud.base import CRUDBase
 from app.models.car import Car
@@ -29,6 +29,15 @@ class CRUDCar(CRUDBase[Car, CarCreate, CarUpdate]):
         db.commit()
         db.refresh(car)
         return car
+    
+    def get_all_car_types(self, db: Session) -> List[Tuple[int]]:
+        return db.query(func.distinct(Car.car_type)).all()
+
+    def count_cars_by_type(self, db: Session, car_type: int) -> int:
+        from app.dbrm import Condition
+        return db.query(func.count(Car.car_id)).where(
+            Condition.eq(Car.car_type, car_type)
+        ).scalar() or 0
 
 
 car = CRUDCar(Car)

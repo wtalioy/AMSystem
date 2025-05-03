@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from app.dbrm import Session
 
@@ -84,6 +84,17 @@ class CRUDProcedure(CRUDBase[Procedure, ProcedureCreate, ProcedureUpdate]):
                 db.refresh(obj)
                 
         return results
+    
+    def get_procedure_progress(self, db: Session, order_id: str) -> Dict[str, int]:
+        procedures = self.get_procedures_by_order(db, order_id=order_id)
+        
+        completed_procedures = sum(1 for p in procedures if p.current_status == 2)
+        total_procedures = len(procedures)
+        
+        return {
+            "total": total_procedures,
+            "completed": completed_procedures
+        }
 
 
 procedure = CRUDProcedure(Procedure)
