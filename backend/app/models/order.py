@@ -1,10 +1,10 @@
 from app.dbrm import Table, Column, Char, Text, Integer, Timestamp, Text, model_register
 
 @model_register(dependencies=["Car", "Customer", "Worker"])
-class Order(Table):
-    __tablename__ = "Order"
+class ServiceOrder(Table):
+    __tablename__ = "ServiceOrder"
 
-    order_id = Column(Char(10), primary_key=True)
+    order_id = Column(Char(10), nullable=False, primary_key=True)
     start_time = Column(Timestamp, nullable=False)
     end_time = Column(Timestamp, nullable=True)
     description = Column(Text, nullable=False)

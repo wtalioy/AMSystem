@@ -4,7 +4,7 @@ from app.dbrm import Table, Column, Integer, Char, Timestamp, Decimal, model_reg
 class Distribute(Table):
     __tablename__ = "Distribute"
     
-    distribute_id = Column(Integer, primary_key=True, autoincrement=True)
+    distribute_id = Column(Integer, nullable=False, primary_key=True, autoincrement=True)
     distribute_time = Column(Timestamp, nullable=False)
     amount = Column(Decimal(10, 1), nullable=False)
 
