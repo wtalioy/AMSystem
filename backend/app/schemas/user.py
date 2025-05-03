@@ -1,5 +1,5 @@
-from typing import Optional, List
-from pydantic import BaseModel, Field, validator
+from typing import Optional
+from pydantic import BaseModel
 
 
 # Shared properties
