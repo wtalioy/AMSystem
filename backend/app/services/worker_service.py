@@ -1,6 +1,7 @@
-from typing import List, Dict
+from typing import List, Dict, Optional, Tuple
 from app.dbrm import Session
 from decimal import Decimal
+from enum import IntEnum
 
 from app.crud.crud_order import order
 from app.crud.crud_user import worker
@@ -8,10 +9,15 @@ from app.crud.crud_log import log
 from app.crud.crud_wage import wage
 from app.crud.crud_distribute import distribute
 from app.crud.crud_procedure import procedure
-from app.schemas.log import LogCreate
+from app.schemas.log import LogCreate, Log
 from app.schemas.distribute import DistributeCreate
-from app.models.log import Log
 from app.models.distribute import Distribute
+from app.models.procedure import Procedure
+
+class ProcedureStatus(IntEnum):
+    PENDING = 0    # pending
+    IN_PROGRESS = 1  # in progress
+    COMPLETED = 2  # completed
 
 def create_maintenance_log(
     db: Session, 
@@ -22,7 +28,6 @@ def create_maintenance_log(
     duration: Decimal
 ) -> Log:
     """Create a new maintenance log for an order"""
-    # Verify the order exists
     order_obj = order.get_by_order_id(db, order_id=order_id)
     if not order_obj:
         raise ValueError("Order does not exist")
@@ -44,7 +49,6 @@ def get_worker_logs(
 
 def calculate_worker_income(db: Session, worker_id: str) -> Dict:
     """Calculate a worker's total income based on their logs"""
-    # Get worker information
     worker_obj = worker.get_by_id(db, worker_id=worker_id)
     if not worker_obj:
         raise ValueError("Worker does not exist")
@@ -53,7 +57,8 @@ def calculate_worker_income(db: Session, worker_id: str) -> Dict:
     wage_rate = wage.get_by_type(db, worker_type=worker_obj.worker_type)
     if not wage_rate:
         raise ValueError("No wage rate found for worker type")
-      # Calculate total hours worked
+    
+    # Calculate total hours worked
     total_hours = log.get_total_duration_by_worker(db, worker_id=worker_id)
     
     # Calculate earnings
@@ -86,9 +91,170 @@ def distribute_payment(db: Session, worker_id: str, amount: Decimal) -> Distribu
     )
     return distribute.create_distribution(db=db, obj_in=distribute_in)
 
-def update_procedure_status(db: Session, procedure_id: int, new_status: int) -> bool:
-    """Update the status of a procedure"""
-    procedure_obj = procedure.update_procedure_status(
+def update_procedure_status(db: Session, procedure_id: int, new_status: int) -> Tuple[bool, Optional[Procedure], str]:
+    """
+    Update the status of a maintenance procedure
+    
+    Args:
+        db: Database session
+        procedure_id: Procedure ID
+        new_status: New status (0: pending, 1: in progress, 2: completed)
+        
+    Returns:
+        Tuple[bool, Optional[Procedure], str]: 
+            - Whether the update was successful
+            - Updated procedure object (if successful)
+            - Detailed message or error reason
+    """
+    # Validate procedure exists
+    procedure_obj = procedure.get_by_id(db, procedure_id=procedure_id)
+    if not procedure_obj:
+        return False, None, "Procedure not found"
+    
+    # Validate status code
+    if new_status not in [st.value for st in ProcedureStatus]:
+        return False, None, f"Invalid status value: {new_status}, valid values are: 0 (pending), 1 (in progress), 2 (completed)"
+    
+    # Validate status transition
+    current_status = procedure_obj.current_status
+    
+    # Completed procedures cannot be changed to other statuses
+    if current_status == ProcedureStatus.COMPLETED and new_status != ProcedureStatus.COMPLETED:
+        return False, None, "Completed procedures cannot be changed to other statuses"
+    
+    # Execute status update
+    updated_procedure = procedure.update_procedure_status(
         db=db, procedure_id=procedure_id, new_status=new_status
     )
-    return procedure_obj is not None
+    
+    if not updated_procedure:
+        return False, None, "Status update failed"
+    
+    # Generate status transition message
+    status_names = {
+        ProcedureStatus.PENDING: "pending",
+        ProcedureStatus.IN_PROGRESS: "in progress",
+        ProcedureStatus.COMPLETED: "completed"
+    }
+    status_message = f"Procedure status changed from '{status_names[current_status]}' to '{status_names[new_status]}'"
+    
+    return True, updated_procedure, status_message
+
+def batch_update_procedure_status(
+    db: Session, 
+    updates: List[Dict[str, int]]
+) -> List[Dict]:
+    """
+    Batch update multiple procedure statuses
+    
+    Args:
+        db: Database session
+        updates: List containing multiple procedure update information, each dict contains procedure_id and new_status
+               Example: [{"procedure_id": 1, "new_status": 2}, {"procedure_id": 2, "new_status": 1}]
+        
+    Returns:
+        List[Dict]: List of update results for each procedure, including success/failure information and details
+    """
+    results = []
+    to_update = []  # List of procedures to update
+    status_names = {
+        ProcedureStatus.PENDING: "pending",
+        ProcedureStatus.IN_PROGRESS: "in progress",
+        ProcedureStatus.COMPLETED: "completed"
+    }
+    
+    # Step 1: Check each procedure, only process those that need status changes
+    for update_info in updates:
+        procedure_id = update_info.get("procedure_id")
+        new_status = update_info.get("new_status")
+        
+        # Check required fields
+        if procedure_id is None or new_status is None:
+            results.append({
+                "procedure_id": procedure_id,
+                "success": False,
+                "message": "Missing required information: procedure_id or new_status",
+                "procedure_text": None
+            })
+            continue
+        
+        # Get procedure information
+        procedure_obj = procedure.get_by_id(db, procedure_id=procedure_id)
+        if not procedure_obj:
+            results.append({
+                "procedure_id": procedure_id,
+                "success": False,
+                "message": "Procedure not found",
+                "procedure_text": None
+            })
+            continue
+            
+        # Validate status code
+        if new_status not in [st.value for st in ProcedureStatus]:
+            results.append({
+                "procedure_id": procedure_id,
+                "success": False,
+                "message": f"Invalid status value: {new_status}, valid values are: 0 (pending), 1 (in progress), 2 (completed)",
+                "procedure_text": procedure_obj.procedure_text
+            })
+            continue
+        
+        current_status = procedure_obj.current_status
+        
+        # If status hasn't changed, skip this procedure
+        if current_status == new_status:
+            results.append({
+                "procedure_id": procedure_id,
+                "success": True,
+                "new_status": new_status,
+                "message": "Procedure status unchanged, no update needed",
+                "procedure_text": procedure_obj.procedure_text
+            })
+            continue
+            
+        # Check status transition validity: completed procedures can't change status
+        if current_status == ProcedureStatus.COMPLETED and new_status != ProcedureStatus.COMPLETED:
+            results.append({
+                "procedure_id": procedure_id,
+                "success": False,
+                "message": "Completed procedures cannot be changed to other statuses",
+                "procedure_text": procedure_obj.procedure_text
+            })
+            continue
+            
+        # If validation passes and status needs to change, add to update list
+        to_update.append({
+            "procedure_id": procedure_id,
+            "new_status": new_status,
+            "current_status": current_status,
+            "procedure_text": procedure_obj.procedure_text
+        })
+    
+    # Step 2: Batch update procedures that need status changes
+    if to_update:
+        # Prepare batch update data
+        update_data = [{"procedure_id": u["procedure_id"], "new_status": u["new_status"]} for u in to_update]
+        
+        # Execute batch update
+        updated_procedures = procedure.batch_update_procedure_status(db=db, updates=update_data)
+        
+        # Process update results
+        for i, proc in enumerate(updated_procedures):
+            update_info = to_update[i]
+            if proc:
+                results.append({
+                    "procedure_id": update_info["procedure_id"],
+                    "success": True,
+                    "new_status": update_info["new_status"],
+                    "message": f"Procedure status changed from '{status_names[update_info['current_status']]}' to '{status_names[update_info['new_status']]}'",
+                    "procedure_text": update_info["procedure_text"]
+                })
+            else:
+                results.append({
+                    "procedure_id": update_info["procedure_id"],
+                    "success": False,
+                    "message": "Status update failed",
+                    "procedure_text": update_info["procedure_text"]
+                })
+    
+    return results

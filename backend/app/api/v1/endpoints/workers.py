@@ -4,10 +4,9 @@ from decimal import Decimal
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import crud, models, services
+from app import models, services, schemas
 from app.api import deps
-from app.models.log import Log
-from app.models.procedure import Procedure
+from app.schemas.log import Log
 
 router = APIRouter()
 
@@ -77,19 +76,66 @@ def update_procedure_status(
     current_user: models.user.Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Update a repair procedure status
-    """
-    # Verify procedure exists
-    procedure = crud.procedure.get_by_id(db, procedure_id=procedure_id)
-    if not procedure:
-        raise HTTPException(status_code=404, detail="Procedure not found")
+    Update procedure status
     
-    # Update the status
-    success = services.worker_service.update_procedure_status(
+    Status codes:
+    - 0: pending
+    - 1: in progress
+    - 2: completed
+    """
+    success, procedure_obj, message = services.worker_service.update_procedure_status(
         db=db, procedure_id=procedure_id, new_status=new_status
     )
     
     if not success:
-        raise HTTPException(status_code=400, detail="Failed to update procedure status")
-        
-    return {"success": True, "procedure_id": procedure_id, "new_status": new_status}
+        raise HTTPException(status_code=400, detail=message)
+    
+    # Return success result
+    return {
+        "success": True, 
+        "procedure_id": procedure_id, 
+        "new_status": new_status,
+        "message": message,
+        "procedure_text": procedure_obj.procedure_text if procedure_obj else ""
+    }
+
+
+@router.put("/procedures/batch", response_model=List[dict])
+def batch_update_procedure_status(
+    *,
+    db: Session = Depends(deps.get_db),
+    updates: List[dict] = Body(...),
+    current_user: models.user.Worker = Depends(deps.get_current_worker),
+) -> Any:
+    """
+    Batch update multiple procedure statuses
+    
+    Request body format:
+    ```
+    [
+      {"procedure_id": 1, "new_status": 2},
+      {"procedure_id": 2, "new_status": 1},
+      ...
+    ]
+    ```
+    
+    Status codes:
+    - 0: pending
+    - 1: in progress
+    - 2: completed
+    
+    Notes:
+    - Only procedures with status changes will be updated
+    - Completed procedures cannot be changed to other statuses
+    - Returns processing results for all procedures, including those that don't need updates
+    """
+    # Validate request body format
+    if not updates:
+        raise HTTPException(status_code=400, detail="Please provide a list of procedures to update")
+    
+    # Call service layer batch update function
+    results = services.worker_service.batch_update_procedure_status(
+        db=db, updates=updates
+    )
+    
+    return results
