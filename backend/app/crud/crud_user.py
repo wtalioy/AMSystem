@@ -50,7 +50,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
 class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
     def get_by_id(self, db: Session, customer_id: str) -> Optional[Customer]:
-        return db.query(Customer).filter(Customer.user_id == customer_id).first()
+        return db.query(Customer).filter_by(user_id=customer_id).first()
 
     def create(self, db: Session, *, obj_in: CustomerCreate) -> Customer:
         # First create a User object
@@ -74,7 +74,7 @@ class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
 
 class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
     def get_by_id(self, db: Session, worker_id: str) -> Optional[Worker]:
-        return db.query(Worker).filter(Worker.user_id == worker_id).first()
+        return db.query(Worker).filter_by(user_id=worker_id).first()
 
     def create(self, db: Session, *, obj_in: WorkerCreate) -> Worker:
         # First create a User object
@@ -97,12 +97,12 @@ class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
         return db_obj
         
     def get_workers_by_type(self, db: Session, *, worker_type: int) -> List[Worker]:
-        return db.query(Worker).filter(Worker.worker_type == worker_type).all()
+        return db.query(Worker).filter_by(worker_type=worker_type).all()
 
 
 class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):
     def get_by_id(self, db: Session, admin_id: str) -> Optional[Administrator]:
-        return db.query(Administrator).filter(Administrator.user_id == admin_id).first()
+        return db.query(Administrator).filter_by(user_id=admin_id).first()
 
     def create(self, db: Session, *, obj_in: AdminCreate) -> Administrator:
         # First create a User object
