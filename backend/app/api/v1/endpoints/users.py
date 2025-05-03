@@ -9,7 +9,7 @@ from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCre
 
 router = APIRouter()
 
-@router.post("/register-customer", response_model=User)
+@router.post("/register/customer", response_model=User)
 def create_customer(
     *, db: Session = Depends(deps.get_db), customer_in: CustomerCreate
 ) -> Any:
@@ -25,7 +25,7 @@ def create_customer(
     return user_service.create_customer(db=db, customer_in=customer_in)
 
 
-@router.post("/register-worker", response_model=User)
+@router.post("/register/worker", response_model=User)
 def create_worker(
     *,
     db: Session = Depends(deps.get_db),
@@ -44,7 +44,7 @@ def create_worker(
     return user_service.create_worker(db=db, worker_in=worker_in)
 
 
-@router.post("/register-admin", response_model=User)
+@router.post("/register/admin", response_model=User)
 def create_admin(
     *,
     db: Session = Depends(deps.get_db),
@@ -108,7 +108,7 @@ def read_user_by_id(
     return user
 
 
-@router.get("/", response_model=List[User])
+@router.get("/all", response_model=List[User])
 def read_users(
     db: Session = Depends(deps.get_db),
     skip: int = 0,

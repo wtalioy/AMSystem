@@ -8,7 +8,7 @@ from app.schemas import Token
 
 router = APIRouter()
 
-@router.post("/access-token", response_model=Token)
+@router.post("/", response_model=Token)
 def login_access_token(
     db: Session = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
