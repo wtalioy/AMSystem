@@ -2,17 +2,9 @@ from typing import Optional, List, Dict
 from app.dbrm import Session
 from decimal import Decimal
 
-from app.crud.crud_order import order
-from app.crud.crud_car import car
-from app.crud.crud_log import log
-from app.crud.crud_procedure import procedure
-from app.crud.crud_user import worker
-from app.crud.crud_wage import wage
-from app.schemas.order import OrderCreate, OrderUpdate
-from app.schemas.procedure import ProcedureCreate
-from app.models.order import Order
-from app.models.log import Log
-from app.models.procedure import Procedure
+from app.crud import order, car, log, procedure, worker, wage
+from app.schemas import OrderCreate, ProcedureCreate
+from app.models import Order, Procedure
 
 
 def create_order(db: Session, obj_in: OrderCreate, customer_id: str) -> Order:

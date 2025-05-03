@@ -1,18 +1,12 @@
 from typing import List, Dict, Optional, Tuple
-from app.dbrm import Session
 from decimal import Decimal
 from enum import IntEnum
+from app.dbrm import Session
 
-from app.crud.crud_order import order
-from app.crud.crud_user import worker
-from app.crud.crud_log import log
-from app.crud.crud_wage import wage
-from app.crud.crud_distribute import distribute
-from app.crud.crud_procedure import procedure
+from app.crud import order, log, distribute, procedure, wage, worker
 from app.schemas.log import LogCreate, Log
 from app.schemas.distribute import DistributeCreate
-from app.models.distribute import Distribute
-from app.models.procedure import Procedure
+from app.models import Distribute, Procedure
 
 class ProcedureStatus(IntEnum):
     PENDING = 0    # pending

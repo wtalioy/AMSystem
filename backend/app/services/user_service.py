@@ -1,9 +1,8 @@
 from typing import Optional, List
 from app.dbrm import Session
 
-from app.crud.crud_user import user, customer, worker, admin
-from app.schemas.user import UserCreate, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate
-from app.models.user import User
+from app.crud import user, customer, worker, admin
+from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate
 
 
 def create_customer(db: Session, customer_in: CustomerCreate) -> User:

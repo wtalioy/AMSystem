@@ -1,11 +1,9 @@
 from typing import Optional, List, Dict
 from app.dbrm import Session
 
-from app.crud.crud_car import car
-from app.crud.crud_order import order
-from app.crud.crud_log import log
-from app.schemas.car import CarCreate, CarUpdate
-from app.models.car import Car
+from app.crud import car, order, log
+from app.schemas import CarCreate, CarUpdate
+from app.models import Car
 
 def create_car(db: Session, obj_in: CarCreate, customer_id: str) -> Car:
     """Register a new car for a customer"""

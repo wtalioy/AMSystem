@@ -2,11 +2,11 @@ from datetime import timedelta
 from typing import Optional
 from app.dbrm import Session
 
-from app.crud.crud_user import user
+from app.crud import user
 from app.core import security
 from app.core.config import settings
-from app.schemas.token import Token
-from app.models.user import User
+from app.schemas import Token
+from app.models import User
 
 
 def authenticate_user(db: Session, user_id: str, password: str) -> Optional[User]:
