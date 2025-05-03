@@ -16,11 +16,11 @@ def create_customer(
     """
     Create new customer user
     """
-    user = user_service.get_user_by_id(db, user_id=customer_in.user_id)
+    user = user_service.get_user_by_name(db, user_name=customer_in.user_name)
     if user:
         raise HTTPException(
             status_code=400,
-            detail="The user with this ID already exists in the system",
+            detail="The user with this name already exists in the system",
         )
     return user_service.create_customer(db=db, customer_in=customer_in)
 

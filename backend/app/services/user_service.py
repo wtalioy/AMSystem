@@ -24,6 +24,9 @@ def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
     """Get a user by ID"""
     return user.get_by_id(db, user_id=user_id)
 
+def get_user_by_name(db: Session, user_name: str) -> Optional[User]:
+    """Get a user by name"""
+    return user.get_by_name(db, user_name=user_name)
 
 def update_user(db: Session, user_id: str, user_in: UserUpdate) -> Optional[User]:
     """Update a user's information"""
