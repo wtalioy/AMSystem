@@ -1,5 +1,6 @@
-from app.dbrm import Table, Column, TinyInt, Integer
+from app.dbrm import Table, Column, TinyInt, Integer, model_register
 
+@model_register
 class Wage(Table):
     __tablename__ = 'Wage'
     

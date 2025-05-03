@@ -1,5 +1,6 @@
-from app.dbrm import Table, Column, Char, TinyText, Integer
+from app.dbrm import Table, Column, Char, TinyText, Integer, model_register
 
+@model_register(dependencies=["Order"])
 class Procedure(Table):
     __tablename__ = "Procedure"
 

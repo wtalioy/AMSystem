@@ -11,6 +11,10 @@ from .types import (
     Integer, String, Float, Double, Boolean, Text, DateTime, Date, Time, Timestamp, TinyText,
     JSON, BLOB, LongText, TinyInt, SmallInt, BigInt, Decimal, Interval, Numeric, Char, VarChar
 )
+from .decorators import (
+    db_operation_handler, model_register, get_registered_models, 
+    create_all_tables, drop_all_tables
+)
 
 __all__ = [
     
@@ -57,11 +61,16 @@ __all__ = [
     'TinyInt',
     'SmallInt',
     'BigInt',
-    'Decimal',
-    'Time',
+    'Decimal',    'Time',
     'Timestamp',
     'Interval',
     'Numeric',
     'Char',
     'VarChar',
+    
+    # Model registration
+    'model_register',
+    'get_registered_models',
+    'create_all_tables',
+    'drop_all_tables',
 ]

@@ -1,5 +1,6 @@
-from app.dbrm import Table, Column, Char, Text, Integer, Timestamp, Text
+from app.dbrm import Table, Column, Char, Text, Integer, Timestamp, Text, model_register
 
+@model_register(dependencies=["Car", "Customer", "Worker"])
 class Order(Table):
     __tablename__ = "Order"
 

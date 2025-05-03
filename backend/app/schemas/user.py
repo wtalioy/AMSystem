@@ -21,7 +21,7 @@ class UserUpdate(BaseModel):
 
 # Properties shared by models stored in DB
 class UserInDBBase(UserBase):
-    id: str
+    user_id: str
     user_type: str
 
     class Config:
