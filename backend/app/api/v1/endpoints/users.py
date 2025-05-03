@@ -5,7 +5,7 @@ from dbrm import Session
 
 from app.services import user_service
 from app.api import deps
-from app.schemas.user import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate
+from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate
 
 router = APIRouter()
 
@@ -16,7 +16,7 @@ def create_customer(
     """
     Create new customer user
     """
-    user = user_service.get_user_by_id(db, user_id=customer_in.id)
+    user = user_service.get_user_by_id(db, user_id=customer_in.user_id)
     if user:
         raise HTTPException(
             status_code=400,
@@ -35,7 +35,7 @@ def create_worker(
     """
     Create new worker user (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=worker_in.id)
+    user = user_service.get_user_by_id(db, user_id=worker_in.user_id)
     if user:
         raise HTTPException(
             status_code=400,
@@ -54,7 +54,7 @@ def create_admin(
     """
     Create new admin user (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=admin_in.id)
+    user = user_service.get_user_by_id(db, user_id=admin_in.user_id)
     if user:
         raise HTTPException(
             status_code=400,
@@ -83,7 +83,7 @@ def update_user_me(
     """
     Update own user information
     """
-    return user_service.update_user(db=db, user_id=current_user.id, user_in=user_in)
+    return user_service.update_user(db=db, user_id=current_user.user_id, user_in=user_in)
 
 
 @router.get("/{user_id}", response_model=User)
@@ -101,7 +101,7 @@ def read_user_by_id(
             status_code=404,
             detail="The user with this ID does not exist in the system",
         )
-    if user.id != current_user.id and current_user.user_type != "administrator":
+    if user.user_id != current_user.user_id and current_user.user_type != "administrator":
         raise HTTPException(
             status_code=400, detail="Not enough permissions"
         )

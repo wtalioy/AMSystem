@@ -4,14 +4,14 @@ from enum import IntEnum
 from app.dbrm import Session
 
 from app.crud import order, log, distribute, procedure, wage, worker
-from app.schemas.log import LogCreate, Log
-from app.schemas.distribute import DistributeCreate
-from app.models import Distribute, Procedure
+from app.schemas import LogCreate, Log, DistributeCreate, Distribute, Procedure
+
 
 class ProcedureStatus(IntEnum):
     PENDING = 0    # pending
     IN_PROGRESS = 1  # in progress
     COMPLETED = 2  # completed
+
 
 def create_maintenance_log(
     db: Session, 
@@ -35,11 +35,13 @@ def create_maintenance_log(
     )
     return log.create_log_for_order(db=db, obj_in=log_in, worker_id=worker_id)
 
+
 def get_worker_logs(
     db: Session, worker_id: str, skip: int = 0, limit: int = 100
 ) -> List[Log]:
     """Get all maintenance logs for a worker"""
     return log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
+
 
 def calculate_worker_income(db: Session, worker_id: str) -> Dict:
     """Calculate a worker's total income based on their logs"""
@@ -71,6 +73,7 @@ def calculate_worker_income(db: Session, worker_id: str) -> Dict:
         "pending_payment": earnings - distributed_amount
     }
 
+
 def distribute_payment(db: Session, worker_id: str, amount: Decimal) -> Distribute:
     """Record a payment distribution to a worker"""
     # Verify worker exists
@@ -84,6 +87,7 @@ def distribute_payment(db: Session, worker_id: str, amount: Decimal) -> Distribu
         worker_id=worker_id
     )
     return distribute.create_distribution(db=db, obj_in=distribute_in)
+
 
 def update_procedure_status(db: Session, procedure_id: int, new_status: int) -> Tuple[bool, Optional[Procedure], str]:
     """
@@ -133,6 +137,7 @@ def update_procedure_status(db: Session, procedure_id: int, new_status: int) -> 
     status_message = f"Procedure status changed from '{status_names[current_status]}' to '{status_names[new_status]}'"
     
     return True, updated_procedure, status_message
+
 
 def batch_update_procedure_status(
     db: Session, 

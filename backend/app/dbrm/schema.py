@@ -295,7 +295,7 @@ class TableBase:
             for name, column in self.__class__._columns.items():
                 if hasattr(result, name):
                     setattr(self, name, getattr(result, name))
-        
+
         return self
         
 Table = TableBase

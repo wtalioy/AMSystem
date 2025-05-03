@@ -5,9 +5,7 @@ from app.dbrm import Session
 
 from app.api import deps
 from app.services import car_service, order_service
-from app.schemas.user import User, Customer
-from app.schemas.order import Order, OrderCreate
-from app.schemas.procedure import Procedure
+from app.schemas import User, Customer, Order, OrderCreate, Procedure
 
 router = APIRouter()
 
@@ -23,7 +21,7 @@ def create_order(
     """
     # Verify the car belongs to the current customer
     car = car_service.get_car_by_id(db, car_id=order_in.car_id)
-    if not car or car.customer_id != current_user.id:
+    if not car or car.customer_id != current_user.user_id:
         raise HTTPException(
             status_code=400,
             detail="Car not found or does not belong to you",
@@ -31,7 +29,7 @@ def create_order(
     
     try:
         order = order_service.create_order(
-            db=db, obj_in=order_in, customer_id=current_user.id
+            db=db, obj_in=order_in, customer_id=current_user.user_id
         )
         return order
     except ValueError as e:
@@ -55,7 +53,7 @@ def read_orders(
     """
     if current_user.user_type == "customer":
         return order_service.get_orders_for_customer(
-            db=db, customer_id=current_user.id, skip=skip, limit=limit
+            db=db, customer_id=current_user.user_id, skip=skip, limit=limit
         )
     elif current_user.user_type == "administrator":
         return order_service.get_all_orders(
@@ -85,7 +83,7 @@ def read_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    if current_user.user_type == "customer" and order.customer_id != current_user.id:
+    if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
         raise HTTPException(status_code=400, detail="Not enough permissions")
     
     return order
@@ -134,7 +132,7 @@ def add_order_feedback(
         raise HTTPException(status_code=404, detail="Order not found")
     
     # Only the customer who owns the order can add feedback
-    if order.customer_id != current_user.id:
+    if order.customer_id != current_user.user_id:
         raise HTTPException(status_code=400, detail="Not enough permissions")
     
     # Order must be completed to add feedback
@@ -187,7 +185,7 @@ def calculate_order_cost(
         raise HTTPException(status_code=404, detail="Order not found")
     
     # Check permissions - customer can only check own orders
-    if current_user.user_type == "customer" and order.customer_id != current_user.id:
+    if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
         raise HTTPException(status_code=400, detail="Not enough permissions")
 
     return order_service.calculate_order_cost(db=db, order_id=order_id)

@@ -4,7 +4,7 @@ from app.dbrm import Session
 
 from app.api import deps
 from app.services import auth_service
-from app.schemas.token import Token
+from app.schemas import Token
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ def login_access_token(
             detail="Incorrect user ID or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return auth_service.create_access_token(user_id=user.id)
+    return auth_service.create_access_token(user_id=user.user_id)
 
 
 @router.post("/test-token", response_model=dict)
@@ -33,4 +33,4 @@ def test_token(current_user = Depends(deps.get_current_user)):
     """
     Test access token
     """
-    return {"user_id": current_user.id, "user_type": current_user.user_type}
+    return {"user_id": current_user.user_id, "user_type": current_user.user_type}

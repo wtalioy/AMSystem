@@ -5,7 +5,7 @@ from dbrm import Session
 
 from app.api import deps
 from app.services import car_service
-from app.schemas.car import Car, CarCreate, CarUpdate, User, Customer
+from app.schemas import Car, CarCreate, CarUpdate, User, Customer
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ def create_car(
             detail="The car with this ID already exists in the system",
         )
     return car_service.create_car(
-        db=db, obj_in=car_in, customer_id=current_user.id
+        db=db, obj_in=car_in, customer_id=current_user.user_id
     )
 
 
@@ -43,7 +43,7 @@ def read_cars(
     """
     if current_user.user_type == "customer":
         return car_service.get_customer_cars(
-            db=db, customer_id=current_user.id
+            db=db, customer_id=current_user.user_id
         )
     elif current_user.user_type == "administrator":
         return car_service.get_all_cars(
@@ -72,7 +72,7 @@ def read_car(
     if not car:
         raise HTTPException(status_code=404, detail="Car not found")
     
-    if current_user.user_type == "customer" and car.customer_id != current_user.id:
+    if current_user.user_type == "customer" and car.customer_id != current_user.user_id:
         raise HTTPException(status_code=400, detail="Not enough permissions")
     
     return car
@@ -94,7 +94,7 @@ def update_car(
         raise HTTPException(status_code=404, detail="Car not found")
     
     # Only owner or admin can update car
-    if current_user.user_type == "customer" and car.customer_id != current_user.id:
+    if current_user.user_type == "customer" and car.customer_id != current_user.user_id:
         raise HTTPException(status_code=400, detail="Not enough permissions")
     elif current_user.user_type == "worker":
         raise HTTPException(status_code=400, detail="Not enough permissions")
@@ -120,7 +120,7 @@ def read_car_maintenance_history(
         raise HTTPException(status_code=404, detail="Car not found")
     
     # Check permissions
-    if current_user.user_type == "customer" and car.customer_id != current_user.id:
+    if current_user.user_type == "customer" and car.customer_id != current_user.user_id:
         raise HTTPException(status_code=400, detail="Not enough permissions")
 
     return car_service.get_car_maintenance_history(db=db, car_id=car_id)

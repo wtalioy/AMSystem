@@ -6,9 +6,7 @@ from dbrm import Session
 
 from app.services import worker_service
 from app.api import deps
-from app.schemas.log import Log
-from app.schemas.user import Worker
-from app.schemas.procedure import Procedure, ProcedureCreate
+from app.schemas import Log, Worker, Procedure, ProcedureCreate
 
 router = APIRouter()
 

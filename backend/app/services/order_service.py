@@ -3,8 +3,7 @@ from app.dbrm import Session
 from decimal import Decimal
 
 from app.crud import order, car, log, procedure, worker, wage
-from app.schemas import OrderCreate, ProcedureCreate
-from app.models import Order, Procedure
+from app.schemas import Order, OrderCreate, Procedure, ProcedureCreate
 
 
 def create_order(db: Session, obj_in: OrderCreate, customer_id: str) -> Order:

@@ -5,8 +5,7 @@ from app.dbrm import Session
 from app.crud import user
 from app.core import security
 from app.core.config import settings
-from app.schemas import Token
-from app.models import User
+from app.schemas import Token, User
 
 
 def authenticate_user(db: Session, user_id: str, password: str) -> Optional[User]:
