@@ -228,7 +228,7 @@ class Select:
         return rows
     
     def exists(self, session):
-        return self.limit(1).count(session) > 0
+        return self.first(session) is not None
     
     def scalar(self, session=None):
         session = session or self._session
