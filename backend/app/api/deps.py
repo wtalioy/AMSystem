@@ -1,16 +1,16 @@
-from typing import Generator, Optional
+from typing import Generator
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from app.dbrm import Session, Engine
 
-from app import crud, models
-from app.core import security
+from app import crud, schemas
 from app.core.config import settings
-from app.db.session import SessionLocal
 from app.schemas.token import TokenPayload
+
+engine = Engine.from_env()
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -18,16 +18,13 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 
 def get_db() -> Generator:
-    try:
-        db = SessionLocal()
-        yield db
-    finally:
-        db.close()
+    with Session(engine) as session:
+        yield session
 
 
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
-) -> models.user.User:
+) -> schemas.user.User:
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -45,33 +42,36 @@ def get_current_user(
 
 
 def get_current_customer(
-    current_user: models.user.User = Depends(get_current_user),
-) -> models.user.Customer:
+    current_user: schemas.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> schemas.user.Customer:
     if current_user.user_type != "customer":
         raise HTTPException(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return crud.customer.get_by_id(db=SessionLocal(), customer_id=current_user.id)
+    return crud.customer.get_by_id(db=db, customer_id=current_user.id)
 
 
 def get_current_worker(
-    current_user: models.user.User = Depends(get_current_user),
-) -> models.user.Worker:
+    current_user: schemas.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> schemas.user.Worker:
     if current_user.user_type != "worker":
         raise HTTPException(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return crud.worker.get_by_id(db=SessionLocal(), worker_id=current_user.id)
+    return crud.worker.get_by_id(db=db, worker_id=current_user.id)
 
 
 def get_current_admin(
-    current_user: models.user.User = Depends(get_current_user),
-) -> models.user.Administrator:
+    current_user: schemas.user.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> schemas.user.Admin:
     if current_user.user_type != "administrator":
         raise HTTPException(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return crud.admin.get_by_id(db=SessionLocal(), admin_id=current_user.id)
+    return crud.admin.get_by_id(db=db, admin_id=current_user.id)
