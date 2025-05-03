@@ -6,7 +6,7 @@ from dbrm import Session
 
 from app.services import worker_service
 from app.api import deps
-from app.schemas import Log, Worker, Procedure, ProcedureCreate
+from app.schemas import Log, Worker
 
 router = APIRouter()
 
@@ -90,7 +90,6 @@ def update_procedure_status(
     if not success:
         raise HTTPException(status_code=400, detail=message)
     
-    # Return success result
     return {
         "success": True, 
         "procedure_id": procedure_id, 
@@ -100,21 +99,52 @@ def update_procedure_status(
     }
 
 
-@router.put("/procedures/batch", response_model=List[dict])
-def batch_update_procedure_status(
+@router.post("/procedures/create", response_model=Any)
+def create_procedures(
+    *,
+    db: Session = Depends(deps.get_db),
+    order_id: str = Body(...),
+    procedures: list[str] = Body(...),
+    current_user: Worker = Depends(deps.get_current_worker),
+) -> Any:
+    """
+    Create maintenance procedures for an order
+    
+    Request body format:
+    ```
+    {
+      "order_id": "ORD123",
+      "procedures": ["Check oil", "Replace filter", "Adjust brakes"]
+    }
+    ```
+    
+    Notes:
+    - order_id: The order ID that all procedures will be associated with
+    - procedures: A list of strings (one or more)
+    """
+    try:
+        return worker_service.create_procedures(
+            db=db, order_id=order_id, procedures=procedures
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.put("/procedures/update", response_model=List[dict])
+def update_procedure_status(
     *,
     db: Session = Depends(deps.get_db),
     updates: List[dict] = Body(...),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Batch update multiple procedure statuses
+    Update multiple procedure statuses
     
     Request body format:
     ```
     [
-      {"procedure_id": 1, "new_status": 2},
-      {"procedure_id": 2, "new_status": 1},
+      {"procedure_id": 1, "status": 2},
+      {"procedure_id": 2, "status": 1},
       ...
     ]
     ```
@@ -134,7 +164,7 @@ def batch_update_procedure_status(
         raise HTTPException(status_code=400, detail="Please provide a list of procedures to update")
     
     # Call service layer batch update function
-    results = worker_service.batch_update_procedure_status(
+    results = worker_service.update_procedure_status(
         db=db, updates=updates
     )
     

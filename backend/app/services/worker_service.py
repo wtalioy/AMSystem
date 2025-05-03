@@ -1,10 +1,10 @@
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Union, Any
 from decimal import Decimal
 from enum import IntEnum
 from app.dbrm import Session
 
 from app.crud import order, log, distribute, procedure, wage, worker
-from app.schemas import LogCreate, Log, DistributeCreate, Distribute, Procedure
+from app.schemas import LogCreate, Log, DistributeCreate, Distribute, Procedure, ProcedureCreate
 
 
 class ProcedureStatus(IntEnum):
@@ -89,71 +89,48 @@ def distribute_payment(db: Session, worker_id: str, amount: Decimal) -> Distribu
     return distribute.create_distribution(db=db, obj_in=distribute_in)
 
 
-def update_procedure_status(db: Session, procedure_id: int, new_status: int) -> Tuple[bool, Optional[Procedure], str]:
-    """
-    Update the status of a maintenance procedure
+def create_procedures(
+    db: Session, 
+    order_id: str, 
+    procedures: Any
+) -> Union[Procedure, List[Procedure]]:
+    """ Create maintenance procedures for an order """
+    # Verify order exists
+    order_obj = order.get_by_order_id(db, order_id=order_id)
+    if not order_obj:
+        raise ValueError(f"Order with ID {order_id} does not exist")
     
-    Args:
-        db: Database session
-        procedure_id: Procedure ID
-        new_status: New status (0: pending, 1: in progress, 2: completed)
+    if not procedures:
+        raise ValueError("Please provide at least one procedure")
         
-    Returns:
-        Tuple[bool, Optional[Procedure], str]: 
-            - Whether the update was successful
-            - Updated procedure object (if successful)
-            - Detailed message or error reason
-    """
-    # Validate procedure exists
-    procedure_obj = procedure.get_by_id(db, procedure_id=procedure_id)
-    if not procedure_obj:
-        return False, None, "Procedure not found"
+    procedure_objects = []
+    for proc_item in procedures:
+        # Handle both string and dict formats
+        if isinstance(proc_item, dict):
+            procedure_text = proc_item.get("procedure_text")
+        else:
+            procedure_text = proc_item
+        
+        # Validate required fields
+        if not procedure_text:
+            raise ValueError("Missing procedure text")
+        
+        # Create procedure object with default status (0: pending)
+        procedure_in = ProcedureCreate(
+            order_id=order_id,
+            procedure_text=procedure_text,
+            current_status=ProcedureStatus.PENDING
+        )
+        procedure_objects.append(procedure_in)
     
-    # Validate status code
-    if new_status not in [st.value for st in ProcedureStatus]:
-        return False, None, f"Invalid status value: {new_status}, valid values are: 0 (pending), 1 (in progress), 2 (completed)"
-    
-    # Validate status transition
-    current_status = procedure_obj.current_status
-    
-    # Completed procedures cannot be changed to other statuses
-    if current_status == ProcedureStatus.COMPLETED and new_status != ProcedureStatus.COMPLETED:
-        return False, None, "Completed procedures cannot be changed to other statuses"
-    
-    # Execute status update
-    updated_procedure = procedure.update_procedure_status(
-        db=db, procedure_id=procedure_id, new_status=new_status
-    )
-    
-    if not updated_procedure:
-        return False, None, "Status update failed"
-    
-    # Generate status transition message
-    status_names = {
-        ProcedureStatus.PENDING: "pending",
-        ProcedureStatus.IN_PROGRESS: "in progress",
-        ProcedureStatus.COMPLETED: "completed"
-    }
-    status_message = f"Procedure status changed from '{status_names[current_status]}' to '{status_names[new_status]}'"
-    
-    return True, updated_procedure, status_message
+    return procedure.create_procedures(db=db, order_id=order_id, procedures=procedure_objects)
 
 
-def batch_update_procedure_status(
+def update_procedure_status(
     db: Session, 
     updates: List[Dict[str, int]]
 ) -> List[Dict]:
-    """
-    Batch update multiple procedure statuses
-    
-    Args:
-        db: Database session
-        updates: List containing multiple procedure update information, each dict contains procedure_id and new_status
-               Example: [{"procedure_id": 1, "new_status": 2}, {"procedure_id": 2, "new_status": 1}]
-        
-    Returns:
-        List[Dict]: List of update results for each procedure, including success/failure information and details
-    """
+    """ Update the status of procedures """
     results = []
     to_update = []  # List of procedures to update
     status_names = {
@@ -165,14 +142,14 @@ def batch_update_procedure_status(
     # Step 1: Check each procedure, only process those that need status changes
     for update_info in updates:
         procedure_id = update_info.get("procedure_id")
-        new_status = update_info.get("new_status")
+        new_status = update_info.get("status")
         
         # Check required fields
         if procedure_id is None or new_status is None:
             results.append({
                 "procedure_id": procedure_id,
                 "success": False,
-                "message": "Missing required information: procedure_id or new_status",
+                "message": "Missing required information: procedure_id or status",
                 "procedure_text": None
             })
             continue
@@ -231,11 +208,8 @@ def batch_update_procedure_status(
     
     # Step 2: Batch update procedures that need status changes
     if to_update:
-        # Prepare batch update data
         update_data = [{"procedure_id": u["procedure_id"], "new_status": u["new_status"]} for u in to_update]
-        
-        # Execute batch update
-        updated_procedures = procedure.batch_update_procedure_status(db=db, updates=update_data)
+        updated_procedures = procedure.update_procedure_status(db=db, updates=update_data)
         
         # Process update results
         for i, proc in enumerate(updated_procedures):
