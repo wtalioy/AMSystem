@@ -5,7 +5,7 @@ from app.dbrm import Session
 
 from app.services import user_service
 from app.api import deps
-from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate
+from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate, Admin
 
 router = APIRouter()
 
@@ -90,7 +90,7 @@ def update_user_me(
 def read_user_by_id(
     user_id: str,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get a specific user by id
@@ -113,7 +113,7 @@ def read_users(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(deps.get_current_admin),
+    current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Retrieve users (admin only)

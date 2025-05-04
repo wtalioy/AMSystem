@@ -13,9 +13,9 @@ __all__ = [
     "Distribute", "DistributeCreate", "DistributeUpdate", "DistributeInDB",
     
     "Log", "LogCreate", "LogUpdate", "LogInDB",
-    
-    "Order", "OrderCreate", "OrderUpdate", "OrderInDB",
-    
+
+    "Order", "OrderCreate", "OrderUpdate", "OrderInDB", "OrderToCustomer", "OrderToWorker", "OrderToAdmin", "OrderPending"
+
     "Procedure", "ProcedureCreate", "ProcedureUpdate", "ProcedureInDB",
     
     "Token", "TokenPayload",

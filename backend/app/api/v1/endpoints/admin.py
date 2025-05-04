@@ -62,7 +62,7 @@ def update_wage(
     )
 
 
-@router.post("/distribute-payment", response_model=Distribute)
+@router.post("/distribute", response_model=Distribute)
 def distribute_payment(
     *,
     db: Session = Depends(deps.get_db),
@@ -95,20 +95,22 @@ def get_car_type_statistics(
 @router.get("/statistics/worker-types", response_model=List[dict])
 def get_worker_statistics(
     db: Session = Depends(deps.get_db),
+    start_time: str = Body(...),
+    end_time: str = Body(...),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get statistics about worker types, their tasks, and productivity
     """
-    return statistics_service.get_worker_statistics(db)
+    return statistics_service.get_worker_statistics(db, start_time=start_time, end_time=end_time)
 
 
-@router.get("/statistics/pending-orders", response_model=List[dict])
-def get_pending_orders(
+@router.get("/statistics/orders/progress", response_model=List[dict])
+def get_in_progress_orders(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
-    Get all pending orders and their details
+    Get all in-progress orders and their details
     """
-    return statistics_service.get_pending_orders_statistics(db)
+    return statistics_service.get_in_progress_orders_statistics(db)

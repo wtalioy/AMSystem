@@ -3,7 +3,7 @@ from app.dbrm import Session
 from decimal import Decimal
 
 from app.crud import order, car, log, procedure, worker, wage
-from app.schemas import Order, OrderCreate, Procedure, ProcedureCreate
+from app.schemas import Order, OrderCreate, Procedure, ProcedureCreate, OrderToCustomer, OrderToAdmin
 
 
 def create_order(db: Session, obj_in: OrderCreate, customer_id: str) -> Order:
@@ -26,14 +26,14 @@ def get_order_by_id(db: Session, order_id: str) -> Optional[Order]:
 
 def get_orders_for_customer(
     db: Session, customer_id: str, skip: int = 0, limit: int = 100
-) -> List[Order]:
+) -> List[OrderToCustomer]:
     """Get all orders for a customer"""
     return order.get_orders_by_customer(
         db, customer_id=customer_id, skip=skip, limit=limit
     )
 
 
-def get_all_orders(db: Session, skip: int = 0, limit: int = 100) -> List[Order]:
+def get_all_orders(db: Session, skip: int = 0, limit: int = 100) -> List[OrderToAdmin]:
     """Get all orders (admin function)"""
     return order.get_multi(db, skip=skip, limit=limit)
 
@@ -47,7 +47,7 @@ def update_order_status(db: Session, order_id: str, new_status: int) -> Optional
 
 def add_customer_feedback(
     db: Session, order_id: str, rating: int, comment: Optional[str] = None
-) -> Optional[Order]:
+) -> Optional[OrderToCustomer]:
     """Add customer feedback to an order"""
     return order.add_customer_feedback(
         db=db, order_id=order_id, rating=rating, comment=comment
