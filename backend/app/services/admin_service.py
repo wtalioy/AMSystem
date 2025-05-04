@@ -1,7 +1,16 @@
 from typing import List
 from app.dbrm import Session
 
-from app.crud import car, order, log, user, procedure
+from app.crud import car, order, log, user, procedure, distribute
+from app.schemas import Distribute
+
+
+def get_all_distributions(db: Session) -> List[Distribute]:
+    """
+    Get all distribution records
+    """
+    distributions = distribute.get_all_distributions(db)
+    return distributions
 
 
 def get_car_type_statistics(db: Session) -> List[dict]:
