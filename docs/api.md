@@ -2,7 +2,7 @@
 
 ## 概述
 
-汽车维修系统(Automobile Maintenance System) API 提供了一套完整的RESTful接口，用于管理汽车维修业务流程。系统支持用户认证、客户车辆管理、订单处理、工人工作分配与工资管理等功能。
+汽车维修系统(Automobile Maintenance System) API 提供了一套完整的RESTful接口，用于管理汽车维修业务流程。系统支持用户认证、客户车辆管理、订单处理、技师工作分配与工资管理等功能。
 
 **基础URL**: `http://localhost:8000/api/v1`
 
@@ -80,9 +80,9 @@ POST /users/register/worker
 
 ```json
 {
-  "user_id": "工人ID",
+  "user_id": "技师ID",
   "worker_type": 1,
-  "user_name": "工人姓名",
+  "user_name": "技师姓名",
   "password": "密码",
   "phone": "电话号码"
 }
@@ -266,7 +266,15 @@ GET /orders/{order_id}
 
 **响应**: 返回指定订单的详细信息
 
-### 更新订单状态 (工人/管理员)
+### 获取订单维修流程
+
+```
+GET /orders/{order_id}/procedures
+```
+
+**响应**: 返回指定订单的所有维修流程
+
+### 更新订单状态 (技师/管理员)
 
 ```
 PUT /orders/status
@@ -306,7 +314,7 @@ POST /orders/feedback
 
 **响应**: 返回更新后的订单信息
 
-## 工人操作
+## 技师操作
 
 ### 记录维修日志
 
@@ -327,7 +335,7 @@ POST /workers/logs
 
 **响应**: 返回新创建的维修日志
 
-### 获取工人日志
+### 获取技师日志
 
 ```
 GET /workers/logs?skip=0&limit=100
@@ -337,7 +345,7 @@ GET /workers/logs?skip=0&limit=100
 - `skip`: 跳过的记录数，默认为0
 - `limit`: 返回的最大记录数，默认为100
 
-**响应**: 返回当前工人的维修日志列表
+**响应**: 返回当前技师的维修日志列表
 
 ### 获取工资率
 
@@ -345,17 +353,17 @@ GET /workers/logs?skip=0&limit=100
 GET /workers/wage/rate
 ```
 
-**响应**: 返回当前工人类型的小时工资率
+**响应**: 返回当前技师类型的小时工资率
 
-### 计算工人收入
+### 计算技师收入
 
 ```
 GET /workers/wage/income
 ```
 
-**响应**: 返回当前工人的收入统计
+**响应**: 返回当前技师的收入统计
 
-### 获取工人订单
+### 获取技师订单
 
 ```
 GET /workers/orders/owned?skip=0&limit=100
@@ -365,7 +373,7 @@ GET /workers/orders/owned?skip=0&limit=100
 - `skip`: 跳过的记录数，默认为0
 - `limit`: 返回的最大记录数，默认为100
 
-**响应**: 返回分配给当前工人的订单列表
+**响应**: 返回分配给当前技师的订单列表
 
 ### 获取待处理订单
 
@@ -379,7 +387,7 @@ GET /workers/orders/pending?skip=0&limit=100
 
 **响应**: 返回系统中待处理的订单列表
 
-### 接受订单并创建维修程序
+### 接受订单并创建维修流程
 
 ```
 POST /workers/order/accept
@@ -394,12 +402,23 @@ POST /workers/order/accept
 }
 ```
 
-**响应**: 返回创建的维修程序信息
+**响应**: 返回创建的维修流程信息
 
-### 更新维修程序状态
+### 获取订单维修流程
 
 ```
-PUT /workers/procedures
+GET /workers/order/procedures?order_id=订单ID
+```
+
+**查询参数**:
+- `order_id`: 订单ID
+
+**响应**: 返回订单的所有维修流程
+
+### 更新维修流程状态
+
+```
+PUT /workers/order/procedures
 ```
 
 **请求体**:
@@ -495,7 +514,7 @@ POST /admin/wage/distribute
 
 ```json
 {
-  "worker_id": "工人ID",
+  "worker_id": "技师ID",
   "amount": 1000.5
 }
 ```
@@ -513,19 +532,14 @@ GET /admin/statistics/car-types
 ### 获取工人统计
 
 ```
-POST /admin/statistics/worker-types
+GET /admin/statistics/worker-types
 ```
 
-**请求体**:
+**请求参数**:
+- `start_time`: 起始时间
+- `end_time`: 结束时间
 
-```json
-{
-  "start_time": "2023-01-01",
-  "end_time": "2023-12-31"
-}
-```
-
-**响应**: 返回工人类型、任务和生产力的统计信息
+**响应**: 返回技师类型、任务和生产力的统计信息
 
 ### 获取未完成订单
 
@@ -548,26 +562,21 @@ GET /admin/statistics/orders/incomplete
 
 ### 用户类型
 - `customer`: 客户
-- `worker`: 工人
+- `worker`: 技师
 - `administrator`: 管理员
 
-### 工人类型
+### 技师类型
 - `1`: 机械师
-- `2`: 电气工人
-- `3`: 钣金工人
-- `4`: 喷漆工人
+- `2`: 电气技师
+- `3`: 钣金技师
+- `4`: 喷漆技师
 
 ### 订单状态
 - `0`: 待处理
 - `1`: 处理中
 - `2`: 已完成
 
-### 程序状态
+### 流程状态
 - `0`: 待处理
 - `1`: 处理中
 - `2`: 已完成
-
-### 紧急程度
-- `0`: 普通
-- `1`: 加急
-- `2`: 特急
