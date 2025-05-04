@@ -133,6 +133,7 @@ class Select:
         return self
     
     def group_by(self, *columns):
+        columns = [f"{col.parent.__tablename__}.{col.name}" for col in columns if hasattr(col, 'parent')]
         self.group_by_columns.extend(columns)
         return self
     

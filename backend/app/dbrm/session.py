@@ -126,11 +126,13 @@ class Session:
             raise
         finally:
             self._transaction_level -= 1
-            
-    def query(self, model_class) -> 'Select':
+
+    def query(self, col_or_model_class) -> 'Select':
         from .query import Select
-        return Select(session=self).from_(model_class)
-            
+        if hasattr(col_or_model_class, 'parent'):
+            return Select(col_or_model_class, session=self).from__(col_or_model_class.parent)
+        return Select(session=self).from_(col_or_model_class)
+
     def add(self, obj):
         if hasattr(obj, 'save'):
             obj.save(self)

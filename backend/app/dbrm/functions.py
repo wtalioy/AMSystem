@@ -1,20 +1,19 @@
 class FunctionExpression:
     
-    def __init__(self, name, *args, distinct=False):
+    def __init__(self, name, col, distinct=False):
         self.name = name
-        self.args = args
+        self.col = col
         self.distinct = distinct
+        self.parent = col.parent if hasattr(col, 'parent') else None
     
     def __str__(self):
-        if not self.args:
+        if not self.col:
             return f"{self.name}()"
-            
-        if self.distinct and len(self.args) == 1:
-            return f"DISTINCT {self.args[0]}"
-        else:
-            args_str = ", ".join(str(arg) for arg in self.args)
-            
-        return f"{self.name}({args_str})"
+
+        if self.distinct:
+            return f"DISTINCT {self.col}"
+
+        return f"{self.name}({self.col})"
 
 
 class Function:
@@ -23,8 +22,8 @@ class Function:
         return FunctionExpression(None, column, distinct=True)
     
     def __getattr__(self, name):
-        def function_generator(*args):
-            return FunctionExpression(name.upper(), *args)
+        def function_generator(col):
+            return FunctionExpression(name.upper(), col)
         return function_generator
 
 
