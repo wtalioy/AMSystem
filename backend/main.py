@@ -1,7 +1,7 @@
 import sys
 import logging
 from pathlib import Path
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 
 # Add the parent directory to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -31,7 +31,7 @@ def init_db():
         logger.error(f"Fail to initialize database: {str(e)}")
         return []
 
-@contextmanager
+@asynccontextmanager
 async def startup_db_client(app: FastAPI):
     logger.info("Initializing database...")
     try:
