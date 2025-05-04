@@ -113,7 +113,7 @@ class CRUDProcedure(CRUDBase[ServiceProcedure, ProcedureCreate, ProcedureUpdate]
     
 
     def get_procedure_progress(self, db: Session, order_id: str) -> Dict[str, int]:
-        procedures = self.get_procedures_by_order(db, order_id=order_id)
+        procedures = self.get_procedures_by_order(db, order_id=order_id) or []
         
         completed_procedures = sum(1 for p in procedures if p.current_status == 2)
         total_procedures = len(procedures)

@@ -14,14 +14,14 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         return db.query(Log).filter_by(
             order_id=order_id
         ).order_by_desc(Log.log_time).offset(skip).limit(limit).all()
-        
+    
     def get_logs_by_worker(
         self, db: Session, worker_id: str, skip: int = 0, limit: int = 100
     ) -> List[Log]:
         return db.query(Log).filter_by(
             worker_id=worker_id
         ).order_by_desc(Log.log_time).offset(skip).limit(limit).all()
-    
+        
     def calculate_avg_cost_by_car_type(self, db: Session, car_type: int) -> float:
         from app.models.order import ServiceOrder
         from app.models.car import Car
@@ -36,6 +36,19 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         ).scalar()
         
         return float(cost_result) if cost_result else 0
+    
+    def get_car_type_consumption(self, db: Session, car_type: int) -> List[tuple]:
+        from app.models.order import ServiceOrder
+        from app.models.car import Car
+        from app.dbrm import Condition
+        
+        return db.query(Log.consumption).join(
+            ServiceOrder, on=(ServiceOrder.order_id, Log.order_id)
+        ).join(
+            Car, on=(Car.car_id, ServiceOrder.car_id)
+        ).where(
+            Condition.eq(Car.car_type, car_type)
+        ).all()
 
     def count_tasks_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
         from app.models.user import Worker

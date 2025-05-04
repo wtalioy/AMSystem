@@ -88,7 +88,10 @@ class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
             db.commit()
             db.refresh(db_obj)
         return db_obj
-
+    
+    def get_total_orders_count(self, db: Session) -> int:
+        return db.query(func.count(ServiceOrder.order_id)).scalar() or 0
+    
     def count_orders_by_car_type(self, db: Session, car_type: int) -> int:
         from app.models.car import Car
         from app.dbrm import Condition
@@ -106,6 +109,12 @@ class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
 
     def get_completed_orders(self, db: Session, skip: int = 0, limit: int = 100) -> List[ServiceOrder]:
         return db.query(ServiceOrder).filter_by(status=2).offset(skip).limit(limit).all()
+    
+    def get_incomplete_orders(self, db: Session, skip: int = 0, limit: int = 100) -> List[ServiceOrder]:
+        from app.dbrm import Condition
+        return db.query(ServiceOrder).filter(
+            Condition.lt(ServiceOrder.status, 2)
+        ).offset(skip).limit(limit).all()
 
 
 order = CRUDOrder(ServiceOrder)

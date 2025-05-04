@@ -15,14 +15,16 @@ def get_car_type_statistics(db: Session) -> List[dict]:
         car_count = car.count_cars_by_type(db, car_type)
         order_count = order.count_orders_by_car_type(db, car_type)
         avg_cost = log.calculate_avg_cost_by_car_type(db, car_type)
+        repair_frequency = (order_count / car_count) * 100 if car_count > 0 else 0
 
         result.append({
             "car_type": car_type,
             "car_count": car_count,
             "repair_count": order_count,
-            "average_repair_cost": avg_cost
+            "average_repair_cost": avg_cost,
+            "repair_frequency": repair_frequency
         })
-    
+
     return result
 
 
@@ -52,11 +54,11 @@ def get_worker_statistics(db: Session, start_time: str, end_time: str) -> List[d
     return result
 
 
-def get_in_progress_orders_statistics(db: Session) -> List[dict]:
+def get_incomplete_orders_statistics(db: Session) -> List[dict]:
     """
     Get all pending orders and their details
     """
-    in_progress_orders = order.get_in_progress_orders(db)
+    in_progress_orders = order.get_incomplete_orders(db)
 
     result = []
     for order_item in in_progress_orders:
@@ -65,8 +67,6 @@ def get_in_progress_orders_statistics(db: Session) -> List[dict]:
         progress_info = procedure.get_procedure_progress(db, order_id=order_item.order_id)
         completed_procedures = progress_info["completed"]
         total_procedures = progress_info["total"]
-        
-        progress = (completed_procedures / total_procedures * 100) if total_procedures > 0 else 0
         
         result.append({
             "order_id": order_item.order_id,
@@ -78,7 +78,6 @@ def get_in_progress_orders_statistics(db: Session) -> List[dict]:
             "status": order_item.status,
             "procedures_count": total_procedures,
             "completed_procedures": completed_procedures,
-            "progress_percentage": progress
         })
     
     return result

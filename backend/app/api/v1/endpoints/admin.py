@@ -7,6 +7,7 @@ from app.dbrm import Session
 from app.api import deps
 from app.services import statistics_service, wage_service, worker_service
 from app.schemas import Wage, WageCreate, Distribute, Admin
+from app.crud import log
 
 router = APIRouter()
 
@@ -105,12 +106,12 @@ def get_worker_statistics(
     return statistics_service.get_worker_statistics(db, start_time=start_time, end_time=end_time)
 
 
-@router.get("/statistics/orders/progress", response_model=List[dict])
-def get_in_progress_orders(
+@router.get("/statistics/orders/incomplete", response_model=List[dict])
+def get_incomplete_orders(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
-    Get all in-progress orders and their details
+    Get all incomplete orders and their details
     """
-    return statistics_service.get_in_progress_orders_statistics(db)
+    return statistics_service.get_incomplete_orders_statistics(db)
