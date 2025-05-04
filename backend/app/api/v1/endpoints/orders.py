@@ -4,8 +4,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from app.dbrm import Session
 
 from app.api import deps
-from app.services import car_service, order_service
-from app.schemas import User, Customer, Order, OrderCreate
+from app.services import car_service, order_service, procedure_service
+from app.schemas import User, Customer, Order, OrderCreate, Procedure
 
 router = APIRouter()
 
@@ -87,6 +87,28 @@ def read_order(
         raise HTTPException(status_code=400, detail="Not enough permissions")
     
     return order
+
+
+@router.get("/{order_id}/procedures", response_model=List[Procedure])
+def read_order_procedures(
+    *,
+    db: Session = Depends(deps.get_db),
+    order_id: str,
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Get all procedures for a specific order.
+    - If current user is customer, verify they own the order
+    - If current user is admin, allow access to any order
+    """
+    order = order_service.get_order_by_id(db=db, order_id=order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    return procedure_service.get_procedure_progress(db=db, order_id=order_id)
 
 
 @router.put("/status", response_model=Order)

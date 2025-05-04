@@ -4,9 +4,9 @@ from decimal import Decimal
 from fastapi import APIRouter, Body, Depends, HTTPException
 from app.dbrm import Session
 
-from app.services import worker_service
+from app.services import worker_service, procedure_service
 from app.api import deps
-from app.schemas import Log, Worker, OrderToWorker, OrderPending
+from app.schemas import Log, Worker, OrderToWorker, OrderPending, Procedure
 
 router = APIRouter()
 
@@ -93,7 +93,7 @@ def get_orders_for_worker(
     """
     Retrieve orders owned by the current worker
     """
-    return worker_service.get_orders_for_worker(
+    return worker_service.get_owner_orders(
         db=db, worker_id=current_user.user_id, skip=skip, limit=limit
     )
 
@@ -137,14 +137,26 @@ def accept_order(
     - procedures: A list of strings (one or more)
     """
     try:
-        return worker_service.create_procedures(
+        return procedure_service.create_procedures(
             db=db, order_id=order_id, procedures=procedures, worker_id=current_user.user_id
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+@router.get("/order/procedures", response_model=List[Procedure])
+def get_procedures_for_order(
+    *,
+    db: Session = Depends(deps.get_db),
+    order_id: str
+) -> Any:
+    """
+    Retrieve all procedures for a specific order
+    """
+    return procedure_service.get_procedure_progress(db=db, order_id=order_id)
 
 
-@router.put("/procedures", response_model=List[dict])
+@router.put("/order/procedures", response_model=List[dict])
 def update_procedure_status(
     *,
     db: Session = Depends(deps.get_db),
@@ -178,7 +190,7 @@ def update_procedure_status(
         raise HTTPException(status_code=400, detail="Please provide a list of procedures to update")
     
     # Call service layer batch update function
-    results = worker_service.update_procedure_status(
+    results = procedure_service.update_procedure_status(
         db=db, updates=updates
     )
     

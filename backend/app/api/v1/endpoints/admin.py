@@ -108,7 +108,7 @@ def distribute_payment(
     Record a payment distribution to a worker
     """
     try:
-        return worker_service.distribute_payment(
+        return admin_service.distribute_payment(
             db=db, worker_id=worker_id, amount=Decimal(str(amount))
         )
     except ValueError as e:
