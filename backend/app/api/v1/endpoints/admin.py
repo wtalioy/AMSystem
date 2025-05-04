@@ -10,7 +10,7 @@ from app.schemas import Wage, WageCreate, Distribute, Admin
 
 router = APIRouter()
 
-@router.post("/wages", response_model=Wage)
+@router.post("/wage/rate", response_model=Wage)
 def create_wage(
     *,
     db: Session = Depends(deps.get_db),
@@ -31,7 +31,7 @@ def create_wage(
     return wage_service.create_wage(db=db, obj_in=wage_in)
 
 
-@router.get("/wages", response_model=List[Wage])
+@router.get("/wage/rate", response_model=List[Wage])
 def read_wages(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -42,7 +42,7 @@ def read_wages(
     return wage_service.get_all_wages(db=db)
 
 
-@router.put("/wages/{worker_type}", response_model=Wage)
+@router.put("/wage/rate/{worker_type}", response_model=Wage)
 def update_wage(
     *,
     db: Session = Depends(deps.get_db),
@@ -62,7 +62,7 @@ def update_wage(
     )
 
 
-@router.post("/distribute", response_model=Distribute)
+@router.post("/wage/distribute", response_model=Distribute)
 def distribute_payment(
     *,
     db: Session = Depends(deps.get_db),
