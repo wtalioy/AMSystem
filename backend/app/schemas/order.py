@@ -1,7 +1,6 @@
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, field_validator
-from app.schemas import Procedure
 
 
 # Shared properties
@@ -50,21 +49,6 @@ class Order(OrderInDBBase):
     pass
 
 
-# Properties to return to customers
-class OrderToCustomer(OrderBase):
-    order_id: str
-    worker_id: Optional[str] = None
-    start_time: datetime
-    end_time: Optional[datetime] = None
-    rating: Optional[int] = None
-    comment: Optional[str] = None
-    status: int  # 0: pending, 1: in progress, 2: completed
-    procedures: List["Procedure"] = []
-
-    class Config:
-        orm_mode = True
-
-
 # Properties to return to workers
 class OrderToWorker(OrderBase):
     order_id: str
@@ -73,7 +57,14 @@ class OrderToWorker(OrderBase):
     rating: Optional[int] = None
     comment: Optional[str] = None
     status: int  # 0: pending, 1: in progress, 2: completed
-    procedures: List["Procedure"] = []
+
+    class Config:
+        orm_mode = True
+
+
+# Properties to return to customers
+class OrderToCustomer(OrderToWorker):
+    worker_id: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -88,7 +79,7 @@ class OrderPending(OrderBase):
 
 
 # Properties to return to admins
-class OrderToAdmin(OrderToWorker):
+class OrderToAdmin(OrderToCustomer):
     customer_id: str
 
     class Config:
