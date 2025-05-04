@@ -33,18 +33,6 @@ def get_orders_for_customer(
     )
 
 
-def get_all_orders(db: Session, skip: int = 0, limit: int = 100) -> List[OrderToAdmin]:
-    """Get all orders (admin function)"""
-    return order.get_multi(db, skip=skip, limit=limit)
-
-
-def update_order_status(db: Session, order_id: str, new_status: int) -> Optional[Order]:
-    """Update the status of an order"""
-    return order.update_order_status(
-        db=db, order_id=order_id, new_status=new_status
-    )
-
-
 def add_customer_feedback(
     db: Session, order_id: str, rating: int, comment: Optional[str] = None
 ) -> Optional[OrderToCustomer]:

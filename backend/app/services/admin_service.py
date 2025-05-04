@@ -1,8 +1,21 @@
-from typing import List
+from typing import List, Optional
+from decimal import Decimal
 from app.dbrm import Session
 
-from app.crud import car, order, log, user, procedure, distribute
-from app.schemas import Distribute
+from app.crud import car, order, log, user, procedure, distribute, worker
+from app.schemas import Distribute, OrderToAdmin, Order, DistributeCreate
+
+
+def get_all_orders(db: Session, skip: int = 0, limit: int = 100) -> List[OrderToAdmin]:
+    """Get all orders (admin function)"""
+    return order.get_multi(db, skip=skip, limit=limit)
+
+
+def update_order_status(db: Session, order_id: str, new_status: int) -> Optional[Order]:
+    """Update the status of an order"""
+    return order.update_order_status(
+        db=db, order_id=order_id, new_status=new_status
+    )
 
 
 def get_all_distributions(db: Session) -> List[Distribute]:
@@ -90,3 +103,18 @@ def get_incomplete_orders_statistics(db: Session) -> List[dict]:
         })
     
     return result
+
+
+def distribute_payment(db: Session, worker_id: str, amount: Decimal) -> Distribute:
+    """Record a payment distribution to a worker"""
+    # Verify worker exists
+    worker_obj = worker.get_by_id(db, worker_id=worker_id)
+    if not worker_obj:
+        raise ValueError("Worker does not exist")
+    
+    # Create distribution
+    distribute_in = DistributeCreate(
+        amount=amount,
+        worker_id=worker_id
+    )
+    return distribute.create_distribution(db=db, obj_in=distribute_in)
