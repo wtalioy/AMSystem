@@ -121,7 +121,7 @@ class Session:
                 self.commit()
         except Exception as e:
             if self._transaction_level == 1:
-                logger.error(f"事务执行异常，回滚: {e}")
+                logger.error(f"Transaction failed: {e}")
                 self.rollback()
             raise
         finally:
