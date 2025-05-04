@@ -77,11 +77,13 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     def get_all_worker_types(self, db: Session) -> List[Tuple[int]]:
         return db.query(func.distinct(Worker.worker_type)).all()
-    
-    def count_workers_by_type(self, db: Session, worker_type: int) -> int:
+
+    def count_workers_by_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
         from app.dbrm import Condition
         return db.query(func.count(Worker.user_id)).where(
-            Condition.eq(Worker.worker_type, worker_type)
+            Condition.eq(Worker.worker_type, worker_type),
+            Condition.ge(Worker.created_at, start_time),
+            Condition.le(Worker.created_at, end_time)
         ).scalar() or 0
 
 

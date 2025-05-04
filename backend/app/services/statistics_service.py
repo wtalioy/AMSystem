@@ -26,7 +26,7 @@ def get_car_type_statistics(db: Session) -> List[dict]:
     return result
 
 
-def get_worker_statistics(db: Session) -> List[dict]:
+def get_worker_statistics(db: Session, start_time: str, end_time: str) -> List[dict]:
     """
     Get statistics about worker types, their tasks, and productivity
     """
@@ -34,9 +34,9 @@ def get_worker_statistics(db: Session) -> List[dict]:
 
     result = []
     for worker_type, in worker_types:
-        worker_count = user.count_workers_by_type(db, worker_type)
-        task_count = log.count_tasks_by_worker_type(db, worker_type)
-        total_hours = log.calculate_total_hours_by_worker_type(db, worker_type)
+        worker_count = user.count_workers_by_type(db, worker_type, start_time, end_time)
+        task_count = log.count_tasks_by_worker_type(db, worker_type, start_time, end_time)
+        total_hours = log.calculate_total_hours_by_worker_type(db, worker_type, start_time, end_time)
 
         wage = wage.get_by_type(db, worker_type=worker_type)
         
@@ -52,30 +52,30 @@ def get_worker_statistics(db: Session) -> List[dict]:
     return result
 
 
-def get_pending_orders_statistics(db: Session) -> List[dict]:
+def get_in_progress_orders_statistics(db: Session) -> List[dict]:
     """
     Get all pending orders and their details
     """
-    pending_orders = order.get_pending_orders(db)
+    in_progress_orders = order.get_in_progress_orders(db)
 
     result = []
-    for order in pending_orders:
-        car = car.get_by_car_id(db, car_id=order.car_id)
+    for order_item in in_progress_orders:
+        car = car.get_by_car_id(db, car_id=order_item.car_id)
 
-        progress_info = procedure.get_procedure_progress(db, order_id=order.order_id)
+        progress_info = procedure.get_procedure_progress(db, order_id=order_item.order_id)
         completed_procedures = progress_info["completed"]
         total_procedures = progress_info["total"]
         
         progress = (completed_procedures / total_procedures * 100) if total_procedures > 0 else 0
         
         result.append({
-            "order_id": order.order_id,
-            "car_id": order.car_id,
+            "order_id": order_item.order_id,
+            "car_id": order_item.car_id,
             "car_type": car.car_type if car else None,
-            "customer_id": order.customer_id,
-            "start_time": order.start_time,
-            "description": order.description,
-            "status": order.status,
+            "customer_id": order_item.customer_id,
+            "start_time": order_item.start_time,
+            "description": order_item.description,
+            "status": order_item.status,
             "procedures_count": total_procedures,
             "completed_procedures": completed_procedures,
             "progress_percentage": progress

@@ -37,26 +37,30 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         
         return float(cost_result) if cost_result else 0
 
-    def count_tasks_by_worker_type(self, db: Session, worker_type: int) -> int:
+    def count_tasks_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
         from app.models.user import Worker
         from app.dbrm import Condition
         
         return db.query(func.count(Log.id)).join(
             Worker, on=(Worker.user_id, Log.worker_id)
         ).where(
-            Condition.eq(Worker.worker_type, worker_type)
+            Condition.eq(Worker.worker_type, worker_type),
+            Condition.ge(Log.log_time, start_time),
+            Condition.le(Log.log_time, end_time)
         ).scalar() or 0
-    
-    def calculate_total_hours_by_worker_type(self, db: Session, worker_type: int) -> float:
+
+    def calculate_total_hours_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> float:
         from app.models.user import Worker
         from app.dbrm import Condition
 
         hours_result = db.query(func.sum(Log.duration)).join(
             Worker, on=(Worker.user_id, Log.worker_id)
         ).where(
-            Condition.eq(Worker.worker_type, worker_type)
+            Condition.eq(Worker.worker_type, worker_type),
+            Condition.ge(Log.log_time, start_time),
+            Condition.le(Log.log_time, end_time)
         ).scalar()
-        
+
         return float(hours_result) if hours_result else 0
 
     def create_log_for_order(
