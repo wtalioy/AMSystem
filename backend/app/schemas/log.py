@@ -9,7 +9,6 @@ class LogBase(BaseModel):
     consumption: str
     cost: Decimal
     duration: Decimal
-    order_id: str
 
 
 # Properties to receive via API on creation
