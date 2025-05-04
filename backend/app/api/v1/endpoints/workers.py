@@ -6,7 +6,7 @@ from app.dbrm import Session
 
 from app.services import worker_service
 from app.api import deps
-from app.schemas import Log, Worker
+from app.schemas import Log, Worker, OrderToWorker, OrderPending
 
 router = APIRouter()
 
@@ -51,7 +51,23 @@ def read_worker_logs(
     )
 
 
-@router.get("/income", response_model=dict)
+@router.get("/wage/rate", response_model=Decimal)
+def get_worker_wage_rate(
+    db: Session = Depends(deps.get_db),
+    current_user: Worker = Depends(deps.get_current_worker),
+) -> Any:
+    """
+    Retrieve the wage rate for the current worker type
+    """
+    try:
+        return worker_service.get_wage_rate(
+            db=db, worker_type=current_user.worker_type
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/wage/income", response_model=dict)
 def calculate_worker_income(
     db: Session = Depends(deps.get_db),
     current_user: Worker = Depends(deps.get_current_worker),
@@ -65,42 +81,40 @@ def calculate_worker_income(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
 
-
-@router.put("/procedures/{procedure_id}", response_model=dict)
-def update_procedure_status(
-    *,
+@router.get("/orders/owned", response_model=List[OrderToWorker])
+def get_orders_for_worker(
     db: Session = Depends(deps.get_db),
-    procedure_id: int,
-    new_status: int = Body(..., embed=True),
+    skip: int = 0,
+    limit: int = 100,
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Update procedure status
-    
-    Status codes:
-    - 0: pending
-    - 1: in progress
-    - 2: completed
+    Retrieve orders owned by the current worker
     """
-    success, procedure_obj, message = worker_service.update_procedure_status(
-        db=db, procedure_id=procedure_id, new_status=new_status
+    return worker_service.get_orders_for_worker(
+        db=db, worker_id=current_user.user_id, skip=skip, limit=limit
     )
-    
-    if not success:
-        raise HTTPException(status_code=400, detail=message)
-    
-    return {
-        "success": True, 
-        "procedure_id": procedure_id, 
-        "new_status": new_status,
-        "message": message,
-        "procedure_text": procedure_obj.procedure_text if procedure_obj else ""
-    }
 
 
-@router.post("/procedures/create", response_model=Any)
-def create_procedures(
+@router.get("/orders/pending", response_model=List[OrderPending])
+def get_pending_orders(
+    db: Session = Depends(deps.get_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: Worker = Depends(deps.get_current_worker),
+) -> Any:
+    """
+    Retrieve all pending orders available for workers
+    """
+    return worker_service.get_pending_orders(
+        db=db, skip=skip, limit=limit
+    )
+
+
+@router.post("/order/accept", response_model=Any)
+def accept_order(
     *,
     db: Session = Depends(deps.get_db),
     order_id: str = Body(...),
@@ -108,7 +122,7 @@ def create_procedures(
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Create maintenance procedures for an order
+    Accept an order and create procedures for it
     
     Request body format:
     ```
@@ -124,13 +138,13 @@ def create_procedures(
     """
     try:
         return worker_service.create_procedures(
-            db=db, order_id=order_id, procedures=procedures
+            db=db, order_id=order_id, procedures=procedures, worker_id=current_user.user_id
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/procedures/update", response_model=List[dict])
+@router.put("/procedures", response_model=List[dict])
 def update_procedure_status(
     *,
     db: Session = Depends(deps.get_db),

@@ -4,7 +4,7 @@ from enum import IntEnum
 from app.dbrm import Session
 
 from app.crud import order, log, distribute, procedure, wage, worker
-from app.schemas import LogCreate, Log, DistributeCreate, Distribute, Procedure, ProcedureCreate
+from app.schemas import LogCreate, Log, DistributeCreate, Distribute, Procedure, ProcedureCreate, OrderPending
 
 
 class ProcedureStatus(IntEnum):
@@ -41,6 +41,24 @@ def get_worker_logs(
 ) -> List[Log]:
     """Get all maintenance logs for a worker"""
     return log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
+
+
+def get_pending_orders(
+    db: Session, skip: int = 0, limit: int = 100
+) -> List[OrderPending]:
+    """Get all pending orders for workers"""
+    return order.get_pending_orders(
+        db, skip=skip, limit=limit
+    )
+
+
+def get_wage_rate(db: Session, worker_type: int) -> Decimal:
+    """Get the wage rate for a specific worker type"""
+    wage_obj = wage.get_by_type(db, worker_type=worker_type)
+    if not wage_obj:
+        raise ValueError("No wage rate found for this worker type")
+    
+    return Decimal(str(wage_obj.wage_per_hour))
 
 
 def calculate_worker_income(db: Session, worker_id: str) -> Dict:
@@ -89,14 +107,35 @@ def distribute_payment(db: Session, worker_id: str, amount: Decimal) -> Distribu
     return distribute.create_distribution(db=db, obj_in=distribute_in)
 
 
+def get_procedure_progress(
+    db: Session,
+    order_id: str
+) -> Procedure:
+    """Get all procedures for an order"""
+    # Verify order exists
+    order_obj = order.get_by_order_id(db, order_id=order_id)
+    if not order_obj:
+        raise ValueError("Order does not exist")
+    
+    # Get procedures for the order
+    procedures = procedure.get_procedures_by_order(db, order_id=order_id)
+    
+    # Check if there are any procedures
+    if not procedures:
+        raise ValueError("No procedures found for this order")
+    
+    return procedures
+
+
 def create_procedures(
     db: Session, 
     order_id: str, 
-    procedures: Any
+    procedures: Any,
+    worker_id: str
 ) -> Union[Procedure, List[Procedure]]:
     """ Create maintenance procedures for an order """
     # Verify order exists
-    order_obj = order.get_by_order_id(db, order_id=order_id)
+    order_obj = order.update_order_status(db, order_id=order_id, worker_id=worker_id)
     if not order_obj:
         raise ValueError(f"Order with ID {order_id} does not exist")
     
@@ -104,13 +143,7 @@ def create_procedures(
         raise ValueError("Please provide at least one procedure")
         
     procedure_objects = []
-    for proc_item in procedures:
-        # Handle both string and dict formats
-        if isinstance(proc_item, dict):
-            procedure_text = proc_item.get("procedure_text")
-        else:
-            procedure_text = proc_item
-        
+    for procedure_text in procedures:       
         # Validate required fields
         if not procedure_text:
             raise ValueError("Missing procedure text")
@@ -122,7 +155,7 @@ def create_procedures(
             current_status=ProcedureStatus.PENDING
         )
         procedure_objects.append(procedure_in)
-    
+
     return procedure.create_procedures(db=db, order_id=order_id, procedures=procedure_objects)
 
 
