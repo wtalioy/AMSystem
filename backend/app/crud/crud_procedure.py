@@ -11,6 +11,7 @@ class CRUDProcedure(CRUDBase[ServiceProcedure, ProcedureCreate, ProcedureUpdate]
     def get_by_id(self, db: Session, procedure_id: int) -> Optional[ServiceProcedure]:
         return db.query(ServiceProcedure).filter(ServiceProcedure.procedure_id == procedure_id).first()
     
+    
     def get_procedures_by_order(
         self, db: Session, order_id: str
     ) -> List[ServiceProcedure]:
