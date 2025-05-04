@@ -99,7 +99,11 @@ class Select:
         return self
     
     def where(self, condition):
-        self.where_clauses.append(condition)
+        if isinstance(condition, str):
+            self.where_clauses.append(condition)
+        elif isinstance(condition, tuple):
+            for cond in condition:
+                self.where_clauses.append(cond)
         return self
         
     def filter_by(self, **kwargs):
