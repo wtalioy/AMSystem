@@ -1,7 +1,7 @@
 from typing import List, Optional
 from decimal import Decimal
 
-from app.dbrm import Session
+from app.dbrm import Session, func
 
 from app.crud.base import CRUDBase
 from app.models.distribute import Distribute
@@ -31,8 +31,11 @@ class CRUDDistribute(CRUDBase[Distribute, DistributeCreate, DistributeUpdate]):
     
     def get_total_payment_for_worker(self, db: Session, worker_id: str) -> Decimal:
         """Get total payment amount for a worker"""
-        result = db.query(Distribute).filter_by(worker_id=worker_id).sum(Distribute.amount)
+        result = db.query(func.sum(Distribute.amount)).filter_by(worker_id=worker_id).scalar()
         return result if result else Decimal('0.0')
+    
+    def get_all_distributions(self, db: Session, skip: int = 0, limit: int = 100) -> List[Distribute]:
+        return db.query(Distribute).order_by(Distribute.distribute_time).offset(skip).limit(limit).all()
 
 
 distribute = CRUDDistribute(Distribute)
