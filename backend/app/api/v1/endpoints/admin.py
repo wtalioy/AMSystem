@@ -5,11 +5,33 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from app.dbrm import Session
 
 from app.api import deps
-from app.services import statistics_service, wage_service, worker_service
+from app.services import wage_service, worker_service, order_service
 from app.schemas import Wage, WageCreate, Distribute, Admin
-from app.crud import log
+from backend.app.services import admin_service
 
 router = APIRouter()
+
+@router.get("/cost", response_model=dict)
+def calculate_order_cost(
+    *,
+    db: Session = Depends(deps.get_db),
+    order_id: str = Body(...),
+    current_user: Admin = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Calculate the total cost for an order
+    """
+    # Verify order exists
+    order = order_service.get_order_by_id(db=db, order_id=order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Check permissions - customer can only check own orders
+    if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    return order_service.calculate_order_cost(db=db, order_id=order_id)
+
 
 @router.post("/wage/rate", response_model=Wage)
 def create_wage(
@@ -63,6 +85,17 @@ def update_wage(
     )
 
 
+@router.get("/wage/distribute", response_model=List[Distribute])
+def get_all_distributions(
+    db: Session = Depends(deps.get_db),
+    current_user: Admin = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Retrieve all payment distributions to workers
+    """
+    return admin_service.get_all_distributions(db=db)
+
+
 @router.post("/wage/distribute", response_model=Distribute)
 def distribute_payment(
     *,
@@ -90,7 +123,7 @@ def get_car_type_statistics(
     """
     Get statistics about car types, repairs, and costs
     """
-    return statistics_service.get_car_type_statistics(db)
+    return admin_service.get_car_type_statistics(db)
 
 
 @router.get("/statistics/worker-types", response_model=List[dict])
@@ -103,7 +136,7 @@ def get_worker_statistics(
     """
     Get statistics about worker types, their tasks, and productivity
     """
-    return statistics_service.get_worker_statistics(db, start_time=start_time, end_time=end_time)
+    return admin_service.get_worker_statistics(db, start_time=start_time, end_time=end_time)
 
 
 @router.get("/statistics/orders/incomplete", response_model=List[dict])
@@ -114,4 +147,4 @@ def get_incomplete_orders(
     """
     Get all incomplete orders and their details
     """
-    return statistics_service.get_incomplete_orders_statistics(db)
+    return admin_service.get_incomplete_orders_statistics(db)

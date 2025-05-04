@@ -108,7 +108,7 @@ def read_user_by_id(
     return user
 
 
-@router.get("/all", response_model=List[User])
+@router.get("/", response_model=List[User])
 def read_users(
     db: Session = Depends(deps.get_db),
     skip: int = 0,

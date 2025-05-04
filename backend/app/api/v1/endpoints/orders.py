@@ -5,7 +5,7 @@ from app.dbrm import Session
 
 from app.api import deps
 from app.services import car_service, order_service
-from app.schemas import User, Customer, Order, OrderCreate, Procedure
+from app.schemas import User, Customer, Order, OrderCreate
 
 router = APIRouter()
 
@@ -89,11 +89,11 @@ def read_order(
     return order
 
 
-@router.put("/{order_id}/status", response_model=Order)
+@router.put("/status", response_model=Order)
 def update_order_status(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str,
+    order_id: str = Body(...),
     new_status: int = Body(..., embed=True),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
@@ -115,11 +115,11 @@ def update_order_status(
     )
 
 
-@router.post("/{order_id}/feedback", response_model=Order)
+@router.post("/feedback", response_model=Order)
 def add_order_feedback(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str,
+    order_id: str = Body(...),
     rating: int = Body(...),
     comment: str = Body(None),
     current_user: User = Depends(deps.get_current_user),
@@ -142,50 +142,3 @@ def add_order_feedback(
     return order_service.add_customer_feedback(
         db=db, order_id=order_id, rating=rating, comment=comment
     )
-
-
-@router.post("/{order_id}/procedures", response_model=Procedure)
-def add_procedure(
-    *,
-    db: Session = Depends(deps.get_db),
-    order_id: str,
-    procedure_text: str = Body(..., embed=True),
-    current_user: User = Depends(deps.get_current_user),
-) -> Any:
-    """
-    Add a repair procedure to an order
-    """
-    # Verify order exists
-    order = order_service.get_order_by_id(db=db, order_id=order_id)
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Only workers and admins can add procedures
-    if current_user.user_type not in ["worker", "administrator"]:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-
-    return order_service.add_procedure_to_order(
-        db=db, order_id=order_id, procedure_text=procedure_text
-    )
-
-
-@router.get("/{order_id}/cost", response_model=dict)
-def calculate_order_cost(
-    *,
-    db: Session = Depends(deps.get_db),
-    order_id: str,
-    current_user: User = Depends(deps.get_current_user),
-) -> Any:
-    """
-    Calculate the total cost for an order
-    """
-    # Verify order exists
-    order = order_service.get_order_by_id(db=db, order_id=order_id)
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Check permissions - customer can only check own orders
-    if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-
-    return order_service.calculate_order_cost(db=db, order_id=order_id)
