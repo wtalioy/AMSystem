@@ -1,14 +1,30 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, cars, orders, workers, admin
+from app.api.v1.endpoints import (
+    auth, 
+    users, 
+    cars, 
+    orders, 
+    logs, 
+    wage, 
+    procedures, 
+    statistics,
+    payments
+)
 
 api_router = APIRouter()
-# Authentication endpoints
-api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
-# Main resource endpoints - all use plural nouns for collections
-api_router.include_router(users.router, prefix="/users", tags=["users"])
-api_router.include_router(cars.router, prefix="/cars", tags=["cars"])
-api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
-api_router.include_router(workers.router, prefix="/workers", tags=["workers"])
-# Administrative endpoints
-api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+
+# Core services
+api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+api_router.include_router(users.router, prefix="/users", tags=["Users"])
+api_router.include_router(cars.router, prefix="/cars", tags=["Cars"])
+
+# Order and Procedure management
+api_router.include_router(orders.router, prefix="/orders", tags=["Orders"])
+api_router.include_router(procedures.router, prefix="/procedures", tags=["Procedures"])
+
+# Worker and Admin specific functionalities
+api_router.include_router(logs.router, prefix="/logs", tags=["Maintenance Logs"])
+api_router.include_router(wage.router, prefix="/wage", tags=["Wage & Income"])
+api_router.include_router(statistics.router, prefix="/statistics", tags=["Statistics"])
+api_router.include_router(payments.router, prefix="/payments", tags=["Payments"])

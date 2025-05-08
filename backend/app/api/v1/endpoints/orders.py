@@ -4,8 +4,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Resp
 from app.dbrm import Session
 
 from app.api import deps
-from app.services import car_service, order_service, procedure_service
-from app.schemas import User, Customer, Order, OrderCreate, Procedure
+from app.services import car_service, order_service, worker_service
+from app.schemas import User, Customer, Order, OrderCreate, Worker, OrderToWorker, OrderPending, Admin
 
 router = APIRouter()
 
@@ -34,7 +34,7 @@ def create_order(
             db=db, obj_in=order_in, customer_id=current_user.user_id
         )
         # Add Location header for the newly created resource
-        response.headers["Location"] = f"/api/v1/orders/{order.order_id}"
+        response.headers["Location"] = f"/api/v1/orders/order?order_id={order.order_id}"
         return order
     except ValueError as e:
         raise HTTPException(
@@ -102,39 +102,66 @@ def get_order(
     return order
 
 
-# Order-related resources
-@router.get("/{order_id}/procedures", response_model=List[Procedure])
-def get_order_procedures(
+# Worker-specific order views
+@router.get("/assigned", response_model=List[OrderToWorker])
+def get_worker_assigned_orders(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str,
-    current_user: User = Depends(deps.get_current_user),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    status_filter: Optional[int] = Query(None, description="Filter by order status"),
+    current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Get all procedures associated with an order
+    Get orders assigned to the current worker
+    """
+    skip = (page - 1) * page_size
+    return worker_service.get_owner_orders( # Uses worker_service
+        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size, status=status_filter
+    )
+
+
+@router.get("/available", response_model=List[OrderPending])
+def get_worker_available_orders(
+    *,
+    db: Session = Depends(deps.get_db),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    current_user: Worker = Depends(deps.get_current_worker),
+) -> Any:
+    """
+    Get all available orders that workers can accept
+    """
+    skip = (page - 1) * page_size
+    return worker_service.get_pending_orders( # Uses worker_service
+        db=db, skip=skip, limit=page_size
+    )
+
+
+# Admin order cost calculation
+@router.get("/cost", response_model=dict) 
+def calculate_order_cost_admin(
+    *,
+    db: Session = Depends(deps.get_db),
+    order_id: str = Query(..., description="Order ID to calculate cost for"), 
+    current_user: Admin = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Calculate the total cost for an order (Admin access)
     """
     order = order_service.get_order_by_id(db=db, order_id=order_id)
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Order not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     
-    if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Not authorized to access this order's procedures"
-        )
-
-    return procedure_service.get_procedure_progress(db=db, order_id=order_id)
+    return order_service.calculate_order_cost(db=db, order_id=order_id)
 
 
 # Order status updates
-@router.patch("/{order_id}/status", response_model=Order)
+@router.patch("/status", response_model=Order)
 def update_order_status(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str,
+    order_id: str = Query(..., description="Order ID to update status"),
     new_status: int = Body(..., embed=True),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
@@ -167,11 +194,11 @@ def update_order_status(
 
 
 # Order feedback
-@router.post("/{order_id}/feedback", response_model=Order)
+@router.post("/feedback", response_model=Order)
 def add_order_feedback(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str,
+    order_id: str = Query(..., description="Order ID to add feedback"),
     rating: int = Body(..., ge=1, le=5),
     comment: Optional[str] = Body(None),
     current_user: Customer = Depends(deps.get_current_customer),
