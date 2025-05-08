@@ -10,7 +10,7 @@ class ServiceOrder(Table):
     description = Column(Text, nullable=False)
     rating = Column(Integer, check='BETWEEN 1 AND 5', nullable=True)
     comment = Column(Text, nullable=True)
-    status = Column(Integer, nullable=False, default=0)  # 0: pending, 1: in progress, 2: completed
+    status = Column(Integer, nullable=False, default=0)  # 0: pending, 1: in progress, 2: completed, 3: cancelled
 
     worker_id = Column(Char(10), foreign_key='Worker.user_id', nullable=True)
     car_id = Column(Char(10), foreign_key='Car.car_id', nullable=False)
