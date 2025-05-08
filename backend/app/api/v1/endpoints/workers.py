@@ -1,7 +1,7 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from decimal import Decimal
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from app.dbrm import Session
 
 from app.services import worker_service, procedure_service
@@ -10,7 +10,8 @@ from app.schemas import Log, Worker, OrderToWorker, OrderPending, Procedure
 
 router = APIRouter()
 
-@router.post("/logs", response_model=Log)
+# Worker maintenance logs
+@router.post("/logs", response_model=Log, status_code=status.HTTP_201_CREATED)
 def create_maintenance_log(
     *,
     db: Session = Depends(deps.get_db),
@@ -33,91 +34,102 @@ def create_maintenance_log(
             duration=Decimal(str(duration))
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 @router.get("/logs", response_model=List[Log])
-def read_worker_logs(
+def get_worker_logs(
+    *,
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Retrieve logs created by the current worker
+    Get logs created by the current worker
     """
+    skip = (page - 1) * page_size
     return worker_service.get_worker_logs(
-        db=db, worker_id=current_user.user_id, skip=skip, limit=limit
+        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size
     )
 
 
-@router.get("/wage/rate", response_model=Decimal)
+# Worker wage information
+@router.get("/wage-rate", response_model=Decimal)
 def get_worker_wage_rate(
+    *,
     db: Session = Depends(deps.get_db),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Retrieve the wage rate for the current worker type
+    Get the hourly wage rate for the current worker
     """
     try:
         return worker_service.get_wage_rate(
             db=db, worker_type=current_user.worker_type
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/wage/income", response_model=dict)
-def calculate_worker_income(
+@router.get("/income", response_model=dict)
+def get_worker_income(
+    *,
     db: Session = Depends(deps.get_db),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Calculate the worker's income based on hours worked
+    Get the worker's calculated income based on hours worked
     """
     try:
         return worker_service.calculate_worker_income(
             db=db, worker_id=current_user.user_id
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     
 
-@router.get("/orders/owned", response_model=List[OrderToWorker])
-def get_orders_for_worker(
+# Worker order management
+@router.get("/orders", response_model=List[OrderToWorker])
+def get_assigned_orders(
+    *,
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    status: Optional[int] = Query(None, description="Filter by order status"),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Retrieve orders owned by the current worker
+    Get orders assigned to the current worker
     """
+    skip = (page - 1) * page_size
     return worker_service.get_owner_orders(
-        db=db, worker_id=current_user.user_id, skip=skip, limit=limit
+        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size, status=status
     )
 
 
-@router.get("/orders/pending", response_model=List[OrderPending])
-def get_pending_orders(
+@router.get("/available-orders", response_model=List[OrderPending])
+def get_available_orders(
+    *,
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Retrieve all pending orders available for workers
+    Get all available orders that workers can accept
     """
+    skip = (page - 1) * page_size
     return worker_service.get_pending_orders(
-        db=db, skip=skip, limit=limit
+        db=db, skip=skip, limit=page_size
     )
 
 
-@router.post("/order/accept", response_model=Any)
+@router.post("/orders/{order_id}/accept", response_model=Any)
 def accept_order(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str = Body(...),
+    order_id: str,
     procedures: list[str] = Body(...),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
@@ -127,44 +139,40 @@ def accept_order(
     Request body format:
     ```
     {
-      "order_id": "ORD123",
       "procedures": ["Check oil", "Replace filter", "Adjust brakes"]
     }
     ```
-    
-    Notes:
-    - order_id: The order ID that all procedures will be associated with
-    - procedures: A list of strings (one or more)
     """
     try:
         return procedure_service.create_procedures(
             db=db, order_id=order_id, procedures=procedures, worker_id=current_user.user_id
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     
 
-@router.get("/order/procedures", response_model=List[Procedure])
-def get_procedures_for_order(
+@router.get("/orders/{order_id}/procedures", response_model=List[Procedure])
+def get_order_procedures(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str
+    order_id: str,
+    current_user: Worker = Depends(deps.get_current_worker)
 ) -> Any:
     """
-    Retrieve all procedures for a specific order
+    Get all procedures for a specific order
     """
     return procedure_service.get_procedure_progress(db=db, order_id=order_id)
 
 
-@router.put("/order/procedures", response_model=List[dict])
-def update_procedure_status(
+@router.patch("/procedures", response_model=List[dict])
+def update_procedures(
     *,
     db: Session = Depends(deps.get_db),
     updates: List[dict] = Body(...),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
-    Update multiple procedure statuses
+    Update the status of multiple procedures
     
     Request body format:
     ```
@@ -179,19 +187,22 @@ def update_procedure_status(
     - 0: pending
     - 1: in progress
     - 2: completed
-    
-    Notes:
-    - Only procedures with status changes will be updated
-    - Completed procedures cannot be changed to other statuses
-    - Returns processing results for all procedures, including those that don't need updates
     """
     # Validate request body format
     if not updates:
-        raise HTTPException(status_code=400, detail="Please provide a list of procedures to update")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Please provide a list of procedures to update"
+        )
     
     # Call service layer batch update function
-    results = procedure_service.update_procedure_status(
-        db=db, updates=updates
-    )
-    
-    return results
+    try:
+        results = procedure_service.update_procedure_status(
+            db=db, updates=updates
+        )
+        return results
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
