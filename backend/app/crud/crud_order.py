@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 
 from app.dbrm import Session, func
 
 from app.crud.base import CRUDBase
 from app.models.order import ServiceOrder
-from app.schemas.order import OrderCreate, OrderUpdate
+from app.schemas.order import OrderCreate, OrderUpdate, OrderToAdmin, OrderToCustomer
 
 
 class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
@@ -13,29 +13,50 @@ class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
         return db.query(ServiceOrder).filter_by(order_id=order_id).first()
         
     def get_orders_by_customer(
-        self, db: Session, customer_id: str, skip: int = 0, limit: int = 100
+        self, db: Session, customer_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
     ) -> List[ServiceOrder]:
-        return db.query(ServiceOrder).filter_by(customer_id=customer_id).offset(skip).limit(limit).all()
+        query = db.query(ServiceOrder).filter_by(customer_id=customer_id)
+        if status is not None:
+            query = query.filter_by(status=status)
+        return query.offset(skip).limit(limit).all()
     
     def get_orders_by_worker(
-        self, db: Session, worker_id: str, skip: int = 0, limit: int = 100
+        self, db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
     ) -> List[ServiceOrder]:
-        return db.query(ServiceOrder).filter_by(worker_id=worker_id).offset(skip).limit(limit).all()
+        query = db.query(ServiceOrder).filter_by(worker_id=worker_id)
+        if status is not None:
+            query = query.filter_by(status=status)
+        return query.offset(skip).limit(limit).all()
     
     def get_orders_by_worker_type(
-        self, db: Session, worker_type: int, skip: int = 0, limit: int = 100
+        self, db: Session, worker_type: int, skip: int = 0, limit: int = 100, status: Optional[int] = None
     ) -> List[ServiceOrder]:
-        return db.query(ServiceOrder).filter_by(worker_type=worker_type).offset(skip).limit(limit).all()
+        query = db.query(ServiceOrder).filter_by(worker_type=worker_type)
+        if status is not None:
+            query = query.filter_by(status=status)
+        return query.offset(skip).limit(limit).all()
 
     def get_orders_by_car(
-        self, db: Session, car_id: str, skip: int = 0, limit: int = 100
+        self, db: Session, car_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
     ) -> List[ServiceOrder]:
-        return db.query(ServiceOrder).filter_by(car_id=car_id).offset(skip).limit(limit).all()
+        query = db.query(ServiceOrder).filter_by(car_id=car_id)
+        if status is not None:
+            query = query.filter_by(status=status)
+        return query.offset(skip).limit(limit).all()
         
     def get_orders_by_status(
         self, db: Session, status: int, skip: int = 0, limit: int = 100
     ) -> List[ServiceOrder]:
         return db.query(ServiceOrder).filter_by(status=status).offset(skip).limit(limit).all()
+    
+    def get_multi_with_details(
+        self, db: Session, skip: int = 0, limit: int = 100, status: Optional[int] = None
+    ) -> List[Union[OrderToAdmin, ServiceOrder]]:
+        """Get all orders with additional details for admin viewing"""
+        query = db.query(ServiceOrder)
+        if status is not None:
+            query = query.filter_by(status=status)
+        return query.offset(skip).limit(limit).all()
     
     def create_order_for_customer(
         self, db: Session, *, obj_in: OrderCreate, customer_id: str
@@ -60,8 +81,8 @@ class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
         db.refresh(db_obj)
         return db_obj
     
-    def update_order_status(
-        self, db: Session, *, order_id: str, new_status: int = 1, worker_id: Optional[str] = None
+    def update_status(
+        self, db: Session, *, order_id: str, new_status: int, worker_id: Optional[str] = None
     ) -> ServiceOrder:
         db_obj = self.get_by_order_id(db, order_id=order_id)
         if db_obj:

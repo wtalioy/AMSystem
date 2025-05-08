@@ -5,17 +5,18 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from app.dbrm import Session
 
 from app.api import deps
-from app.services import wage_service, worker_service, order_service
+from app.services import wage_service, order_service
 from app.schemas import Wage, WageCreate, Distribute, Admin
 from backend.app.services import admin_service
 
 router = APIRouter()
 
-@router.get("/cost", response_model=dict)
+# Order cost calculations
+@router.get("/orders/{order_id}/cost", response_model=dict)
 def calculate_order_cost(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str = Body(...),
+    order_id: str,
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
@@ -28,20 +29,21 @@ def calculate_order_cost(
     
     # Check permissions - customer can only check own orders
     if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+        raise HTTPException(status_code=403, detail="Not enough permissions")
 
     return order_service.calculate_order_cost(db=db, order_id=order_id)
 
 
-@router.post("/wage/rate", response_model=Wage)
-def create_wage(
+# Wage management
+@router.post("/wages", response_model=Wage)
+def create_wage_rate(
     *,
     db: Session = Depends(deps.get_db),
     wage_in: WageCreate,
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
-    Create new wage rate for a worker type
+    Create a new wage rate for a worker type
     """
     # Check if wage for this worker type already exists
     existing_wage = wage_service.get_wage_by_worker_type(db, worker_type=wage_in.worker_type)
@@ -54,19 +56,19 @@ def create_wage(
     return wage_service.create_wage(db=db, obj_in=wage_in)
 
 
-@router.get("/wage/rate", response_model=List[Wage])
-def read_wages(
+@router.get("/wages", response_model=List[Wage])
+def get_wage_rates(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
-    Retrieve all wage rates
+    Get all wage rates
     """
     return wage_service.get_all_wages(db=db)
 
 
-@router.put("/wage/rate/{worker_type}", response_model=Wage)
-def update_wage(
+@router.put("/wages/{worker_type}", response_model=Wage)
+def update_wage_rate(
     *,
     db: Session = Depends(deps.get_db),
     worker_type: int,
@@ -85,19 +87,20 @@ def update_wage(
     )
 
 
-@router.get("/wage/distribute", response_model=List[Distribute])
-def get_all_distributions(
+# Payment distributions
+@router.get("/payments", response_model=List[Distribute])
+def get_payment_distributions(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
-    Retrieve all payment distributions to workers
+    Get all payment distributions to workers
     """
     return admin_service.get_all_distributions(db=db)
 
 
-@router.post("/wage/distribute", response_model=Distribute)
-def distribute_payment(
+@router.post("/payments", response_model=Distribute)
+def create_payment_distribution(
     *,
     db: Session = Depends(deps.get_db),
     worker_id: str = Body(...),
@@ -115,8 +118,9 @@ def distribute_payment(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/statistics/car-types", response_model=List[dict])
-def get_car_type_statistics(
+# Statistics endpoints
+@router.get("/statistics/cars", response_model=List[dict])
+def get_car_statistics(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
@@ -126,11 +130,12 @@ def get_car_type_statistics(
     return admin_service.get_car_type_statistics(db)
 
 
-@router.get("/statistics/worker-types", response_model=List[dict])
+@router.get("/statistics/workers", response_model=List[dict])
 def get_worker_statistics(
+    *,
     db: Session = Depends(deps.get_db),
-    start_time: str = Body(...),
-    end_time: str = Body(...),
+    start_time: str,
+    end_time: str,
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
@@ -139,12 +144,12 @@ def get_worker_statistics(
     return admin_service.get_worker_statistics(db, start_time=start_time, end_time=end_time)
 
 
-@router.get("/statistics/orders/incomplete", response_model=List[dict])
-def get_incomplete_orders(
+@router.get("/statistics/incomplete-orders", response_model=List[dict])
+def get_incomplete_orders_statistics(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
-    Get all incomplete orders and their details
+    Get statistics about incomplete orders
     """
     return admin_service.get_incomplete_orders_statistics(db)

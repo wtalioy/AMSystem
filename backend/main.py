@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.exceptions import add_exception_handlers
 
 from app.dbrm import Engine, Session
 from app.dbrm.decorators import create_all_tables
@@ -46,7 +47,15 @@ async def startup_db_client(app: FastAPI):
         logger.warning("Application will continue to start, but database functionality may be unavailable")
         app.created_tables = []
 
-app = FastAPI(title="Automobile Maintenance System API", lifespan=startup_db_client)
+app = FastAPI(
+    title="Automobile Maintenance System API",
+    description="RESTful API for Automobile Maintenance System",
+    version="1.0.0",
+    lifespan=startup_db_client
+)
+
+# Register the exception handlers from app.core.exceptions
+add_exception_handlers(app)
 
 # Set all CORS enabled origins
 app.add_middleware(
@@ -62,9 +71,23 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to the Automobile Maintenance System API"}
+    return {
+        "message": "Welcome to the Automobile Maintenance System API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "healthy"}
 
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    try:
+        import uvicorn
+        uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    except Exception as e:
+        logger.error(f"Failed to start server: {str(e)}")
