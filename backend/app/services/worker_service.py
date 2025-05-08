@@ -1,10 +1,10 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from decimal import Decimal
 from enum import IntEnum
 from app.dbrm import Session
 
 from app.crud import order, log, distribute, wage, worker
-from app.schemas import LogCreate, Log, DistributeCreate, Distribute, OrderPending, OrderToWorker
+from app.schemas import LogCreate, Log, OrderPending, OrderToWorker
 
 
 class ProcedureStatus(IntEnum):
@@ -44,11 +44,11 @@ def get_worker_logs(
 
 
 def get_owner_orders(
-    db: Session, worker_id: str, skip: int = 0, limit: int = 100
+    db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
 ) -> List[OrderToWorker]:
-    """Get all orders owned by a worker"""
+    """Get all orders owned by a worker with optional status filtering"""
     return order.get_orders_by_worker(
-        db, worker_id=worker_id, skip=skip, limit=limit
+        db, worker_id=worker_id, skip=skip, limit=limit, status=status
     )
 
 
@@ -63,39 +63,39 @@ def get_pending_orders(
 
 def get_wage_rate(db: Session, worker_type: int) -> Decimal:
     """Get the wage rate for a specific worker type"""
-    wage_obj = wage.get_by_type(db, worker_type=worker_type)
-    if not wage_obj:
-        raise ValueError("No wage rate found for this worker type")
-    
-    return Decimal(str(wage_obj.wage_per_hour))
+    wage_rate = wage.get_wage_rate_by_type(db, worker_type=worker_type)
+    if not wage_rate:
+        raise ValueError(f"No wage rate found for worker type {worker_type}")
+    return wage_rate.wage_per_hour
 
 
 def calculate_worker_income(db: Session, worker_id: str) -> Dict:
     """Calculate a worker's total income based on their logs"""
+    # Get the worker to check their type
     worker_obj = worker.get_by_id(db, worker_id=worker_id)
     if not worker_obj:
-        raise ValueError("Worker does not exist")
+        raise ValueError("Worker not found")
     
-    # Get wage rate
-    wage_rate = wage.get_by_type(db, worker_type=worker_obj.worker_type)
-    if not wage_rate:
-        raise ValueError("No wage rate found for worker type")
+    # Get the wage rate
+    wage_rate = get_wage_rate(db, worker_type=worker_obj.worker_type)
     
-    # Calculate total hours worked
+    # Get total hours worked
     total_hours = log.get_total_duration_by_worker(db, worker_id=worker_id)
     
-    # Calculate earnings
-    hourly_rate = Decimal(str(wage_rate.wage_per_hour))
-    earnings = total_hours * hourly_rate
+    # Calculate income
+    total_income = Decimal(str(total_hours)) * wage_rate
     
-    # Get already distributed amount
-    distributed_amount = distribute.get_total_payment_for_worker(db, worker_id=worker_id)
+    # Check for distributed payments
+    distributed = distribute.get_distributions_by_worker(db, worker_id=worker_id)
+    distributed_amount = sum(item.amount for item in distributed) if distributed else Decimal('0.0')
     
+    # Return the results
     return {
         "worker_id": worker_id,
+        "worker_type": worker_obj.worker_type,
+        "wage_rate": wage_rate,
         "total_hours": total_hours,
-        "hourly_rate": hourly_rate,
-        "total_earnings": earnings,
-        "paid_amount": distributed_amount,
-        "pending_payment": earnings - distributed_amount
+        "calculated_income": total_income,
+        "distributed_amount": distributed_amount,
+        "remaining_amount": total_income - distributed_amount
     }

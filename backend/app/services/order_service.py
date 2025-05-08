@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from app.dbrm import Session
 from decimal import Decimal
 
@@ -25,12 +25,57 @@ def get_order_by_id(db: Session, order_id: str) -> Optional[Order]:
 
 
 def get_orders_for_customer(
-    db: Session, customer_id: str, skip: int = 0, limit: int = 100
+    db: Session, customer_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
 ) -> List[OrderToCustomer]:
-    """Get all orders for a customer"""
+    """
+    Get all orders for a customer with pagination and optional status filtering
+    """
     return order.get_orders_by_customer(
-        db, customer_id=customer_id, skip=skip, limit=limit
+        db, customer_id=customer_id, skip=skip, limit=limit, status=status
     )
+
+
+def get_all_orders(
+    db: Session, skip: int = 0, limit: int = 100, status: Optional[int] = None
+) -> List[OrderToAdmin]:
+    """
+    Get all orders with pagination and optional status filtering (admin function)
+    """
+    return order.get_multi_with_details(db, skip=skip, limit=limit, status=status)
+
+
+def update_order_status(db: Session, order_id: str, new_status: int) -> Optional[Order]:
+    """
+    Update the status of an order
+    
+    Status codes:
+    0 - Pending
+    1 - In Progress
+    2 - Completed
+    3 - Cancelled
+    
+    Raises ValueError if the status transition is invalid
+    """
+    order_obj = order.get_by_order_id(db, order_id=order_id)
+    if not order_obj:
+        return None
+    
+    # Validate status transition
+    if new_status not in [0, 1, 2, 3]:
+        raise ValueError(f"Invalid status code: {new_status}")
+    
+    # Check for valid transitions
+    current_status = order_obj.status
+    
+    # Cannot change from completed or cancelled to other statuses
+    if current_status == 2 and new_status != 2:
+        raise ValueError("Cannot change status of a completed order")
+    
+    if current_status == 3 and new_status != 3:
+        raise ValueError("Cannot change status of a cancelled order")
+    
+    # Update the status
+    return order.update_status(db, order_id=order_id, new_status=new_status)
 
 
 def add_customer_feedback(
@@ -52,6 +97,23 @@ def add_procedure_to_order(
         current_status=0  # Initially pending
     )
     return procedure.create_procedure_for_order(db=db, obj_in=procedure_in)
+
+
+def delete_order(db: Session, order_id: str) -> bool:
+    """
+    Delete an order from the database
+    
+    Returns True if order was deleted, False if order was not found
+    
+    Note: This will also delete all associated procedures and logs due to
+    database cascade delete constraints
+    """
+    order_obj = order.get_by_order_id(db, order_id=order_id)
+    if not order_obj:
+        return False
+    
+    order.remove(db, id=order_obj.id)
+    return True
 
 
 def calculate_order_cost(db: Session, order_id: str) -> Dict:
