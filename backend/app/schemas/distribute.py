@@ -26,7 +26,7 @@ class DistributeInDBBase(DistributeBase):
     distribute_time: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return via API
