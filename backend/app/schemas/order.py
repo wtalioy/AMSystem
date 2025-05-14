@@ -11,7 +11,7 @@ class OrderBase(BaseModel):
 
 # Properties to receive via API on creation
 class OrderCreate(OrderBase):
-    pass
+    start_time: datetime
 
 
 # Properties to receive via API on update

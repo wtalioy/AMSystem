@@ -66,15 +66,20 @@ class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
         import random
         import string
         now = datetime.now()
-        random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
         order_id = f"O{now.strftime('%y%m%d')}{random_suffix}"
 
         db_obj = ServiceOrder(
             order_id=order_id,
             description=obj_in.description,
+            start_time=str(obj_in.start_time),
+            end_time=None,
             car_id=obj_in.car_id,
             customer_id=customer_id,
             status=0,  # default to pending
+            rating=None,
+            worker_id=None,
+            comment=None,
         )
         db.add(db_obj)
         db.commit()
