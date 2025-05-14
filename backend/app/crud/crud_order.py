@@ -5,7 +5,7 @@ from app.dbrm import Session, func
 
 from app.crud.base import CRUDBase
 from app.models.order import ServiceOrder
-from app.schemas.order import OrderCreate, OrderUpdate, OrderToAdmin, OrderToCustomer
+from app.schemas.order import OrderCreate, OrderUpdate, OrderToAdmin
 
 
 class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
