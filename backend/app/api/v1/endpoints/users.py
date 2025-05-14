@@ -26,11 +26,20 @@ def create_customer(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this name already exists in the system",
         )
-    customer = user_service.create_customer(db=db, customer_in=customer_in)
+    created_customer_orm = user_service.create_customer(db=db, customer_in=customer_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{customer.user_id}"
-    return customer
+    response.headers["Location"] = f"/api/v1/users/{created_customer_orm.user_id}"
+    
+    user_to_return = user_service.get_user_by_id(db, user_id=created_customer_orm.user_id)
+    
+    if not user_to_return:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not retrieve user details after creation."
+        )
+        
+    return user_to_return
 
 
 @router.post("/workers", response_model=User, status_code=status.HTTP_201_CREATED)
