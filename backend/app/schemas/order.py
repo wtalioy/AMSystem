@@ -80,8 +80,7 @@ class OrderPending(OrderBase):
 
 
 # Properties sto return to admins
-class OrderToAdmin(OrderToCustomer):
-    customer_id: str
+class OrderToAdmin(OrderInDBBase):
 
     class Config:
         from_attributes = True
