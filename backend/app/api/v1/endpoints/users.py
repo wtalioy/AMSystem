@@ -47,23 +47,31 @@ def create_worker(
     *,
     db: Session = Depends(deps.get_db),
     worker_in: WorkerCreate,
-    current_user: User = Depends(deps.get_current_admin),
     response: Response
 ) -> Any:
     """
-    Register a new worker (admin only)
+    Register a new worker
     """
-    user = user_service.get_user_by_id(db, user_id=worker_in.user_id)
+    user = user_service.get_user_by_name(db, user_name=worker_in.user_name)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="The user with this ID already exists in the system",
+            detail="The user with this name already exists in the system",
         )
-    worker = user_service.create_worker(db=db, worker_in=worker_in)
+    created_worker_orm = user_service.create_worker(db=db, worker_in=worker_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{worker.user_id}"
-    return worker
+    response.headers["Location"] = f"/api/v1/users/{created_worker_orm.user_id}"
+
+    user_to_return = user_service.get_user_by_id(db, user_id=created_worker_orm.user_id)
+    
+    if not user_to_return:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not retrieve user details after creation."
+        )
+        
+    return user_to_return
 
 
 @router.post("/admins", response_model=User, status_code=status.HTTP_201_CREATED)
@@ -71,23 +79,31 @@ def create_admin(
     *,
     db: Session = Depends(deps.get_db),
     admin_in: AdminCreate,
-    current_user: User = Depends(deps.get_current_admin),
     response: Response
 ) -> Any:
     """
     Register a new admin (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=admin_in.user_id)
+    user = user_service.get_user_by_name(db, user_name=admin_in.user_name)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="The user with this ID already exists in the system",
+            detail="The user with this name already exists in the system",
         )
-    admin = user_service.create_admin(db=db, admin_in=admin_in)
+    created_admin_orm = user_service.create_admin(db=db, admin_in=admin_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{admin.user_id}"
-    return admin
+    response.headers["Location"] = f"/api/v1/users/{created_admin_orm.user_id}"
+
+    user_to_return = user_service.get_user_by_id(db, user_id=created_admin_orm.user_id)
+    
+    if not user_to_return:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not retrieve user details after creation."
+        )
+        
+    return user_to_return
 
 
 # Current user profile management
