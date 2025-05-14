@@ -15,10 +15,18 @@ from app.core.exceptions import add_exception_handlers
 from app.dbrm import Engine, Session
 from app.dbrm.decorators import create_all_tables
 
+# Configure logging
+logs_dir = Path(__file__).parent / "logs"
+logs_dir.mkdir(parents=True, exist_ok=True) # Create logs directory if it doesn't exist
+log_file_path = logs_dir / "app.log" # Define log file path
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=[
+        logging.StreamHandler(), # Keep console output
+        logging.FileHandler(log_file_path) # Add file output
+    ]
 )
 logger = logging.getLogger(__name__)
 

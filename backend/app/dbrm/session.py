@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from typing import Any, List, Dict, Tuple, Optional, TypeVar
 import logging
+from pathlib import Path # Added Path
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -10,11 +11,14 @@ T = TypeVar('T')
 
 logger = logging.getLogger(__name__)
 
-# Setup for SQL query file logging
+logs_dir = Path(__file__).parent.parent.parent / "logs"
+logs_dir.mkdir(parents=True, exist_ok=True)
+
 sql_query_file_logger = logging.getLogger('SQLQueryLogger')
 if not sql_query_file_logger.hasHandlers():
     sql_query_file_logger.setLevel(logging.INFO)
-    fh = logging.FileHandler('sql_queries.log') 
+    # Updated file path to use the logs_dir
+    fh = logging.FileHandler(logs_dir / 'sql_queries.log') 
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     sql_query_file_logger.addHandler(fh)
