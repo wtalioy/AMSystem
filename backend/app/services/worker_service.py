@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import IntEnum
 from app.dbrm import Session
 
-from app.crud import order, log, distribute, wage, worker
+from app.crud import order, log, distribute, wage, worker, car
 from app.schemas import LogCreate, Log, OrderPending, OrderToWorker
 
 
@@ -33,22 +33,26 @@ def create_maintenance_log(
         duration=duration,
         order_id=order_id
     )
-    return log.create_log_for_order(db=db, obj_in=log_in, worker_id=worker_id)
+    return Log.model_validate(
+        log.create_log_for_order(db=db, obj_in=log_in, worker_id=worker_id)
+    )
 
 
 def get_worker_logs(
     db: Session, worker_id: str, skip: int = 0, limit: int = 100
 ) -> List[Log]:
     """Get all maintenance logs for a worker"""
-    return log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
+    logs = log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
+    logs = [Log.model_validate(l) for l in logs]
+    return logs
 
 
 def get_owner_orders(
     db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
 ) -> List[OrderToWorker]:
     """Get all orders owned by a worker with optional status filtering"""
-    return order.get_orders_by_worker(
-        db, worker_id=worker_id, skip=skip, limit=limit, status=status
+    return OrderToWorker.model_validate(
+        order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
     )
 
 
@@ -56,10 +60,24 @@ def get_pending_orders(
     db: Session, skip: int = 0, limit: int = 100
 ) -> List[OrderPending]:
     """Get all pending orders for workers"""
-    return order.get_pending_orders(
+    # Get all pending orders from database (ServiceOrder models)
+    pending_orders = order.get_pending_orders(
         db, skip=skip, limit=limit
     )
-
+    
+    # Convert to OrderPending models and enrich with car type information
+    result = []
+    for db_order in pending_orders:
+        pending_order = OrderPending.model_validate(db_order)
+        car_info = car.get_by_car_id(db, car_id=db_order.car_id)
+        order_data = pending_order.model_dump()
+        order_data["car_type"] = car_info.car_type if car_info else None
+        enriched_order = OrderPending(**order_data)
+        
+        result.append(enriched_order)
+    
+    return result
+    
 
 def get_wage_rate(db: Session, worker_type: int) -> Decimal:
     """Get the wage rate for a specific worker type"""
