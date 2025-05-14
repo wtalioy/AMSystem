@@ -62,7 +62,7 @@ def get_current_worker(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return get_user_by_id(db=db, user_id=current_user.id)
+    return get_user_by_id(db=db, user_id=current_user.user_id)
 
 
 def get_current_admin(
@@ -74,4 +74,4 @@ def get_current_admin(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return get_user_by_id(db=db, user_id=current_user.id)
+    return get_user_by_id(db=db, user_id=current_user.user_id)
