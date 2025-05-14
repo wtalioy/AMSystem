@@ -1,11 +1,11 @@
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict, Optional, Union
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Response, Path
 from app.dbrm import Session
 
 from app.api import deps
 from app.services import car_service, order_service, worker_service
-from app.schemas import User, Customer, Order, OrderCreate, Worker, OrderToWorker, OrderPending, Admin
+from app.schemas import User, Customer, Order, OrderCreate, Worker, OrderToWorker, OrderPending, Admin, OrderToCustomer, OrderToAdmin
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ def create_order(
         )
 
 
-@router.get("/", response_model=List[Order])
+@router.get("/", response_model=Union[List[OrderToCustomer], List[OrderToAdmin]])
 def get_orders(
     *,
     db: Session = Depends(deps.get_db),
