@@ -15,7 +15,7 @@ def authenticate_user(db: Session, user_name: str, password: str) -> Optional[Us
     user_obj = user.authenticate(db, user_name=user_name, password=password)
     if not user_obj:
         return None
-    return user_obj
+    return User.model_validate(user_obj)
 
 
 def create_access_token(user_id: str) -> Token:

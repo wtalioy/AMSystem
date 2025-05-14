@@ -29,7 +29,7 @@ def get_procedure_progress(
     if not procedures:
         raise ValueError("No procedures found for this order")
     
-    return procedures
+    return [Procedure.model_validate(p) for p in procedures]
 
 
 def create_procedures(
@@ -61,7 +61,8 @@ def create_procedures(
         )
         procedure_objects.append(procedure_in)
 
-    return procedure.create_procedures(db=db, order_id=order_id, procedures=procedure_objects)
+    created_procedures = procedure.create_procedures(db=db, order_id=order_id, procedures=procedure_objects)
+    return [Procedure.model_validate(p) for p in created_procedures]
 
 
 def update_procedure_status(

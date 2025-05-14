@@ -4,21 +4,26 @@ from app.dbrm import Session
 from app.crud import car, order, log
 from app.schemas import CarCreate, CarUpdate, Car
 
+
 def create_car(db: Session, obj_in: CarCreate, customer_id: str) -> Car:
     """Register a new car for a customer"""
-    return car.create_car_with_owner(
+    return Car.model_validate(car.create_car_with_owner(
         db=db, obj_in=obj_in, customer_id=customer_id
-    )
+    ))
 
 
 def get_car_by_id(db: Session, car_id: str) -> Optional[Car]:
     """Get a specific car by ID"""
-    return car.get_by_car_id(db, car_id=car_id)
+    car_obj = car.get_by_car_id(db, car_id=car_id)
+    if car_obj:
+        return Car.model_validate(car_obj)
+    return None
 
 
 def get_customer_cars(db: Session, customer_id: str, skip: int = 0, limit: int = 100) -> List[Car]:
     """Get all cars owned by a customer with pagination"""
-    return car.get_cars_by_customer(db, customer_id=customer_id, skip=skip, limit=limit)
+    cars = car.get_cars_by_customer(db, customer_id=customer_id, skip=skip, limit=limit)
+    return [Car.model_validate(car_obj) for car_obj in cars]
 
 
 def update_car(db: Session, car_id: str, obj_in: CarUpdate) -> Optional[Car]:
@@ -26,7 +31,7 @@ def update_car(db: Session, car_id: str, obj_in: CarUpdate) -> Optional[Car]:
     car_obj = car.get_by_car_id(db, car_id=car_id)
     if not car_obj:
         return None
-    return car.update(db, db_obj=car_obj, obj_in=obj_in)
+    return Car.model_validate(car.update(db, db_obj=car_obj, obj_in=obj_in))
 
 
 def partial_update_car(db: Session, car_id: str, obj_in: Dict[str, Any]) -> Optional[Car]:
@@ -46,7 +51,7 @@ def partial_update_car(db: Session, car_id: str, obj_in: Dict[str, Any]) -> Opti
             car_data[field] = obj_in[field]
     
     update_data = CarUpdate(**car_data)
-    return car.update(db, db_obj=car_obj, obj_in=update_data)
+    return Car.model_validate(car.update(db, db_obj=car_obj, obj_in=update_data))
 
 
 def delete_car(db: Session, car_id: str) -> bool:
@@ -65,12 +70,14 @@ def delete_car(db: Session, car_id: str) -> bool:
 
 def get_cars_by_type(db: Session, car_type: int) -> List[Car]:
     """Get all cars of a specific type"""
-    return car.get_cars_by_type(db, car_type=car_type)
+    cars = car.get_cars_by_type(db, car_type=car_type)
+    return [Car.model_validate(car_obj) for car_obj in cars]
 
 
 def get_all_cars(db: Session, skip: int = 0, limit: int = 100) -> List[Car]:
     """Get all cars (admin function)"""
-    return car.get_multi(db, skip=skip, limit=limit)
+    cars = car.get_multi(db, skip=skip, limit=limit)
+    return [Car.model_validate(car_obj) for car_obj in cars]
 
 
 def get_car_maintenance_history(db: Session, car_id: str, skip: int = 0, limit: int = 100) -> List[Dict]:
