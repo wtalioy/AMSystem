@@ -1,4 +1,4 @@
-from typing import Any, List, Dict, Optional, Union
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Response, Path
 from app.dbrm import Session
@@ -43,7 +43,7 @@ def create_order(
         )
 
 
-@router.get("/", response_model=Union[List[OrderToCustomer], List[OrderToAdmin]])
+@router.get("/", response_model=List[Order])
 def get_orders(
     *,
     db: Session = Depends(deps.get_db),

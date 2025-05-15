@@ -63,8 +63,7 @@ class OrderToWorker(OrderBase):
 
 
 # Properties to return to customers
-class OrderToCustomer(OrderToWorker):
-    worker_id: Optional[str] = None
+class OrderToCustomer(OrderInDBBase):
 
     class Config:
         from_attributes = True
