@@ -91,7 +91,7 @@ def get_current_user(
     """
     Get current user profile with complete information based on user type
     """
-    complete_user = user_service.get_complete_user_by_id(db, user_id=current_user.user_id)
+    complete_user = user_service.get_user_by_id(db, user_id=current_user.user_id, typed=True)
     if not complete_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
