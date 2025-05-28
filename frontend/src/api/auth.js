@@ -9,7 +9,7 @@ export default {
   async login(credentials) {
     const response = await axios.post(`${API_BASE}/auth/login`, {
       user_name: credentials.username,
-      password: credentials.password
+      user_pwd: credentials.password
     })
     return response.data
   },
@@ -25,7 +25,7 @@ export default {
 
   // 测试令牌接口
   async testToken(token) {
-    return axios.post(`${API_BASE}/auth/verify`, null, {
+    return axios.get(`${API_BASE}/auth/verify`, null, {
       headers: { Authorization: `Bearer ${token}` }
     })
   }

@@ -144,7 +144,7 @@
       await authStore.login(credentials.value)
       router.push('/dashboard')
     } catch (err) {
-      error.value = '登录失败，请检查凭证'
+      error.value = err.message
     }
   }
   </script>
