@@ -1,16 +1,16 @@
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
 
 from app.services import user_service
 from app.api import deps
-from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate, Admin
+from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate, Customer, Worker, Admin
 
 router = APIRouter()
 
 # Register endpoints organized by user type
-@router.post("/customers", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/customers", response_model=Customer, status_code=status.HTTP_201_CREATED)
 def create_customer(
     *, 
     db: Session = Depends(deps.get_db), 
@@ -26,23 +26,15 @@ def create_customer(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this name already exists in the system",
         )
-    created_customer_orm = user_service.create_customer(db=db, customer_in=customer_in)
+    created_customer = user_service.create_customer(db=db, customer_in=customer_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_customer_orm.user_id}"
-    
-    user_to_return = user_service.get_user_by_id(db, user_id=created_customer_orm.user_id)
-    
-    if not user_to_return:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not retrieve user details after creation."
-        )
+    response.headers["Location"] = f"/api/v1/users/{created_customer.user_id}"
         
-    return user_to_return
+    return created_customer
 
 
-@router.post("/workers", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/workers", response_model=Worker, status_code=status.HTTP_201_CREATED)
 def create_worker(
     *,
     db: Session = Depends(deps.get_db),
@@ -58,23 +50,15 @@ def create_worker(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this name already exists in the system",
         )
-    created_worker_orm = user_service.create_worker(db=db, worker_in=worker_in)
+    created_worker = user_service.create_worker(db=db, worker_in=worker_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_worker_orm.user_id}"
-
-    user_to_return = user_service.get_user_by_id(db, user_id=created_worker_orm.user_id)
-    
-    if not user_to_return:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not retrieve user details after creation."
-        )
+    response.headers["Location"] = f"/api/v1/users/{created_worker.user_id}"
         
-    return user_to_return
+    return created_worker
 
 
-@router.post("/admins", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/admins", response_model=Admin, status_code=status.HTTP_201_CREATED)
 def create_admin(
     *,
     db: Session = Depends(deps.get_db),
@@ -90,31 +74,30 @@ def create_admin(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this name already exists in the system",
         )
-    created_admin_orm = user_service.create_admin(db=db, admin_in=admin_in)
+    created_admin = user_service.create_admin(db=db, admin_in=admin_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_admin_orm.user_id}"
-
-    user_to_return = user_service.get_user_by_id(db, user_id=created_admin_orm.user_id)
-    
-    if not user_to_return:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not retrieve user details after creation."
-        )
+    response.headers["Location"] = f"/api/v1/users/{created_admin.user_id}"
         
-    return user_to_return
+    return created_admin
 
 
 # Current user profile management
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=Union[Customer, Worker, Admin, User])
 def get_current_user(
+    db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Get current user profile
+    Get current user profile with complete information based on user type
     """
-    return current_user
+    complete_user = user_service.get_complete_user_by_id(db, user_id=current_user.user_id)
+    if not complete_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return complete_user
 
 
 @router.put("/me", response_model=User)
