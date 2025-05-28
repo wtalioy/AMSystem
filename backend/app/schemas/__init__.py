@@ -20,7 +20,7 @@ __all__ = [
     
     "Token", "TokenPayload",
     
-    "User", "UserCreate", "UserUpdate", "UserInDB", "Customer", "Worker", "Admin",
+    "User", "UserCreate", "UserLogin", "UserUpdate", "UserInDB", "Customer", "Worker", "Admin",
     
     "Wage", "WageCreate", "WageUpdate", "WageInDB",
 ]

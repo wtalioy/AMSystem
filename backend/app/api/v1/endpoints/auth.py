@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from app.dbrm import Session
 
 from app.api import deps
 from app.services import auth_service
-from app.schemas import Token, User
+from app.schemas import Token, User, UserLogin
 
 router = APIRouter()
 
@@ -12,13 +11,13 @@ router = APIRouter()
 def login_for_access_token(
     *,
     db: Session = Depends(deps.get_db),
-    form_data: OAuth2PasswordRequestForm = Depends()
+    user_login: UserLogin
 ):
     """
-    OAuth2 compatible token login endpoint, get an access token for future requests
+    JSON-based token login endpoint, get an access token for future requests
     """
     user = auth_service.authenticate_user(
-        db, user_name=form_data.username, password=form_data.password
+        db, user_name=user_login.user_name, password=user_login.user_pwd
     )
     if not user:
         raise HTTPException(

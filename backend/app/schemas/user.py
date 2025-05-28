@@ -13,6 +13,12 @@ class UserCreate(UserBase):
     user_type: str
 
 
+# Properties to receive via API on login
+class UserLogin(BaseModel):
+    user_name: str
+    user_pwd: str
+
+
 # Properties to receive via API on update
 class UserUpdate(BaseModel):
     user_name: Optional[str] = None
