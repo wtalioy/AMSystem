@@ -25,7 +25,7 @@ class UserInDBBase(UserBase):
     user_type: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return via API
@@ -53,7 +53,7 @@ class CustomerUpdate(UserUpdate):
 
 class CustomerInDBBase(UserInDBBase):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Customer(CustomerInDBBase):
@@ -78,7 +78,7 @@ class WorkerInDBBase(UserInDBBase):
     worker_type: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Worker(WorkerInDBBase):
@@ -100,7 +100,7 @@ class AdminUpdate(UserUpdate):
 
 class AdminInDBBase(UserInDBBase):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Admin(AdminInDBBase):

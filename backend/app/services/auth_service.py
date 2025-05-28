@@ -8,14 +8,14 @@ from app.core.config import settings
 from app.schemas import Token, User
 
 
-def authenticate_user(db: Session, user_id: str, password: str) -> Optional[User]:
+def authenticate_user(db: Session, user_name: str, password: str) -> Optional[User]:
     """
     Authenticate a user by checking username and password
     """
-    user_obj = user.authenticate(db, user_id=user_id, password=password)
+    user_obj = user.authenticate(db, user_name=user_name, password=password)
     if not user_obj:
         return None
-    return user_obj
+    return User.model_validate(user_obj)
 
 
 def create_access_token(user_id: str) -> Token:

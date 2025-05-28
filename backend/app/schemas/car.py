@@ -24,7 +24,7 @@ class CarInDBBase(CarBase):
     customer_id: str
 
     class Config:
-        from_attributes = True  # Updated from orm_mode
+        from_attributes = True  # Updated from from_attributes
 
 
 # Properties to return via API

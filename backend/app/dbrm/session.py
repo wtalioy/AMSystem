@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from typing import Any, List, Dict, Tuple, Optional, TypeVar
 import logging
+from pathlib import Path # Added Path
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -9,6 +10,19 @@ if TYPE_CHECKING:
 T = TypeVar('T')
 
 logger = logging.getLogger(__name__)
+
+logs_dir = Path(__file__).parent.parent.parent / "logs"
+logs_dir.mkdir(parents=True, exist_ok=True)
+
+sql_query_file_logger = logging.getLogger('SQLQueryLogger')
+if not sql_query_file_logger.hasHandlers():
+    sql_query_file_logger.setLevel(logging.INFO)
+    # Updated file path to use the logs_dir
+    fh = logging.FileHandler(logs_dir / 'sql_queries.log') 
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    sql_query_file_logger.addHandler(fh)
+    sql_query_file_logger.propagate = False 
 
 class Session:
     
@@ -19,6 +33,7 @@ class Session:
         self._transaction_level = 0
         self._in_transaction = False
         self._query_log = []
+        self.sql_query_logger = sql_query_file_logger # Use the module-level configured logger
         
     def __enter__(self):
         self._connection = self.engine.connect()
@@ -41,6 +56,7 @@ class Session:
         self._query_log.append(query)
         if len(self._query_log) > 100:
             self._query_log = self._query_log[-100:]
+        self.sql_query_logger.info(query) # Log query to file
             
     def get_query_log(self) -> List[str]:
         return self._query_log

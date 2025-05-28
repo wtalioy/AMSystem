@@ -8,7 +8,7 @@ from app.dbrm import Session, Engine
 
 from app.core.config import settings
 from app.schemas import TokenPayload, User, Customer, Worker, Admin
-from app.services.user_service import get_user_by_id
+from app.services.user_service import get_user_by_id, get_typed_user_by_id
 
 engine = Engine.from_env()
 
@@ -45,33 +45,36 @@ def get_current_customer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Customer:
-    if current_user.user_type != "customer":
+    customer = get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="customer")
+    if not customer:
         raise HTTPException(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return get_user_by_id(db=db, user_id=current_user.id)
+    return customer
 
 
 def get_current_worker(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Worker:
-    if current_user.user_type != "worker":
+    worker = get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="worker")
+    if not worker:
         raise HTTPException(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return get_user_by_id(db=db, user_id=current_user.id)
+    return worker
 
 
 def get_current_admin(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Admin:
-    if current_user.user_type != "administrator":
+    admin = get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="administrator")
+    if not admin:
         raise HTTPException(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
-    return get_user_by_id(db=db, user_id=current_user.id)
+    return admin

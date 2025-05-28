@@ -11,7 +11,7 @@ class OrderBase(BaseModel):
 
 # Properties to receive via API on creation
 class OrderCreate(OrderBase):
-    pass
+    start_time: datetime
 
 
 # Properties to receive via API on update
@@ -41,7 +41,7 @@ class OrderInDBBase(OrderBase):
     worker_id: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return via API
@@ -59,28 +59,27 @@ class OrderToWorker(OrderBase):
     status: int  # 0: pending, 1: in progress, 2: completed
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return to customers
-class OrderToCustomer(OrderToWorker):
-    worker_id: Optional[str] = None
+class OrderToCustomer(OrderInDBBase):
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class OrderPending(OrderBase):
     order_id: str
     start_time: datetime
+    car_type: Optional[int] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
-# Properties to return to admins
-class OrderToAdmin(OrderToCustomer):
-    customer_id: str
+# Properties sto return to admins
+class OrderToAdmin(OrderInDBBase):
 
     class Config:
-        orm_mode = True
+        from_attributes = True

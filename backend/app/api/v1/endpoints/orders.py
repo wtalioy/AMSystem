@@ -1,11 +1,11 @@
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Response, Path
 from app.dbrm import Session
 
 from app.api import deps
 from app.services import car_service, order_service, worker_service
-from app.schemas import User, Customer, Order, OrderCreate, Worker, OrderToWorker, OrderPending, Admin
+from app.schemas import User, Customer, Order, OrderCreate, Worker, OrderToWorker, OrderPending, Admin, OrderToCustomer, OrderToAdmin
 
 router = APIRouter()
 
@@ -80,7 +80,7 @@ def get_orders(
 def get_order(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str,
+    order_id: str = Path(..., regex="^[a-zA-Z0-9]{10}$", description="The 10-character ID of the order to retrieve."),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -103,7 +103,7 @@ def get_order(
 
 
 # Worker-specific order views
-@router.get("/assigned", response_model=List[OrderToWorker])
+@router.get("/views/my-assigned", response_model=List[OrderToWorker])
 def get_worker_assigned_orders(
     *,
     db: Session = Depends(deps.get_db),
@@ -121,7 +121,7 @@ def get_worker_assigned_orders(
     )
 
 
-@router.get("/available", response_model=List[OrderPending])
+@router.get("/views/available-for-workers", response_model=List[OrderPending])
 def get_worker_available_orders(
     *,
     db: Session = Depends(deps.get_db),

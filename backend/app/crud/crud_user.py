@@ -64,8 +64,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             update_data["user_pwd"] = hashed_password
         return super().update(db, db_obj=db_obj, obj_in=update_data)
 
-    def authenticate(self, db: Session, *, user_id: str, password: str) -> Optional[User]:
-        user = self.get_by_id(db, user_id=user_id)
+    def authenticate(self, db: Session, *, user_name: str, password: str) -> Optional[User]:
+        user = self.get_by_name(db, user_name=user_name)
         if not user:
             return None
         if not verify_password(password, user.user_pwd):
@@ -104,13 +104,14 @@ class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
         db.add(user_obj)
         
         # Now create the Customer
-        db_obj = Customer(
+        customer_obj = Customer(
             user_id=unique_id
         )
-        db.add(db_obj)
+        db.add(customer_obj)
         db.commit()
-        db.refresh(db_obj)
-        return db_obj
+
+        db.refresh(user_obj)
+        return user_obj
 
 
 class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
@@ -133,14 +134,15 @@ class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
         db.add(user_obj)
         
         # Now create the Worker
-        db_obj = Worker(
+        worker_obj = Worker(
             user_id=unique_id,
             worker_type=obj_in.worker_type
         )
-        db.add(db_obj)
+        db.add(worker_obj)
         db.commit()
-        db.refresh(db_obj)
-        return db_obj
+
+        db.refresh(user_obj)
+        return user_obj
         
     def get_workers_by_type(self, db: Session, *, worker_type: int) -> List[Worker]:
         return db.query(Worker).filter_by(worker_type=worker_type).all()
@@ -163,13 +165,14 @@ class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):
         db.add(user_obj)
         
         # Now create the Administrator
-        db_obj = Administrator(
+        admin_obj = Administrator(
             user_id=unique_id
         )
-        db.add(db_obj)
+        db.add(admin_obj)
         db.commit()
-        db.refresh(db_obj)
-        return db_obj
+
+        db.refresh(user_obj)
+        return user_obj
 
 
 user = CRUDUser(User)

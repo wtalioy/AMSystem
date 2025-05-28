@@ -24,7 +24,7 @@ class ErrorResponse(BaseModel):
     path: Optional[str] = None
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error": "Validation Error",
                 "detail": [

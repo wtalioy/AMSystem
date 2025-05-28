@@ -25,7 +25,7 @@ class ProcedureInDBBase(ProcedureBase):
     procedure_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return via API

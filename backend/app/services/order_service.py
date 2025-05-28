@@ -6,7 +6,7 @@ from app.crud import order, car, log, procedure, worker, wage
 from app.schemas import Order, OrderCreate, Procedure, ProcedureCreate, OrderToCustomer, OrderToAdmin
 
 
-def create_order(db: Session, obj_in: OrderCreate, customer_id: str) -> Order:
+def create_order(db: Session, obj_in: OrderCreate, customer_id: str) -> OrderCreate:
     """Create a new repair order"""
     # Verify the car belongs to the customer
     car_obj = car.get_by_car_id(db, car_id=obj_in.car_id)
@@ -14,14 +14,16 @@ def create_order(db: Session, obj_in: OrderCreate, customer_id: str) -> Order:
         raise ValueError("Car does not exist or does not belong to customer")
     
     # Create the order
-    return order.create_order_for_customer(
-        db=db, obj_in=obj_in, customer_id=customer_id
+    return OrderCreate.model_validate(
+        order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
     )
 
 
 def get_order_by_id(db: Session, order_id: str) -> Optional[Order]:
     """Get a specific order by ID"""
-    return order.get_by_order_id(db, order_id=order_id)
+    return Order.model_validate(
+        order.get_by_order_id(db, order_id=order_id)
+    )
 
 
 def get_orders_for_customer(
@@ -30,9 +32,11 @@ def get_orders_for_customer(
     """
     Get all orders for a customer with pagination and optional status filtering
     """
-    return order.get_orders_by_customer(
+    orders = order.get_orders_by_customer(
         db, customer_id=customer_id, skip=skip, limit=limit, status=status
     )
+    orders = [OrderToCustomer.model_validate(o) for o in orders]
+    return orders
 
 
 def get_all_orders(
@@ -41,7 +45,9 @@ def get_all_orders(
     """
     Get all orders with pagination and optional status filtering (admin function)
     """
-    return order.get_multi_with_details(db, skip=skip, limit=limit, status=status)
+    orders = order.get_multi_with_details(db, skip=skip, limit=limit, status=status)
+    orders = [OrderToAdmin.model_validate(o) for o in orders]
+    return orders
 
 
 def update_order_status(db: Session, order_id: str, new_status: int) -> Optional[Order]:
@@ -75,15 +81,15 @@ def update_order_status(db: Session, order_id: str, new_status: int) -> Optional
         raise ValueError("Cannot change status of a cancelled order")
     
     # Update the status
-    return order.update_status(db, order_id=order_id, new_status=new_status)
+    return Order.model_validate(order.update_status(db, order_id=order_id, new_status=new_status))
 
 
 def add_customer_feedback(
     db: Session, order_id: str, rating: int, comment: Optional[str] = None
 ) -> Optional[OrderToCustomer]:
     """Add customer feedback to an order"""
-    return order.add_customer_feedback(
-        db=db, order_id=order_id, rating=rating, comment=comment
+    return OrderToCustomer.model_validate(
+        order.add_customer_feedback(db=db, order_id=order_id, rating=rating, comment=comment)
     )
 
 
@@ -96,7 +102,9 @@ def add_procedure_to_order(
         procedure_text=procedure_text,
         current_status=0  # Initially pending
     )
-    return procedure.create_procedure_for_order(db=db, obj_in=procedure_in)
+    return Procedure.model_validate(
+        procedure.create_procedure_for_order(db=db, obj_in=procedure_in)
+    )
 
 
 def delete_order(db: Session, order_id: str) -> bool:
