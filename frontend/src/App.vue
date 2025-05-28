@@ -1,0 +1,37 @@
+<script setup>
+import { RouterView } from 'vue-router'
+import AppNavbar from '@/components/shared/AppNavbar.vue'
+import { useAuthStore } from '@/store/authStore'
+
+const authStore = useAuthStore()
+</script>
+
+<template>
+  <!-- 认证相关页面使用独立布局 -->
+  <RouterView v-slot="{ Component }">
+    <template v-if="$route.meta.requiresAuth">
+      <DashboardLayout>
+        <AppNavbar />  <!-- 集成导航栏 -->
+        <component :is="Component" />
+      </DashboardLayout>
+    </template>
+    
+    <!-- 登录/注册页面使用干净布局 -->
+    <template v-else>
+      <AuthLayout>
+        <component :is="Component" />
+      </AuthLayout>
+    </template>
+  </RouterView>
+</template>
+
+<style>
+/* 全局基础样式 */
+@import '@/assets/styles/main.scss';
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  font-weight: normal;
+}
+</style>
