@@ -1,12 +1,12 @@
 <template>
-  <form @submit.prevent="$emit('submit', formData)">
+  <form @submit.prevent="$emit('register', formData)">
     <!-- 客户注册字段 -->
     <template v-if="role === 'customer'">
       <div class="form-group">
         <label>用户名</label>
         <input v-model="formData.username" required>
       </div>
-      
+
       <div class="form-group">
         <label>密码</label>
         <input v-model="formData.password" type="password" required>

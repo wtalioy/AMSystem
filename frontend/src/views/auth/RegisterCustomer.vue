@@ -2,13 +2,13 @@
   <div class="login-container">
     <div class="login-form">
       <h2 class="form-title">用户注册</h2>
-      <RoleBasedForm role="customer" @submit="handleRegister"/>
-      
+      <RoleBasedForm role="customer" @register="handleRegister" />
+
       <!-- 显示错误消息 -->
       <div v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
-      
+
       <p class="auth-link">
         已有账号？<router-link to="/login">立即登录</router-link>
       </p>
@@ -28,14 +28,14 @@ const errorMessage = ref(null)
 
 const handleRegister = async (formData) => {
   errorMessage.value = null // 重置错误消息
-  
+
   try {
     // 直接传递表单数据，字段映射在authStore中处理
     const result = await authStore.registerCustomer({
       user_name: formData.username,
       user_pwd: formData.password
     })
-    
+
     if (result?.success) {
       router.push('/login')
     }
@@ -74,10 +74,11 @@ const handleRegister = async (formData) => {
   text-align: center;
   margin-top: 1.5rem;
   color: #4a5568;
-  
+
   a {
     color: #4299E1;
     font-weight: 500;
+
     &:hover {
       text-decoration: underline;
     }
