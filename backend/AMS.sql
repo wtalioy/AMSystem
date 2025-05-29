@@ -3,7 +3,7 @@ CREATE TABLE User (
     user_id CHAR(10) PRIMARY KEY,   -- 主键
     user_name VARCHAR(10) NOT NULL,
     user_pwd VARCHAR(100) NOT NULL,
-    user_type VARCHAR(15) NOT NULL CHECK (user_type IN ('Customer', 'Worker', 'Administrator'))
+    user_type VARCHAR(15) NOT NULL CHECK (user_type IN ('customer', 'worker', 'administrator'))
 );
 
 -- 子类表（直接继承user_id为主键）
