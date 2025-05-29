@@ -64,6 +64,43 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    // 管理员注册
+    async registerAdmin(formData) {
+      try {
+        await authAPI.registerAdmin({
+          user_name: formData.user_name,
+          user_pwd: formData.user_pwd
+        })
+        return { success: true }
+      } catch (error) {
+        this.handleRegistrationError(error)
+      }
+    },
+
+    // 工人注册
+    async registerWorker(formData) {
+      try {
+        await authAPI.registerWorker({
+          user_name: formData.user_name,
+          user_pwd: formData.user_pwd,
+          worker_type: formData.worker_type
+        })
+        return { success: true }
+      } catch (error) {
+        this.handleRegistrationError(error)
+      }
+    },
+    // 错误处理复用
+    handleRegistrationError(error) {
+      let errorMsg = '注册失败，请检查输入信息'
+      if (error.response?.data?.detail) {
+        errorMsg = error.response.data.detail.map(d => d.msg).join(', ')
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message
+      }
+      throw new Error(errorMsg)
+    },
+
     logout() {
       localStorage.removeItem('token')
       localStorage.removeItem('userType')

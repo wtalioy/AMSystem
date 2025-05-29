@@ -1,10 +1,9 @@
 <template>
   <div class="login-container">
     <div class="login-form">
-      <h2 class="form-title">用户注册</h2>
-      <RoleBasedForm role="customer" @register="handleRegister" />
+      <h2 class="form-title">工人注册</h2>
+      <RoleBasedForm role="worker" @register="handleRegister" />
 
-      <!-- 显示错误消息 -->
       <div v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
@@ -16,7 +15,7 @@
         管理员注册？<router-link to="/register/admin">管理员注册</router-link>
       </p>
       <p class="auth-link">
-        工人注册？<router-link to="/register/worker">工人注册</router-link>
+        用户注册？<router-link to="/register/customer">用户注册</router-link>
       </p>
     </div>
   </div>
@@ -33,25 +32,27 @@ const router = useRouter()
 const errorMessage = ref(null)
 
 const handleRegister = async (formData) => {
-  errorMessage.value = null // 重置错误消息
-
+  errorMessage.value = null
+  
   try {
-    // 直接传递表单数据，字段映射在authStore中处理
-    const result = await authStore.registerCustomer({
+    const result = await authStore.registerWorker({
       user_name: formData.username,
-      user_pwd: formData.password
+      user_pwd: formData.password,
+      worker_type: formData.workerType
     })
 
     if (result?.success) {
       router.push('/login')
     }
   } catch (error) {
-    console.error('注册失败:', error)
+    console.error('工人注册失败:', error)
     errorMessage.value = error.message
   }
 }
 </script>
+
 <style scoped>
+/* 复用现有客户注册页面的样式 */
 .login-container {
   min-height: 100vh;
   display: flex;

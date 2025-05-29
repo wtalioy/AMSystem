@@ -16,7 +16,7 @@ const routes = [
       component: () => import('@/views/auth/RegisterCustomer.vue'),
       meta: { guestOnly: true }
     },
-    /*{
+    {
       path: '/register/worker',
       component: () => import('@/views/auth/RegisterWorker.vue'),
       meta: { requiresAdmin: true }
@@ -25,7 +25,7 @@ const routes = [
       path: '/register/admin',
       component: () => import('@/views/auth/RegisterAdmin.vue'),
       meta: { requiresAdmin: true }
-    },*/
+    },
   
     // 仪表盘路由组
     {

@@ -1,15 +1,24 @@
 <template>
   <form @submit.prevent="$emit('register', formData)">
-    <!-- 客户注册字段 -->
-    <template v-if="role === 'customer'">
-      <div class="form-group">
-        <label>用户名</label>
-        <input v-model="formData.username" required>
-      </div>
+    <!-- 所有角色通用字段 -->
+    <div class="form-group">
+      <label>用户名</label>
+      <input v-model="formData.username" required>
+    </div>
 
+    <div class="form-group">
+      <label>密码</label>
+      <input v-model="formData.password" type="password" required>
+    </div>
+
+    <!-- 工人特有字段 -->
+    <template v-if="role === 'worker'">
       <div class="form-group">
-        <label>密码</label>
-        <input v-model="formData.password" type="password" required>
+        <label>工种类型</label>
+        <select v-model="formData.workerType" required>
+          <option value="0">初级技师</option>
+          <option value="1">高级技师</option>
+        </select>
       </div>
     </template>
 

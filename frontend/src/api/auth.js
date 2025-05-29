@@ -22,6 +22,24 @@ export default {
       user_type: 'customer'       // 使用后端要求的字段名
     })
   },
+  // 管理员注册接口
+  async registerAdmin(data) {
+    return axios.post(`${API_BASE}/users/admins`, {
+      user_name: data.user_name,
+      user_pwd: data.user_pwd,
+      user_type: 'admin'
+    })
+  },
+
+  // 工人注册接口
+  async registerWorker(data) {
+    return axios.post(`${API_BASE}/users/workers`, {
+      user_name: data.user_name,
+      user_pwd: data.user_pwd,
+      user_type: 'worker',
+      worker_type: data.worker_type  // 工人特有字段
+    })
+  },
 
   // 测试令牌接口
   async testToken(token) {
