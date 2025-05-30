@@ -1,0 +1,8 @@
+// src/assets/styles/main.scss
+@use 'variables' as *; // 使用@use替代@import
+
+body {
+  margin: 0;
+  font-family: Arial;
+  color: $color-primary; // 确保变量通过命名空间引用
+}
