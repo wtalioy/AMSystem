@@ -50,11 +50,11 @@ const routes = [
           path: 'worker',
           component: () => import('@/views/dashboard/Worker.vue'),
           meta: { role: 'worker' },
-        //   children: [
-        //     { path: 'orders', component: () => import('@/views/worker/MyOrders.vue') },
-        //     { path: 'orders/pending', component: () => import('@/views/worker/PendingOrders.vue') },
-        //     { path: 'logs', component: () => import('@/views/worker/WorkLogs.vue') }
-        //   ]
+           children: [
+             { path: 'orders', component: () => import('@/views/worker/MyOrders.vue') },
+             { path: 'orders/pending', component: () => import('@/views/worker/PendingOrders.vue') },
+             { path: 'logs', component: () => import('@/views/worker/WorkLogs.vue') }
+           ]
         },
         
         // 管理员专属路由
@@ -62,18 +62,18 @@ const routes = [
           path: 'admin',
           component: () => import('@/views/dashboard/Admin.vue'),
           meta: { role: 'admin' },
-        //   children: [
-        //     { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
-        //     { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
-        //     { path: 'stats/cars', component: () => import('@/views/admin/CarStatistics.vue') }
-        //   ]
+           children: [
+             { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
+             { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
+             { path: 'stats/cars', component: () => import('@/views/admin/CarStatistics.vue') }
+           ]
         }
       ]
     },
     
     // 公共页面
-    //{ path: '/unauthorized', component: () => import('@/views/errors/Unauthorized.vue') },
-    //{ path: '/:pathMatch(.*)*', component: () => import('@/views/errors/NotFound.vue') }
+    { path: '/unauthorized', component: () => import('@/views/errors/Unauthorized.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/errors/NotFound.vue') }
   ]
 
 const router = createRouter({
