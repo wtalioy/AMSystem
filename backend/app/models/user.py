@@ -1,4 +1,4 @@
-from app.dbrm import Table, Column, String, TinyInt, Char, model_register
+from app.dbrm import Table, Column, String, TinyInt, Char, Timestamp, model_register
 
 @model_register
 class User(Table):
@@ -8,6 +8,14 @@ class User(Table):
     user_name = Column(String(10), nullable=False)
     user_pwd = Column(String(100), nullable=False)  # store hashed password
     user_type = Column(String(15), nullable=False, check="IN ('user', 'customer', 'worker', 'administrator')")
+    
+    # Soft delete and audit fields
+    created_at = Column(Timestamp, nullable=False, default='CURRENT_TIMESTAMP')
+    updated_at = Column(Timestamp, nullable=False, default='CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+    deleted_at = Column(Timestamp, nullable=True)  # NULL = not deleted
+    created_by = Column(Char(10), nullable=True)
+    updated_by = Column(Char(10), nullable=True)
+    deleted_by = Column(Char(10), nullable=True)
 
 @model_register(dependencies=["User"])
 class Customer(Table):

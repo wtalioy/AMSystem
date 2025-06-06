@@ -1,85 +1,36 @@
-from typing import Any, List, Dict, Optional, Union
+from typing import Any, List, Dict, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
 
-from app.services import user_service
+from app.services import UserService
 from app.api import deps
-from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate, Customer, Worker, Admin
+from app.schemas import User, UserUpdate, UserCreate, Customer, Worker, Admin
 
 router = APIRouter()
 
-# Register endpoints organized by user type
-@router.post("/customers", response_model=Customer, status_code=status.HTTP_201_CREATED)
-def create_customer(
-    *, 
-    db: Session = Depends(deps.get_db), 
-    customer_in: CustomerCreate,
-    response: Response
-) -> Any:
-    """
-    Register a new customer
-    """
-    user = user_service.get_user_by_name(db, user_name=customer_in.user_name)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The user with this name already exists in the system",
-        )
-    created_customer = user_service.create_customer(db=db, customer_in=customer_in)
-    
-    # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_customer.user_id}"
-        
-    return created_customer
-
-
-@router.post("/workers", response_model=Worker, status_code=status.HTTP_201_CREATED)
-def create_worker(
+@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+def register_user(
     *,
     db: Session = Depends(deps.get_db),
-    worker_in: WorkerCreate,
+    user_in: UserCreate,
     response: Response
 ) -> Any:
     """
-    Register a new worker
+    Register a new user
     """
-    user = user_service.get_user_by_name(db, user_name=worker_in.user_name)
+    user = UserService.get_user_by_name(db, user_name=user_in.user_name)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this name already exists in the system",
         )
-    created_worker = user_service.create_worker(db=db, worker_in=worker_in)
+    created_user = UserService.create_user(db=db, obj_in=user_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_worker.user_id}"
-        
-    return created_worker
+    response.headers["Location"] = f"/api/v1/users/{created_user.user_id}"
 
-
-@router.post("/admins", response_model=Admin, status_code=status.HTTP_201_CREATED)
-def create_admin(
-    *,
-    db: Session = Depends(deps.get_db),
-    admin_in: AdminCreate,
-    response: Response
-) -> Any:
-    """
-    Register a new admin (admin only)
-    """
-    user = user_service.get_user_by_name(db, user_name=admin_in.user_name)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The user with this name already exists in the system",
-        )
-    created_admin = user_service.create_admin(db=db, admin_in=admin_in)
-    
-    # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_admin.user_id}"
-        
-    return created_admin
+    return created_user
 
 
 # Current user profile management
@@ -91,7 +42,7 @@ def get_current_user(
     """
     Get current user profile with complete information based on user type
     """
-    complete_user = user_service.get_user_by_id(db, user_id=current_user.user_id, typed=True)
+    complete_user = UserService.get_user_by_id(db, user_id=current_user.user_id, typed=True)
     if not complete_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -100,7 +51,7 @@ def get_current_user(
     return complete_user
 
 
-@router.put("/me", response_model=User)
+@router.put("/me", response_model=User, deprecated=True)
 def update_current_user(
     *,
     db: Session = Depends(deps.get_db),
@@ -110,7 +61,7 @@ def update_current_user(
     """
     Update current user profile (full update)
     """
-    return user_service.update_user(db=db, user_id=current_user.user_id, user_in=user_in)
+    return User
 
 
 @router.patch("/me", response_model=User)
@@ -123,7 +74,8 @@ def partial_update_current_user(
     """
     Partially update current user profile
     """
-    return user_service.partial_update_user(db=db, user_id=current_user.user_id, obj_in=user_in)
+    audit_context = deps.get_audit_context(current_user)
+    return UserService.partial_update_user(db=db, user_id=current_user.user_id, obj_in=user_in, audit_context=audit_context)
 
 
 # Admin operations on users
@@ -136,7 +88,7 @@ def get_user_by_id(
     """
     Get a specific user by ID (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=user_id)
+    user = UserService.get_user_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -157,7 +109,7 @@ def get_users(
     Get all users (admin only) with pagination
     """
     skip = (page - 1) * page_size
-    users = user_service.get_all_users(db, skip=skip, limit=page_size)
+    users = UserService.get_all_users(db, skip=skip, limit=page_size)
     return users
 
 
@@ -172,13 +124,14 @@ def update_user(
     """
     Update a specific user (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=user_id)
+    user = UserService.get_user_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this ID does not exist in the system",
         )
-    return user_service.update_user(db=db, user_id=user_id, user_in=user_in)
+    audit_context = deps.get_audit_context(current_user)
+    return UserService.update_user(db=db, user_id=user_id, user_in=user_in, audit_context=audit_context)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -191,11 +144,12 @@ def delete_user(
     """
     Delete a specific user (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=user_id)
+    user = UserService.get_user_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this ID does not exist in the system",
         )
-    user_service.delete_user(db=db, user_id=user_id)
+    audit_context = deps.get_audit_context(current_user)
+    UserService.delete_user(db=db, user_id=user_id, audit_context=audit_context)
     return None

@@ -142,10 +142,25 @@ class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
         db.commit()
 
         db.refresh(user_obj)
-        return user_obj
+        db.refresh(worker_obj)
+        return User(
+            user_id=user_obj.user_id,
+            user_name=user_obj.user_name,
+            user_type=user_obj.user_type,
+            worker_type=worker_obj.worker_type
+        )
         
     def get_workers_by_type(self, db: Session, *, worker_type: int) -> List[Worker]:
         return db.query(Worker).filter_by(worker_type=worker_type).all()
+    
+    def get_available_workers(self, db: Session, worker_type: Optional[int] = None) -> List[Worker]:
+        """Get available workers, optionally filtered by worker type"""
+        # Simple implementation - get all workers of specified type
+        # In a real system, this would check worker availability, workload, etc.
+        query = db.query(Worker)
+        if worker_type is not None:
+            query = query.filter_by(worker_type=worker_type)
+        return query.all()
 
 
 class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):

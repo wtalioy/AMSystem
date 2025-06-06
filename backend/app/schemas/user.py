@@ -2,112 +2,55 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-# Shared properties
+# Base user schema
 class UserBase(BaseModel):
     user_name: str
-
-
-# Properties to receive via API on creation
-class UserCreate(UserBase):
-    user_pwd: str
     user_type: str
 
 
-# Properties to receive via API on login
+# For creating new users
+class UserCreate(UserBase):
+    user_pwd: str
+    worker_type: Optional[int] = None  # Only used for workers
+
+
+# For user login
 class UserLogin(BaseModel):
     user_name: str
     user_pwd: str
 
 
-# Properties to receive via API on update
+# For updating users
 class UserUpdate(BaseModel):
     user_name: Optional[str] = None
     user_pwd: Optional[str] = None
-
-
-# Properties shared by models stored in DB
-class UserInDBBase(UserBase):
-    user_id: str
-    user_type: str
-
-    class Config:
-        from_attributes = True
-
-
-# Properties to return via API
-class User(UserInDBBase):
-    pass
-
-
-# Properties stored in DB
-class UserInDB(UserInDBBase):
-    user_pwd: str
-
-
-# Customer schemas
-class CustomerBase(UserBase):
-    pass
-
-
-class CustomerCreate(UserCreate):
-    user_type: str = "customer"
-
-
-class CustomerUpdate(UserUpdate):
-    pass
-
-
-class CustomerInDBBase(UserInDBBase):
-    class Config:
-        from_attributes = True
-
-
-class Customer(CustomerInDBBase):
-    pass
-
-
-# Worker schemas
-class WorkerBase(UserBase):
-    worker_type: int
-
-
-class WorkerCreate(UserCreate):
-    user_type: str = "worker"
-    worker_type: int
-
-
-class WorkerUpdate(UserUpdate):
     worker_type: Optional[int] = None
 
 
-class WorkerInDBBase(UserInDBBase):
-    worker_type: int
+# Main user schema (returned by API)
+class User(UserBase):
+    user_id: str
+    worker_type: Optional[int] = None
 
     class Config:
         from_attributes = True
 
 
-class Worker(WorkerInDBBase):
-    pass
+# Specialized user types (simplified)
+class Customer(User):
+    user_type: str = "customer"
 
 
-# Administrator schemas
-class AdminBase(UserBase):
-    pass
+class Worker(User):
+    user_type: str = "worker"
+    worker_type: int  # Required for workers
 
 
-class AdminCreate(UserCreate):
+class Admin(User):
     user_type: str = "administrator"
 
 
-class AdminUpdate(UserUpdate):
-    pass
-
-
-class AdminInDBBase(UserInDBBase):
-    class Config:
-        from_attributes = True
-
-
-class Admin(AdminInDBBase):
-    pass
+# For backward compatibility with existing CRUD operations
+CustomerCreate = UserCreate
+WorkerCreate = UserCreate  
+AdminCreate = UserCreate
