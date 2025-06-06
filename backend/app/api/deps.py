@@ -8,7 +8,8 @@ from app.dbrm import Session, Engine
 
 from app.core.config import settings
 from app.schemas import TokenPayload, User, Customer, Worker, Admin
-from app.services.user_service import get_user_by_id, get_typed_user_by_id
+from app.services import UserService
+from app.schemas.audit_log import ChangeTrackingContext
 
 engine = Engine.from_env()
 
@@ -35,7 +36,7 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = get_user_by_id(db, user_id=token_data.sub)
+    user = UserService.get_user_by_id(db, user_id=token_data.sub)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -45,7 +46,7 @@ def get_current_customer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Customer:
-    customer = get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="customer")
+    customer = UserService.get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="customer")
     if not customer:
         raise HTTPException(
             status_code=400,
@@ -58,7 +59,7 @@ def get_current_worker(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Worker:
-    worker = get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="worker")
+    worker = UserService.get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="worker")
     if not worker:
         raise HTTPException(
             status_code=400,
@@ -71,10 +72,15 @@ def get_current_admin(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Admin:
-    admin = get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="administrator")
+    admin = UserService.get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="administrator")
     if not admin:
         raise HTTPException(
             status_code=400,
             detail="The user doesn't have enough privileges"
         )
     return admin
+
+
+def get_audit_context(current_user: User) -> ChangeTrackingContext:
+    """Create audit context from current user"""
+    return ChangeTrackingContext(user_id=current_user.user_id)

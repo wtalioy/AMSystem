@@ -5,6 +5,7 @@ from app.models.order import ServiceOrder
 from app.models.procedure import ServiceProcedure
 from app.models.user import User, Customer, Worker, Administrator
 from app.models.wage import Wage
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "Car",
@@ -17,4 +18,5 @@ __all__ = [
     "Worker",
     "Administrator",
     "Wage",
+    "AuditLog",
 ]

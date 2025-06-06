@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
+from decimal import Decimal
 
 from app.dbrm import Session, func
 
@@ -86,21 +87,44 @@ class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
         db.refresh(db_obj)
         return db_obj
     
-    def update_status(
-        self, db: Session, *, order_id: str, new_status: int, worker_id: Optional[str] = None
-    ) -> ServiceOrder:
+
+    
+    def update_order_status(self, db: Session, order_id: str, new_status: int) -> ServiceOrder:
+        """Update order status"""
         db_obj = self.get_by_order_id(db, order_id=order_id)
         if db_obj:
             db_obj.status = new_status
             if new_status == 2:  # If completed
                 db_obj.end_time = datetime.now()
-            if worker_id:
-                db_obj.worker_id = worker_id
-                db_obj.status = 1  # In progress
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
         return db_obj
+    
+    def update_order_assignment(
+        self, db: Session, order_id: str, worker_id: Optional[str], status: int
+    ) -> ServiceOrder:
+        """Update order worker assignment and status"""
+        db_obj = self.get_by_order_id(db, order_id=order_id)
+        if db_obj:
+            db_obj.worker_id = worker_id
+            db_obj.status = status
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+        return db_obj
+    
+    def get_completed_orders_count_by_worker_period(
+        self, db: Session, worker_id: str, start_date: datetime, end_date: datetime
+    ) -> int:
+        """Get count of completed orders by worker in a date range"""
+        from app.dbrm import Condition
+        return db.query(func.count(ServiceOrder.order_id)).filter(
+            Condition.eq(ServiceOrder.worker_id, worker_id),
+            Condition.eq(ServiceOrder.status, 2),  # completed
+            Condition.ge(ServiceOrder.end_time, start_date),
+            Condition.le(ServiceOrder.end_time, end_date)
+        ).scalar() or 0
     
     def add_customer_feedback(
         self, db: Session, *, order_id: str, rating: int, comment: Optional[str] = None
@@ -141,6 +165,27 @@ class CRUDOrder(CRUDBase[ServiceOrder, OrderCreate, OrderUpdate]):
         return db.query(ServiceOrder).filter(
             Condition.lt(ServiceOrder.status, 2)
         ).offset(skip).limit(limit).all()
+
+    def set_expedite_flag(self, db: Session, order_id: str, expedite_time: datetime) -> ServiceOrder:
+        """Set expedite flag and timestamp for an order"""
+        db_obj = self.get_by_order_id(db, order_id=order_id)
+        if db_obj:
+            db_obj.expedite_flag = True
+            db_obj.expedite_time = expedite_time
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+        return db_obj
+    
+    def update_order_total_cost(self, db: Session, order_id: str, total_cost: Decimal) -> ServiceOrder:
+        """Update the total cost of an order"""
+        db_obj = self.get_by_order_id(db, order_id=order_id)
+        if db_obj:
+            db_obj.total_cost = total_cost
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+        return db_obj
 
 
 order = CRUDOrder(ServiceOrder)

@@ -1,9 +1,9 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from app.dbrm import Session
 
-from app.services import admin_service
+from app.services import AdminService
 from app.api import deps
 from app.schemas import Admin
 
@@ -17,7 +17,64 @@ def get_car_statistics(
     """
     Get statistics about car types, repairs, and costs
     """
-    return admin_service.get_car_type_statistics(db)
+    return AdminService.get_car_type_statistics(db)
+
+
+@router.get("/vehicles/failure-patterns", response_model=List[dict])
+def get_vehicle_failure_patterns(
+    db: Session = Depends(deps.get_db),
+    current_user: Admin = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Analyze most common failure types by vehicle type
+    """
+    return AdminService.get_vehicle_failure_patterns(db)
+
+
+@router.get("/costs/analysis", response_model=dict)
+def get_cost_analysis(
+    *,
+    db: Session = Depends(deps.get_db),
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    period_type: str = Query("month", description="Period type: month or quarter"),
+    current_user: Admin = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Get cost analysis by time period with labor vs materials breakdown
+    """
+    return AdminService.get_cost_analysis_by_period(
+        db, start_date=start_date, end_date=end_date, period_type=period_type
+    )
+
+
+@router.get("/feedback/negative", response_model=dict)
+def get_negative_feedback_analysis(
+    *,
+    db: Session = Depends(deps.get_db),
+    rating_threshold: int = Query(3, ge=1, le=5, description="Rating threshold (orders below this rating)"),
+    current_user: Admin = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Analyze orders with low ratings and associated worker performance
+    """
+    return AdminService.get_negative_feedback_analysis(db, rating_threshold=rating_threshold)
+
+
+@router.get("/workers/productivity", response_model=List[dict])
+def get_worker_productivity_analysis(
+    *,
+    db: Session = Depends(deps.get_db),
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    current_user: Admin = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Analyze worker productivity metrics by specialty
+    """
+    return AdminService.get_worker_productivity_analysis(
+        db, start_date=start_date, end_date=end_date
+    )
 
 
 @router.get("/workers", response_model=List[dict])
@@ -31,7 +88,7 @@ def get_worker_statistics(
     """
     Get statistics about worker types, their tasks, and productivity
     """
-    return admin_service.get_worker_statistics(db, start_time=start_time, end_time=end_time)
+    return AdminService.get_worker_statistics(db, start_time=start_time, end_time=end_time)
 
 
 @router.get("/incomplete-orders", response_model=List[dict])
@@ -42,4 +99,4 @@ def get_incomplete_orders_statistics(
     """
     Get statistics about incomplete orders
     """
-    return admin_service.get_incomplete_orders_statistics(db)
+    return AdminService.get_incomplete_orders_statistics(db)

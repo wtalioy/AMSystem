@@ -4,8 +4,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Resp
 from app.dbrm import Session
 
 from app.api import deps
-from app.services import car_service, order_service, worker_service
-from app.schemas import User, Customer, Order, OrderCreate, Worker, OrderToWorker, OrderPending, Admin, OrderToCustomer, OrderToAdmin
+from app.services import CarService, OrderService
+from app.schemas import User, Customer, Order, OrderCreate, Admin
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ def create_order(
     Create a new repair order
     """
     # Verify the car belongs to the current customer
-    car = car_service.get_car_by_id(db, car_id=order_in.car_id)
+    car = CarService.get_car_by_id(db, car_id=order_in.car_id)
     if not car or car.customer_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -30,8 +30,9 @@ def create_order(
         )
     
     try:
-        order = order_service.create_order(
-            db=db, obj_in=order_in, customer_id=current_user.user_id
+        audit_context = deps.get_audit_context(current_user)
+        order = OrderService.create_order(
+            db=db, obj_in=order_in, customer_id=current_user.user_id, audit_context=audit_context
         )
         # Add Location header for the newly created resource
         response.headers["Location"] = f"/api/v1/orders/order?order_id={order.order_id}"
@@ -60,12 +61,12 @@ def get_orders(
     skip = (page - 1) * page_size
     
     if current_user.user_type == "customer":
-        return order_service.get_orders_for_customer(
+        return OrderService.get_orders_for_customer(
             db=db, customer_id=current_user.user_id, skip=skip, limit=page_size,
             status=status_filter
         )
     elif current_user.user_type == "administrator":
-        return order_service.get_all_orders(
+        return OrderService.get_all_orders(
             db=db, skip=skip, limit=page_size, status=status_filter
         )
     else:
@@ -86,7 +87,7 @@ def get_order(
     """
     Get a specific order by ID
     """
-    order = order_service.get_order_by_id(db=db, order_id=order_id)
+    order = OrderService.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -102,42 +103,6 @@ def get_order(
     return order
 
 
-# Worker-specific order views
-@router.get("/views/my-assigned", response_model=List[OrderToWorker])
-def get_worker_assigned_orders(
-    *,
-    db: Session = Depends(deps.get_db),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    status_filter: Optional[int] = Query(None, description="Filter by order status"),
-    current_user: Worker = Depends(deps.get_current_worker),
-) -> Any:
-    """
-    Get orders assigned to the current worker
-    """
-    skip = (page - 1) * page_size
-    return worker_service.get_owner_orders( # Uses worker_service
-        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size, status=status_filter
-    )
-
-
-@router.get("/views/available-for-workers", response_model=List[OrderPending])
-def get_worker_available_orders(
-    *,
-    db: Session = Depends(deps.get_db),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    current_user: Worker = Depends(deps.get_current_worker),
-) -> Any:
-    """
-    Get all available orders that workers can accept
-    """
-    skip = (page - 1) * page_size
-    return worker_service.get_pending_orders( # Uses worker_service
-        db=db, skip=skip, limit=page_size
-    )
-
-
 # Admin order cost calculation
 @router.get("/cost", response_model=dict) 
 def calculate_order_cost_admin(
@@ -149,11 +114,11 @@ def calculate_order_cost_admin(
     """
     Calculate the total cost for an order (Admin access)
     """
-    order = order_service.get_order_by_id(db=db, order_id=order_id)
+    order = OrderService.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     
-    return order_service.calculate_order_cost(db=db, order_id=order_id)
+    return OrderService.calculate_order_cost(db=db, order_id=order_id)
 
 
 # Order status updates
@@ -168,7 +133,7 @@ def update_order_status(
     """
     Update the status of an order
     """
-    order = order_service.get_order_by_id(db=db, order_id=order_id)
+    order = OrderService.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -183,8 +148,9 @@ def update_order_status(
         )
 
     try:
-        return order_service.update_order_status(
-            db=db, order_id=order_id, new_status=new_status
+        audit_context = deps.get_audit_context(current_user)
+        return OrderService.update_order_status(
+            db=db, order_id=order_id, new_status=new_status, audit_context=audit_context
         )
     except ValueError as e:
         raise HTTPException(
@@ -206,7 +172,7 @@ def add_order_feedback(
     """
     Add customer feedback to a completed order
     """
-    order = order_service.get_order_by_id(db=db, order_id=order_id)
+    order = OrderService.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -227,9 +193,46 @@ def add_order_feedback(
             detail="Order must be completed to add feedback"
         )
 
-    return order_service.add_customer_feedback(
-        db=db, order_id=order_id, rating=rating, comment=comment
+    audit_context = deps.get_audit_context(current_user)
+    return OrderService.add_customer_feedback(
+        db=db, order_id=order_id, rating=rating, comment=comment, audit_context=audit_context
     )
+
+
+# Order expedite functionality  
+@router.post("/{order_id}/expedite", response_model=Order)
+def expedite_order(
+    *,
+    db: Session = Depends(deps.get_db),
+    order_id: str,
+    current_user: Customer = Depends(deps.get_current_customer),
+) -> Any:
+    """
+    Expedite an order - customer requests priority handling
+    """
+    order = OrderService.get_order_by_id(db=db, order_id=order_id)
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Order not found"
+        )
+    
+    # Only the customer who owns the order can expedite it
+    if order.customer_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not authorized to expedite this order"
+        )
+    
+    # Can only expedite non-completed orders
+    if order.status >= 2:  # 2 = completed, 3 = cancelled
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+            detail="Cannot expedite completed or cancelled orders"
+        )
+
+    audit_context = deps.get_audit_context(current_user)
+    return OrderService.expedite_order(db=db, order_id=order_id, audit_context=audit_context)
 
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -244,7 +247,7 @@ def cancel_order(
     - Customers can only cancel their own pending orders
     - Admins can delete any order
     """
-    order = order_service.get_order_by_id(db=db, order_id=order_id)
+    order = OrderService.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -270,5 +273,6 @@ def cancel_order(
             detail="Not authorized to cancel or delete orders"
         )
     
-    order_service.delete_order(db=db, order_id=order_id)
+    audit_context = deps.get_audit_context(current_user)
+    OrderService.delete_order(db=db, order_id=order_id, audit_context=audit_context)
     return None

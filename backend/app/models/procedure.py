@@ -8,4 +8,4 @@ class ServiceProcedure(Table):
     procedure_text = Column(TinyText, nullable=False)
     current_status = Column(Integer, nullable=False, default=0)  # 0: pending, 1: in progress, 2: completed
 
-    order_id = Column(Char(10), primary_key=True, foreign_key='ServiceOrder.order_id')
+    order_id = Column(Char(10), primary_key=True, foreign_key='ServiceOrder.order_id', on_delete="CASCADE", on_update="CASCADE")

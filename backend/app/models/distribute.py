@@ -8,4 +8,4 @@ class Distribute(Table):
     distribute_time = Column(Timestamp, nullable=False)
     amount = Column(Decimal(10, 1), nullable=False)
 
-    worker_id = Column(Char(10), foreign_key='Worker.user_id', nullable=False)
+    worker_id = Column(Char(10), foreign_key='Worker.user_id', nullable=False, on_delete="CASCADE", on_update="CASCADE")

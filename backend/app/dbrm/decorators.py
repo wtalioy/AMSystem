@@ -3,7 +3,7 @@ DBRM utility decorators module.
 """
 import logging
 import functools
-from typing import Callable, Dict, Any, Type, List, Optional, Set, TypeVar, cast
+from typing import Callable, Dict, Any, Type, List, Optional, Set, TypeVar
 
 logger = logging.getLogger(__name__)
 

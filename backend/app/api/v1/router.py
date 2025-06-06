@@ -9,7 +9,9 @@ from app.api.v1.endpoints import (
     wage, 
     procedures, 
     statistics,
-    payments
+    payments,
+    workers,
+    audit
 )
 
 api_router = APIRouter()
@@ -24,7 +26,9 @@ api_router.include_router(orders.router, prefix="/orders", tags=["Orders"])
 api_router.include_router(procedures.router, prefix="/procedures", tags=["Procedures"])
 
 # Worker and Admin specific functionalities
+api_router.include_router(workers.router, prefix="/workers", tags=["Worker Management"])
 api_router.include_router(logs.router, prefix="/logs", tags=["Maintenance Logs"])
 api_router.include_router(wage.router, prefix="/wage", tags=["Wage & Income"])
 api_router.include_router(statistics.router, prefix="/statistics", tags=["Statistics"])
 api_router.include_router(payments.router, prefix="/payments", tags=["Payments"])
+api_router.include_router(audit.router, prefix="/audit", tags=["Audit & Rollback"])

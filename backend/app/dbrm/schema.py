@@ -259,7 +259,7 @@ class TableBase:
         data = {}
         for name, column in self.__class__._columns.items():
             value = getattr(self, name, None)
-            if value is not None:
+            if value is not None and not isinstance(value, Column):
                 data[name] = value
         
         if exists:

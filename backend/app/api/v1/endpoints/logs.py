@@ -4,7 +4,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from app.dbrm import Session
 
-from app.services import worker_service
+from app.services import WorkerService
 from app.api import deps
 from app.schemas import Log, Worker
 
@@ -25,7 +25,7 @@ def create_maintenance_log(
     """
     try:
         # This might need to be refactored to a generic log_service if logs are not worker-specific
-        return worker_service.create_maintenance_log(
+        return WorkerService.create_maintenance_log(
             db=db,
             worker_id=current_user.user_id,
             order_id=order_id,
@@ -50,6 +50,6 @@ def get_worker_logs(
     """
     skip = (page - 1) * page_size
     # This might need to be refactored to a generic log_service
-    return worker_service.get_worker_logs(
+    return WorkerService.get_worker_logs(
         db=db, worker_id=current_user.user_id, skip=skip, limit=page_size
     )

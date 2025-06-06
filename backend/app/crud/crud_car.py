@@ -51,9 +51,8 @@ class CRUDCar(CRUDBase[Car, CarCreate, CarUpdate]):
         return db.query(func.distinct(Car.car_type)).all()
 
     def count_cars_by_type(self, db: Session, car_type: int) -> int:
-        from app.dbrm import Condition
-        return db.query(func.count(Car.car_id)).where(
-            Condition.eq(Car.car_type, car_type)
+        return db.query(func.count(Car.car_id)).filter_by(
+            car_type=car_type
         ).scalar() or 0
 
 
