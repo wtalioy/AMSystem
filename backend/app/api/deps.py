@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from app.dbrm import Session, Engine
 
 from app.core.config import settings
-from app.schemas import TokenPayload, User, Customer, Worker, Admin
+from app.schemas import TokenPayload, User
 from app.services import UserService
 from app.schemas.audit_log import ChangeTrackingContext
 
@@ -45,7 +45,7 @@ def get_current_user(
 def get_current_customer(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
-) -> Customer:
+) -> User:
     customer = UserService.get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="customer")
     if not customer:
         raise HTTPException(
@@ -58,7 +58,7 @@ def get_current_customer(
 def get_current_worker(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
-) -> Worker:
+) -> User:
     worker = UserService.get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="worker")
     if not worker:
         raise HTTPException(
@@ -71,7 +71,7 @@ def get_current_worker(
 def get_current_admin(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
-) -> Admin:
+) -> User:
     admin = UserService.get_typed_user_by_id(db=db, user_id=current_user.user_id, expected_type="administrator")
     if not admin:
         raise HTTPException(

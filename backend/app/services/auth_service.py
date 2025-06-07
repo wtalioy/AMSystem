@@ -19,7 +19,7 @@ class AuthService:
         user_obj = user.authenticate(db, user_name=user_name, password=password)
         if not user_obj:
             return None
-        return User.model_validate(user_obj)
+        return user_obj
 
 
     @staticmethod

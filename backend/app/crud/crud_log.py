@@ -2,33 +2,38 @@ from typing import List, Optional, Tuple, Dict, Any, Union
 
 from app.dbrm import Session, func
 
-from app.crud.base import CRUDBase
-from app.models.log import Log
-from app.schemas.log import LogCreate, LogUpdate
+
+from app.models import Log as LogModel
+from app.schemas import LogCreate, Log
 
 
-class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
+class CRUDLog:
     def get_logs_by_order(
         self, db: Session, order_id: str, skip: int = 0, limit: int = 100
     ) -> List[Log]:
-        return db.query(Log).filter_by(
+        objs = db.query(LogModel).filter_by(
             order_id=order_id
-        ).order_by_desc(Log.log_time).offset(skip).limit(limit).all()
+        ).order_by_desc(LogModel.log_time).offset(skip).limit(limit).all()
+        if not objs:
+            return []
+        return [Log.model_validate(obj) for obj in objs]
     
     def get_logs_by_worker(
         self, db: Session, worker_id: str, skip: int = 0, limit: int = 100
     ) -> List[Log]:
-        return db.query(Log).filter_by(
+        objs = db.query(LogModel).filter_by(
             worker_id=worker_id
-        ).order_by_desc(Log.log_time).offset(skip).limit(limit).all()
+        ).order_by_desc(LogModel.log_time).offset(skip).limit(limit).all()
+        if not objs:
+            return []
+        return [Log.model_validate(obj) for obj in objs]
         
     def calculate_avg_cost_by_car_type(self, db: Session, car_type: int) -> float:
-        from app.models.order import ServiceOrder
-        from app.models.car import Car
+        from app.models import ServiceOrder, Car
         from app.dbrm import Condition
         
-        cost_result = db.query(func.avg(Log.cost)).join(
-            ServiceOrder, on=(ServiceOrder.order_id, Log.order_id)
+        cost_result = db.query(func.avg(LogModel.cost)).join(
+            ServiceOrder, on=(ServiceOrder.order_id, LogModel.order_id)
         ).join(
             Car, on=(Car.car_id, ServiceOrder.car_id)
         ).where(
@@ -38,12 +43,11 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         return float(cost_result) if cost_result else 0
     
     def get_car_type_consumption(self, db: Session, car_type: int) -> List[tuple]:
-        from app.models.order import ServiceOrder
-        from app.models.car import Car
+        from app.models import ServiceOrder, Car
         from app.dbrm import Condition
         
-        return db.query(Log.consumption).join(
-            ServiceOrder, on=(ServiceOrder.order_id, Log.order_id)
+        return db.query(LogModel.consumption).join(
+            ServiceOrder, on=(ServiceOrder.order_id, LogModel.order_id)
         ).join(
             Car, on=(Car.car_id, ServiceOrder.car_id)
         ).where(
@@ -51,27 +55,27 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         ).all()
 
     def count_tasks_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
-        from app.models.user import Worker
+        from app.models import Worker
         from app.dbrm import Condition
         
-        return db.query(func.count(Log.id)).join(
-            Worker, on=(Worker.user_id, Log.worker_id)
+        return db.query(func.count(LogModel.id)).join(
+            Worker, on=(Worker.user_id, LogModel.worker_id)
         ).where(
             Condition.eq(Worker.worker_type, worker_type),
-            Condition.ge(Log.log_time, start_time),
-            Condition.le(Log.log_time, end_time)
+            Condition.ge(LogModel.log_time, start_time),
+            Condition.le(LogModel.log_time, end_time)
         ).scalar() or 0
 
     def calculate_total_hours_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> float:
-        from app.models.user import Worker
+        from app.models import Worker
         from app.dbrm import Condition
 
-        hours_result = db.query(func.sum(Log.duration)).join(
-            Worker, on=(Worker.user_id, Log.worker_id)
+        hours_result = db.query(func.sum(LogModel.duration)).join(
+            Worker, on=(Worker.user_id, LogModel.worker_id)
         ).where(
             Condition.eq(Worker.worker_type, worker_type),
-            Condition.ge(Log.log_time, start_time),
-            Condition.le(Log.log_time, end_time)
+            Condition.ge(LogModel.log_time, start_time),
+            Condition.le(LogModel.log_time, end_time)
         ).scalar()
 
         return float(hours_result) if hours_result else 0
@@ -82,7 +86,7 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         from datetime import datetime
         now = datetime.now()
         
-        db_obj = Log(
+        db_obj = LogModel(
             consumption=obj_in.consumption,
             cost=obj_in.cost,
             duration=obj_in.duration,
@@ -94,21 +98,19 @@ class CRUDLog(CRUDBase[Log, LogCreate, LogUpdate]):
         db.commit()
         db.refresh(db_obj)
         
-        return db_obj
+        return Log.model_validate(db_obj)
     
     def get_total_duration_by_worker(self, db: Session, worker_id: str) -> float:
-        """Get total working hours for a worker"""
-        result = db.query(func.sum(Log.duration)).filter_by(
+        result = db.query(func.sum(LogModel.duration)).filter_by(
             worker_id=worker_id
         ).scalar()
         return float(result) if result else 0.0
     
     def get_total_cost_by_order(self, db: Session, order_id: str) -> float:
-        """Get total material cost for an order"""
-        result = db.query(func.sum(Log.cost)).filter_by(
+        result = db.query(func.sum(LogModel.cost)).filter_by(
             order_id=order_id
         ).scalar()
         return float(result) if result else 0.0
 
 
-log = CRUDLog(Log)
+log = CRUDLog()

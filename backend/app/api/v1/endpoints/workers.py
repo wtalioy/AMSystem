@@ -4,7 +4,7 @@ from app.dbrm import Session
 
 from app.api import deps
 from app.services import WorkerService
-from app.schemas import Worker, OrderToWorker
+from app.schemas import User, OrderToWorker
 
 router = APIRouter()
 
@@ -13,7 +13,7 @@ def accept_order(
     *,
     db: Session = Depends(deps.get_db),
     order_id: str,
-    current_user: Worker = Depends(deps.get_current_worker),
+    current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
     Accept an assigned order
@@ -35,7 +35,7 @@ def reject_order(
     db: Session = Depends(deps.get_db),
     order_id: str,
     reason: Optional[str] = Body(None, embed=True),
-    current_user: Worker = Depends(deps.get_current_worker),
+    current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
     Reject an assigned order - will trigger automatic reassignment
@@ -58,7 +58,7 @@ def get_assigned_orders(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     status_filter: Optional[int] = Query(None, description="Filter by order status"),
-    current_user: Worker = Depends(deps.get_current_worker),
+    current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
     Get orders assigned to the current worker
@@ -74,7 +74,7 @@ def get_worker_earnings(
     db: Session = Depends(deps.get_db),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: Worker = Depends(deps.get_current_worker),
+    current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
     Calculate worker's earnings for specified period

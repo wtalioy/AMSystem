@@ -1,14 +1,14 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from app.dbrm import Session, Condition
-from app.crud.base import CRUDBase
-from app.models.audit_log import AuditLog
-from app.schemas.audit_log import AuditLogCreate, AuditLogUpdate
+
+from app.models import AuditLog as AuditLogModel
+from app.schemas import AuditLog, AuditLogSummary
 import random
 import string
 
 
-class CRUDAuditLog(CRUDBase[AuditLog, AuditLogCreate, AuditLogUpdate]):
+class CRUDAuditLog:
     def create_audit_entry(
         self,
         db: Session,
@@ -46,16 +46,19 @@ class CRUDAuditLog(CRUDBase[AuditLog, AuditLogCreate, AuditLogUpdate]):
         db.add(audit_entry)
         db.commit()
         db.refresh(audit_entry)
-        return audit_entry
+        return AuditLog.model_validate(audit_entry)
     
     def get_audit_trail_for_record(
         self, db: Session, record_id: str, skip: int = 0, limit: int = 100
     ) -> List[AuditLog]:
         """Get audit trail for a specific record"""
-        return db.query(AuditLog).filter_by(
+        objs = db.query(AuditLogModel).filter_by(
             record_id=record_id
-        ).order_by_desc(AuditLog.timestamp).offset(skip).limit(limit).all()
-    
+        ).order_by_desc(AuditLogModel.timestamp).offset(skip).limit(limit).all()
+        
+        if not objs:
+            return []
+        return [AuditLog.model_validate(obj) for obj in objs]
 
     
     def get_recent_changes(
@@ -65,66 +68,64 @@ class CRUDAuditLog(CRUDBase[AuditLog, AuditLogCreate, AuditLogUpdate]):
         from datetime import timedelta
         since = datetime.now() - timedelta(hours=hours)
         
-        return db.query(AuditLog).where(
-            Condition.gte(AuditLog.timestamp, since)
-        ).order_by_desc(AuditLog.timestamp).offset(skip).limit(limit).all()
+        objs = db.query(AuditLogModel).where(
+            Condition.gte(AuditLogModel.timestamp, since)
+        ).order_by_desc(AuditLogModel.timestamp).offset(skip).limit(limit).all()
+        
+        if not objs:
+            return []
+        return [AuditLog.model_validate(obj) for obj in objs]
     
     
     def rollback_to_version(
         self, db: Session, target_audit_id: str
-    ) -> Optional[Dict]:
+    ) -> Optional[AuditLog]:
         """
         Get the state of a record at a specific audit point for rollback
         Returns the old_values from the target audit entry
         """
-        audit_entry = db.query(AuditLog).filter_by(
+        obj = db.query(AuditLogModel).filter_by(
             audit_id=target_audit_id
         ).first()
         
-        if audit_entry and audit_entry.old_values:
-            return {
-                "record_id": audit_entry.record_id,
-                "table_name": audit_entry.table_name,
-                "old_values": audit_entry.old_values,
-                "operation": audit_entry.operation,
-                "timestamp": audit_entry.timestamp.isoformat() if audit_entry.timestamp else None
-            }
+        if obj and obj.old_values:
+            return AuditLog.model_validate(obj)
         return None
     
     def get_change_summary(
         self, db: Session, start_date: datetime, end_date: datetime
-    ) -> Dict[str, Any]:
+    ) -> AuditLogSummary:
         """Get summary of changes in a date range"""
-        changes = db.query(AuditLog).where(
-            Condition.gte(AuditLog.timestamp, start_date),
-            Condition.lte(AuditLog.timestamp, end_date)
+        objs = db.query(AuditLogModel).where(
+            Condition.gte(AuditLogModel.timestamp, start_date),
+            Condition.lte(AuditLogModel.timestamp, end_date)
         ).all()
         
         summary = {
-            "total_changes": len(changes),
+            "total_changes": len(objs),
             "by_table": {},
             "by_operation": {},
             "by_user": {}
         }
         
-        for change in changes:
+        for obj in objs:
             # By table
-            if change.table_name not in summary["by_table"]:
-                summary["by_table"][change.table_name] = 0
-            summary["by_table"][change.table_name] += 1
+            if obj.table_name not in summary["by_table"]:
+                summary["by_table"][obj.table_name] = 0
+            summary["by_table"][obj.table_name] += 1
             
             # By operation
-            if change.operation not in summary["by_operation"]:
-                summary["by_operation"][change.operation] = 0
-            summary["by_operation"][change.operation] += 1
+            if obj.operation not in summary["by_operation"]:
+                summary["by_operation"][obj.operation] = 0
+            summary["by_operation"][obj.operation] += 1
             
             # By user
-            user_id = change.user_id or "system"
+            user_id = obj.user_id or "system"
             if user_id not in summary["by_user"]:
                 summary["by_user"][user_id] = 0
             summary["by_user"][user_id] += 1
         
-        return summary
+        return AuditLogSummary(**summary)
 
 
-audit_log = CRUDAuditLog(AuditLog) 
+audit_log = CRUDAuditLog() 

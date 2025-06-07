@@ -25,5 +25,5 @@ __all__ = [
     
     "Wage", "WageCreate", "WageUpdate", "WageInDB",
     
-    "AuditLog", "AuditLogCreate", "AuditLogUpdate", "AuditLogSummary", "RollbackRequest", "ChangeTrackingContext",
+    "AuditLog", "AuditLogCreate", "AuditLogUpdate", "AuditLogInDB", "AuditLogSummary", "RollbackRequest", "ChangeTrackingContext",
 ]

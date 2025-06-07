@@ -6,9 +6,9 @@ import string
 from app.dbrm import Session, func
 
 from app.core.security import get_password_hash, verify_password
-from app.crud.base import CRUDBase
-from app.models.user import User, Customer, Worker, Administrator
-from app.schemas.user import UserCreate, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate
+from app.models import User as UserModel, Customer as CustomerModel, Worker as WorkerModel, Administrator as AdministratorModel
+from app.schemas import UserCreate, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate, User
+from app.core.enum import WorkerAvailabilityStatus
 
 def generate_unique_id(db: Session, user_type: str) -> str:
     prefix_map = {
@@ -24,23 +24,35 @@ def generate_unique_id(db: Session, user_type: str) -> str:
     
     user_id = f"{prefix}{timestamp}{random_chars}"
     
-    while db.query(User).filter_by(user_id=user_id).first():
+    while db.query(UserModel).filter_by(user_id=user_id).first():
         random_chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
         user_id = f"{prefix}{timestamp}{random_chars}"
     
     return user_id
 
-class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):    
+class CRUDUser:
+    def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[User]:
+        objs = db.query(UserModel).offset(skip).limit(limit).all()
+        if not objs:
+            return []
+        return [User.model_validate(obj) for obj in objs]
+
     def get_by_id(self, db: Session, user_id: str) -> Optional[User]:
-        return db.query(User).filter_by(user_id=user_id).first()
+        obj = db.query(UserModel).filter_by(user_id=user_id).first()
+        if not obj:
+            return None
+        return User.model_validate(obj)
     
     def get_by_name(self, db: Session, user_name: str) -> Optional[User]:
-        return db.query(User).filter_by(user_name=user_name).first()
+        obj = db.query(UserModel).filter_by(user_name=user_name).first()
+        if not obj:
+            return None
+        return User.model_validate(obj)
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         unique_id = generate_unique_id(db, obj_in.user_type)
         
-        db_obj = User(
+        db_obj = UserModel(
             user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
@@ -49,53 +61,79 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
-        return db_obj
+        return User.model_validate(db_obj)
 
     def update(
-        self, db: Session, *, db_obj: User, obj_in: Union[UserUpdate, Dict[str, Any]]
+        self, db: Session, *, obj_old: User, obj_in: UserUpdate
     ) -> User:
-        if isinstance(obj_in, dict):
-            update_data = obj_in
-        else:
-            update_data = obj_in.model_dump(exclude_unset=True)
-        if update_data.get("user_pwd"):
-            hashed_password = get_password_hash(update_data["user_pwd"])
-            del update_data["user_pwd"]
-            update_data["user_pwd"] = hashed_password
-        return super().update(db, db_obj=db_obj, obj_in=update_data)
+        # if isinstance(obj_in, dict):
+        #     update_data = obj_in
+        # else:
+        #     update_data = obj_in.model_dump(exclude_unset=True)
+        # if update_data.get("user_pwd"):
+        #     hashed_password = get_password_hash(update_data["user_pwd"])
+        #     del update_data["user_pwd"]
+        #     update_data["user_pwd"] = hashed_password
+        # return User.model_validate(super().update(db, db_obj=db_obj, obj_in=update_data))
+        for field in obj_in:
+            if hasattr(obj_old, field):
+                setattr(obj_old, field, obj_in[field])
 
-    def authenticate(self, db: Session, *, user_name: str, password: str) -> Optional[User]:
+        if hasattr(obj_old, "user_pwd"):
+            obj_old.user_pwd = get_password_hash(obj_old.user_pwd)
+
+        db_obj = UserModel(
+            user_id=obj_old.user_id,
+            user_name=obj_old.user_name,
+            user_pwd=obj_old.user_pwd,
+            user_type=obj_old.user_type
+        )
+        
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return User.model_validate(db_obj)
+    
+    def remove(self, db: Session, *, user_id: str) -> User:
+        obj = db.query(UserModel).filter_by(user_id=user_id).first()
+        db.delete(obj)
+        db.commit()
+        return User.model_validate(obj)
+
+    def authenticate(self, db: Session, *, user_name: str, password: str) -> Optional[UserModel]:
         user = self.get_by_name(db, user_name=user_name)
         if not user:
             return None
         if not verify_password(password, user.user_pwd):
             return None
-        return user
+        return User.model_validate(user)
 
-    def is_active(self, user: User) -> bool:
+    def is_active(self, user: UserModel) -> bool:
         return True
 
     def get_all_worker_types(self, db: Session) -> List[Tuple[int]]:
-        return db.query(func.distinct(Worker.worker_type)).all()
+        return db.query(func.distinct(WorkerModel.worker_type)).all()
 
     def count_workers_by_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
         from app.dbrm import Condition
-        return db.query(func.count(Worker.user_id)).where(
-            Condition.eq(Worker.worker_type, worker_type),
-            Condition.ge(Worker.created_at, start_time),
-            Condition.le(Worker.created_at, end_time)
+        return db.query(func.count(WorkerModel.user_id)).where(
+            Condition.eq(WorkerModel.worker_type, worker_type),
+            Condition.ge(WorkerModel.created_at, start_time),
+            Condition.le(WorkerModel.created_at, end_time)
         ).scalar() or 0
 
 
-class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
-    def get_by_id(self, db: Session, customer_id: str) -> Optional[Customer]:
-        return db.query(Customer).filter_by(user_id=customer_id).first()
+class CRUDCustomer:
+    def get_by_id(self, db: Session, customer_id: str) -> Optional[User]:
+        obj = db.query(CustomerModel).filter_by(user_id=customer_id).first()
+        if not obj:
+            return None
+        return User.model_validate(obj)
 
-    def create(self, db: Session, *, obj_in: CustomerCreate) -> Customer:
+    def create(self, db: Session, *, obj_in: CustomerCreate) -> User:
         unique_id = generate_unique_id(db, "customer")
         
-        # First create a User object
-        user_obj = User(
+        user_obj = UserModel(
             user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
@@ -103,29 +141,33 @@ class CRUDCustomer(CRUDBase[Customer, CustomerCreate, UserUpdate]):
         )
         db.add(user_obj)
         
-        # Now create the Customer
-        customer_obj = Customer(
+        customer_obj = CustomerModel(
             user_id=unique_id
         )
         db.add(customer_obj)
         db.commit()
 
         db.refresh(user_obj)
-        return user_obj
+        return User.model_validate(customer_obj)
 
 
-class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
-    def get_by_id(self, db: Session, worker_id: str) -> Optional[Worker]:
-        return db.query(Worker).filter_by(user_id=worker_id).first()
+class CRUDWorker:
+    def get_by_id(self, db: Session, worker_id: str) -> Optional[User]:
+        obj = db.query(WorkerModel).filter_by(user_id=worker_id).first()
+        if not obj:
+            return None
+        return User.model_validate(obj)
     
-    def get_by_name(self, db: Session, user_name: str) -> Optional[Worker]:
-        return db.query(Worker).filter_by(user_name=user_name).first()
+    def get_by_name(self, db: Session, user_name: str) -> Optional[User]:
+        obj = db.query(WorkerModel).filter_by(user_name=user_name).first()
+        if not obj:
+            return None
+        return User.model_validate(obj)
 
-    def create(self, db: Session, *, obj_in: WorkerCreate) -> Worker:
+    def create(self, db: Session, *, obj_in: WorkerCreate) -> User:
         unique_id = generate_unique_id(db, "worker")
         
-        # First create a User object
-        user_obj = User(
+        user_obj = UserModel(
             user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
@@ -133,8 +175,7 @@ class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
         )
         db.add(user_obj)
         
-        # Now create the Worker
-        worker_obj = Worker(
+        worker_obj = WorkerModel(
             user_id=unique_id,
             worker_type=obj_in.worker_type
         )
@@ -150,28 +191,57 @@ class CRUDWorker(CRUDBase[Worker, WorkerCreate, UserUpdate]):
             worker_type=worker_obj.worker_type
         )
         
-    def get_workers_by_type(self, db: Session, *, worker_type: int) -> List[Worker]:
-        return db.query(Worker).filter_by(worker_type=worker_type).all()
+    def get_workers_by_type(self, db: Session, *, worker_type: int) -> List[User]:
+        objs = db.query(WorkerModel).filter_by(worker_type=worker_type).all()
+        if not objs:
+            return []
+        return [User.model_validate(obj) for obj in objs]
     
-    def get_available_workers(self, db: Session, worker_type: Optional[int] = None) -> List[Worker]:
-        """Get available workers, optionally filtered by worker type"""
-        # Simple implementation - get all workers of specified type
-        # In a real system, this would check worker availability, workload, etc.
-        query = db.query(Worker)
+    def get_available_workers(self, db: Session, worker_type: Optional[int] = None) -> List[User]:
+        query = db.query(WorkerModel).filter(
+            WorkerModel.availability_status == WorkerAvailabilityStatus.AVAILABLE,  # Available
+            WorkerModel.current_order_count < WorkerModel.max_concurrent_orders
+        )
         if worker_type is not None:
             query = query.filter_by(worker_type=worker_type)
-        return query.all()
+        objs = query.all()
+        if not objs:
+            return []
+        return [User.model_validate(obj) for obj in objs]
+    
+    def update_availability(self, db: Session, worker_id: str, status: int) -> User:
+        worker = self.get_by_id(db, worker_id)
+        if worker:
+            worker.availability_status = status
+            db.add(worker)
+            db.commit()
+            db.refresh(worker)
+        return User.model_validate(worker)
+    
+    def update_order_count(self, db: Session, worker_id: str, increment: int) -> User:
+        worker = self.get_by_id(db, worker_id)
+        new_order_count = max(0, worker.current_order_count + increment)
+        if worker:
+            worker.current_order_count = new_order_count
+            worker.availability_status = WorkerAvailabilityStatus.BUSY if new_order_count > 0 else WorkerAvailabilityStatus.AVAILABLE
+            db.add(worker)
+            db.commit()
+            db.refresh(worker)
+        return User.model_validate(worker)
 
 
-class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):
-    def get_by_id(self, db: Session, admin_id: str) -> Optional[Administrator]:
-        return db.query(Administrator).filter_by(user_id=admin_id).first()
 
-    def create(self, db: Session, *, obj_in: AdminCreate) -> Administrator:
+class CRUDAdmin:
+    def get_by_id(self, db: Session, admin_id: str) -> Optional[User]:
+        obj = db.query(AdministratorModel).filter_by(user_id=admin_id).first()
+        if not obj:
+            return None
+        return User.model_validate(obj)
+
+    def create(self, db: Session, *, obj_in: AdminCreate) -> User:
         unique_id = generate_unique_id(db, "administrator")
         
-        # First create a User object
-        user_obj = User(
+        user_obj = UserModel(
             user_id=unique_id,
             user_name=obj_in.user_name,
             user_pwd=get_password_hash(obj_in.user_pwd),
@@ -179,18 +249,17 @@ class CRUDAdmin(CRUDBase[Administrator, AdminCreate, UserUpdate]):
         )
         db.add(user_obj)
         
-        # Now create the Administrator
-        admin_obj = Administrator(
+        admin_obj = AdministratorModel(
             user_id=unique_id
         )
         db.add(admin_obj)
         db.commit()
 
         db.refresh(user_obj)
-        return user_obj
+        return User.model_validate(admin_obj)
 
 
-user = CRUDUser(User)
-customer = CRUDCustomer(Customer)
-worker = CRUDWorker(Worker)
-admin = CRUDAdmin(Administrator)
+user = CRUDUser()
+customer = CRUDCustomer()
+worker = CRUDWorker()
+admin = CRUDAdmin()

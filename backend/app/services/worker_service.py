@@ -1,26 +1,11 @@
 from typing import List, Dict, Optional
 from decimal import Decimal
-from enum import IntEnum
 from datetime import datetime, timedelta
 from app.dbrm import Session
 
 from app.crud import order, log, wage, worker, car
-from app.schemas import LogCreate, Log, OrderPending, OrderToWorker
-
-
-class ProcedureStatus(IntEnum):
-    PENDING = 0    # pending
-    IN_PROGRESS = 1  # in progress
-    COMPLETED = 2  # completed
-
-
-class OrderStatus(IntEnum):
-    PENDING_ASSIGNMENT = 0  # pending assignment
-    ASSIGNED = 1           # assigned to worker
-    IN_PROGRESS = 2        # being worked on
-    COMPLETED = 3          # completed
-    CANCELLED = 4          # cancelled
-    REJECTED = 5           # rejected by worker
+from app.schemas import LogCreate, Log, OrderPending, Order
+from app.core.enum import OrderStatus
 
 
 class WorkerService:
@@ -47,9 +32,7 @@ class WorkerService:
             duration=duration,
             order_id=order_id
         )
-        return Log.model_validate(
-            log.create_log_for_order(db=db, obj_in=log_in, worker_id=worker_id)
-        )
+        return log.create_log_for_order(db=db, obj_in=log_in, worker_id=worker_id)
 
 
     @staticmethod
@@ -58,7 +41,6 @@ class WorkerService:
     ) -> List[Log]:
         """Get all maintenance logs for a worker"""
         logs = log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
-        logs = [Log.model_validate(l) for l in logs]
         return logs
 
 
@@ -68,8 +50,11 @@ class WorkerService:
     ) -> List[OrderPending]:
         """Get all pending orders for workers"""
         # Get all pending orders from database (ServiceOrder models)
-        pending_orders = order.get_pending_orders(
-            db, skip=skip, limit=limit
+        pending_orders = order.get_orders_by_status(
+            db,
+            status=OrderStatus.PENDING_ASSIGNMENT,
+            skip=skip,
+            limit=limit
         )
     
         # Convert to OrderPending models and enrich with car type information
@@ -89,7 +74,7 @@ class WorkerService:
     @staticmethod
     def get_wage_rate(db: Session, worker_type: int) -> Decimal:
         """Get the wage rate for a specific worker type"""
-        wage_rate = wage.get_wage_rate_by_type(db, worker_type=worker_type)
+        wage_rate = wage.get_by_type(db, worker_type=worker_type)
         if not wage_rate:
             raise ValueError(f"No wage rate found for worker type {worker_type}")
         return wage_rate.wage_per_hour
@@ -97,7 +82,7 @@ class WorkerService:
 
     @staticmethod
     def accept_order(db: Session, order_id: str, worker_id: str) -> Dict:
-        """Accept an assigned order"""
+        """Accept an assigned order and create procedures"""
         order_obj = order.get_by_order_id(db, order_id=order_id)
         if not order_obj:
             raise ValueError("Order not found")
@@ -108,15 +93,19 @@ class WorkerService:
         if order_obj.status != OrderStatus.ASSIGNED:
             raise ValueError("Order is not in assigned state")
         
-        # Update order status to in progress
-        order.update_order_status(db, order_id=order_id, new_status=OrderStatus.IN_PROGRESS)
+        # Handle acceptance through assignment service
+        from app.services.assignment_service import AutoAssignmentService
+        success = AutoAssignmentService.handle_acceptance(db, order_id=order_id, worker_id=worker_id)
+        
+        if not success:
+            raise ValueError("Failed to accept order")
         
         return {"message": "Order accepted successfully", "order_id": order_id}
 
 
     @staticmethod
     def reject_order(db: Session, order_id: str, worker_id: str, reason: Optional[str] = None) -> Dict:
-        """Reject an assigned order and trigger reassignment"""
+        """Reject an assigned order and trigger automatic reassignment"""
         order_obj = order.get_by_order_id(db, order_id=order_id)
         if not order_obj:
             raise ValueError("Order not found")
@@ -127,19 +116,20 @@ class WorkerService:
         if order_obj.status != OrderStatus.ASSIGNED:
             raise ValueError("Order is not in assigned state")
         
-        # Clear worker assignment and set to pending
-        order.update_order_assignment(db, order_id=order_id, worker_id=None, status=OrderStatus.PENDING_ASSIGNMENT)
+        # Handle rejection through assignment service
+        from app.services.assignment_service import AutoAssignmentService
+        success = AutoAssignmentService.handle_rejection(db, order_id=order_id, reason=reason)
         
-        # TODO: Implement automatic reassignment logic
-        # For now, just log the rejection reason if provided
-        
-        return {"message": "Order rejected successfully", "order_id": order_id, "reason": reason}
+        if success:
+            return {"message": "Order rejected and reassigned successfully", "order_id": order_id, "reason": reason}
+        else:
+            return {"message": "Order rejected but no available workers for reassignment", "order_id": order_id, "reason": reason}
 
 
     @staticmethod
     def get_assigned_orders(
         db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
-    ) -> List[OrderToWorker]:
+    ) -> List[Order]:
         """Get orders assigned to a specific worker"""
         return order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
 

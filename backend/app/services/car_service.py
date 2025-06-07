@@ -13,9 +13,9 @@ class CarService:
     @audit("Car", "CREATE")
     def create_car(db: Session, obj_in: CarCreate, customer_id: str, audit_context=None) -> Car:
         """Register a new car for a customer"""
-        return Car.model_validate(car.create_car_with_owner(
+        return car.create_car_with_owner(
             db=db, obj_in=obj_in, customer_id=customer_id
-        ))
+        )
 
 
     @staticmethod
@@ -23,7 +23,7 @@ class CarService:
         """Get a specific car by ID"""
         car_obj = car.get_by_car_id(db, car_id=car_id)
         if car_obj:
-            return Car.model_validate(car_obj)
+            return car_obj
         return None
 
 
@@ -31,7 +31,7 @@ class CarService:
     def get_customer_cars(db: Session, customer_id: str, skip: int = 0, limit: int = 100) -> List[Car]:
         """Get all cars owned by a customer with pagination"""
         cars = car.get_cars_by_customer(db, customer_id=customer_id, skip=skip, limit=limit)
-        return [Car.model_validate(car_obj) for car_obj in cars]
+        return cars
 
 
     @staticmethod
@@ -41,7 +41,7 @@ class CarService:
         car_obj = car.get_by_car_id(db, car_id=car_id)
         if not car_obj:
             return None
-        return Car.model_validate(car.update(db, db_obj=car_obj, obj_in=obj_in))
+        return car.update(db, db_obj=car_obj, obj_in=obj_in)
 
 
     @staticmethod
@@ -63,7 +63,7 @@ class CarService:
                 car_data[field] = obj_in[field]
         
         update_data = CarUpdate(**car_data)
-        return Car.model_validate(car.update(db, db_obj=car_obj, obj_in=update_data))
+        return car.update(db, db_obj=car_obj, obj_in=update_data)
 
 
     @staticmethod
@@ -86,14 +86,14 @@ class CarService:
     def get_cars_by_type(db: Session, car_type: int) -> List[Car]:
         """Get all cars of a specific type"""
         cars = car.get_cars_by_type(db, car_type=car_type)
-        return [Car.model_validate(car_obj) for car_obj in cars]
+        return cars
 
 
     @staticmethod
     def get_all_cars(db: Session, skip: int = 0, limit: int = 100) -> List[Car]:
         """Get all cars (admin function)"""
         cars = car.get_multi(db, skip=skip, limit=limit)
-        return [Car.model_validate(car_obj) for car_obj in cars]
+        return cars
 
 
     @staticmethod

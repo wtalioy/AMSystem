@@ -83,7 +83,7 @@ class AuditService:
         )
         audit_entry.old_values = json.loads(audit_entry.old_values) if audit_entry.old_values else None
         audit_entry.new_values = json.loads(audit_entry.new_values) if audit_entry.new_values else None
-        return AuditLog.model_validate(audit_entry)
+        return audit_entry
     
     @staticmethod
     def get_audit_trail(
@@ -91,7 +91,6 @@ class AuditService:
     ) -> List[AuditLog]:
         """Get audit trail for a specific record"""
         audit_entries = audit_log.get_audit_trail_for_record(db, record_id, skip, limit)
-        # return [AuditLog.model_validate(entry) for entry in audit_entries]
         for entry in audit_entries:
             entry.old_values = json.loads(entry.old_values) if entry.old_values else None
             entry.new_values = json.loads(entry.new_values) if entry.new_values else None
@@ -103,12 +102,12 @@ class AuditService:
     ) -> AuditLogSummary:
         """Get summary of changes in a date range"""
         summary_data = audit_log.get_change_summary(db, start_date, end_date)
-        return AuditLogSummary(**summary_data)
+        return summary_data
     
     @staticmethod
     def rollback_to_version(
         db: Session, target_audit_id: str
-    ) -> Optional[Dict]:
+    ) -> Optional[AuditLog]:
         """Get rollback data for a record at a specific audit point"""
         return audit_log.rollback_to_version(db, target_audit_id)
     

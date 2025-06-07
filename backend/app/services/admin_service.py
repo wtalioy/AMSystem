@@ -4,17 +4,17 @@ from datetime import datetime, timedelta
 from app.dbrm import Session
 
 from app.crud import car, order, log, user, procedure, distribute, worker, wage
-from app.schemas import Distribute, OrderToAdmin, Order, DistributeCreate
+from app.schemas import Distribute, Order, DistributeCreate
 
 
 class AdminService:
     """Service for admin functions"""
 
     @staticmethod
-    def get_all_orders(db: Session, skip: int = 0, limit: int = 100) -> List[OrderToAdmin]:
+    def get_all_orders(db: Session, skip: int = 0, limit: int = 100) -> List[Order]:
         """Get all orders (admin function)"""
         orders = order.get_multi(db, skip=skip, limit=limit)
-        return [OrderToAdmin.model_validate(o) for o in orders]
+        return orders
 
     @staticmethod
     def update_order_status(db: Session, order_id: str, new_status: int) -> Optional[Order]:
@@ -22,9 +22,7 @@ class AdminService:
         order_obj = order.update_order_status(
             db=db, order_id=order_id, new_status=new_status
         )
-        if order_obj:
-            return Order.model_validate(order_obj)
-        return None
+        return order_obj
 
 
     @staticmethod
@@ -33,7 +31,7 @@ class AdminService:
         Get all distribution records
         """
         distributions = distribute.get_all_distributions(db)
-        return [Distribute.model_validate(d) for d in distributions]
+        return distributions
 
 
     @staticmethod
@@ -292,6 +290,4 @@ class AdminService:
             amount=amount,
             worker_id=worker_id
         )
-        return Distribute.model_validate(
-            distribute.create_distribution(db=db, obj_in=distribute_in)
-        )
+        return distribute.create_distribution(db=db, obj_in=distribute_in)

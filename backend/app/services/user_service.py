@@ -1,8 +1,8 @@
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List
 from app.dbrm import Session
 
 from app.crud import user as user_crud, customer, worker, admin
-from app.schemas import User, UserUpdate, Customer, Worker, Admin, UserCreate
+from app.schemas import User, UserUpdate, UserCreate
 from app.core.audit_decorators import audit
 
 class UserService:
@@ -20,7 +20,7 @@ class UserService:
             user_obj = admin.create(db, obj_in=obj_in)
         else:
             raise ValueError(f"Invalid user type: {obj_in.user_type}")
-        return User.model_validate(user_obj)
+        return user_obj
             
 
     @staticmethod
@@ -28,7 +28,7 @@ class UserService:
         """Get a user by ID"""
         user = user_crud.get_by_id(db, user_id=user_id)
         if user:
-            return User.model_validate(user)
+            return user
         return None
 
     @staticmethod
@@ -36,7 +36,7 @@ class UserService:
         """Get a user by name"""
         user = user_crud.get_by_name(db, user_name=user_name)
         if user:
-            return User.model_validate(user)
+            return user
         return None
 
     @staticmethod
@@ -48,20 +48,8 @@ class UserService:
             return None
         
         # CRUD layer handles password hashing, so pass data directly
-        updated_user = user_crud.update(db, db_obj=user, obj_in=obj_in)
-        return User.model_validate(updated_user)
-
-    @staticmethod
-    @audit("User", "UPDATE")
-    def partial_update_user(db: Session, user_id: str, obj_in: Dict[str, Any], audit_context=None) -> Optional[User]:
-        """Partially update user information"""
-        user = user_crud.get_by_id(db, user_id=user_id)
-        if not user:
-            return None
-        
-        # CRUD layer handles password hashing, so pass data directly
-        updated_user = user_crud.update(db, db_obj=user, obj_in=obj_in)
-        return User.model_validate(updated_user)
+        updated_user = user_crud.update(db, obj_old=user, obj_in=obj_in)
+        return updated_user
 
     @staticmethod
     @audit("User", "DELETE")
@@ -71,37 +59,37 @@ class UserService:
         if not user:
             return False
         
-        user_crud.remove(db, id=user.id)
+        user_crud.remove(db, user_id=user.user_id)
         return True
 
     @staticmethod
     def get_all_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
         """Get all users with pagination (admin function)"""
         users = user_crud.get_multi(db, skip=skip, limit=limit)
-        return [User.model_validate(user) for user in users]
+        return users
 
     @staticmethod
-    def get_customer_by_id(db: Session, customer_id: str) -> Optional[Customer]:
+    def get_customer_by_id(db: Session, customer_id: str) -> Optional[User]:
         """Get a customer by ID"""
         customer_obj = customer.get_by_id(db, customer_id=customer_id)
         if customer_obj:
-            return Customer.model_validate(customer_obj)
+            return customer_obj
         return None
 
     @staticmethod
-    def get_worker_by_id(db: Session, worker_id: str) -> Optional[Worker]:
+    def get_worker_by_id(db: Session, worker_id: str) -> Optional[User]:
         """Get a worker by ID"""
         worker_obj = worker.get_by_id(db, worker_id=worker_id)
         if worker_obj:
-            return Worker.model_validate(worker_obj)
+            return worker_obj
         return None
 
     @staticmethod
-    def get_admin_by_id(db: Session, admin_id: str) -> Optional[Admin]:
+    def get_admin_by_id(db: Session, admin_id: str) -> Optional[User]:
         """Get an administrator by ID"""
         admin_obj = admin.get_by_id(db, admin_id=admin_id)
         if admin_obj:
-            return Admin.model_validate(admin_obj)
+            return admin_obj
         return None
 
     @staticmethod
@@ -110,7 +98,7 @@ class UserService:
         return user.user_type == expected_type
 
     @staticmethod
-    def get_typed_user_by_id(db: Session, user_id: str, expected_type: str) -> Optional[Union[Customer, Worker, Admin]]:
+    def get_typed_user_by_id(db: Session, user_id: str, expected_type: str) -> Optional[User]:
         """Get a typed user by ID, ensuring they have the expected type"""
         user = UserService.get_user_by_id(db, user_id=user_id)
         if not user or not UserService.verify_user_type(user, expected_type):

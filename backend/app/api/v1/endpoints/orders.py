@@ -5,7 +5,7 @@ from app.dbrm import Session
 
 from app.api import deps
 from app.services import CarService, OrderService
-from app.schemas import User, Customer, Order, OrderCreate, Admin
+from app.schemas import User, Order, OrderCreate
 
 router = APIRouter()
 
@@ -15,7 +15,7 @@ def create_order(
     *,
     db: Session = Depends(deps.get_db),
     order_in: OrderCreate,
-    current_user: Customer = Depends(deps.get_current_customer),
+    current_user: User = Depends(deps.get_current_customer),
     response: Response
 ) -> Any:
     """
@@ -61,7 +61,7 @@ def get_orders(
     skip = (page - 1) * page_size
     
     if current_user.user_type == "customer":
-        return OrderService.get_orders_for_customer(
+        return OrderService.get_customer_orders(
             db=db, customer_id=current_user.user_id, skip=skip, limit=page_size,
             status=status_filter
         )
@@ -109,7 +109,7 @@ def calculate_order_cost_admin(
     *,
     db: Session = Depends(deps.get_db),
     order_id: str = Query(..., description="Order ID to calculate cost for"), 
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Calculate the total cost for an order (Admin access)
@@ -167,7 +167,7 @@ def add_order_feedback(
     order_id: str = Query(..., description="Order ID to add feedback"),
     rating: int = Body(..., ge=1, le=5),
     comment: Optional[str] = Body(None),
-    current_user: Customer = Depends(deps.get_current_customer),
+    current_user: User = Depends(deps.get_current_customer),
 ) -> Any:
     """
     Add customer feedback to a completed order
@@ -205,7 +205,7 @@ def expedite_order(
     *,
     db: Session = Depends(deps.get_db),
     order_id: str,
-    current_user: Customer = Depends(deps.get_current_customer),
+    current_user: User = Depends(deps.get_current_customer),
 ) -> Any:
     """
     Expedite an order - customer requests priority handling

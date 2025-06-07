@@ -23,12 +23,16 @@ class AuditLogUpdate(AuditLogBase):
     operation: Optional[str] = None
 
 
-class AuditLog(AuditLogBase):
+class AuditLogInDBBase(AuditLogBase):
     audit_id: str = Field(..., description="Unique audit log entry ID")
     timestamp: datetime = Field(..., description="When the change occurred")
     
     class Config:
         from_attributes = True
+
+
+class AuditLog(AuditLogInDBBase):
+    pass
 
 
 class AuditLogSummary(BaseModel):
