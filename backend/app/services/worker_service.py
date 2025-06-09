@@ -49,7 +49,6 @@ class WorkerService:
         db: Session, skip: int = 0, limit: int = 100
     ) -> List[OrderPending]:
         """Get all pending orders for workers"""
-        # Get all pending orders from database (ServiceOrder models)
         pending_orders = order.get_orders_by_status(
             db,
             status=OrderStatus.PENDING_ASSIGNMENT,
@@ -57,11 +56,9 @@ class WorkerService:
             limit=limit
         )
     
-        # Convert to OrderPending models and enrich with car type information
         result = []
-        for db_order in pending_orders:
-            pending_order = OrderPending.model_validate(db_order)
-            car_info = car.get_by_car_id(db, car_id=db_order.car_id)
+        for pending_order in pending_orders:
+            car_info = car.get_by_car_id(db, car_id=pending_order.car_id)
             order_data = pending_order.model_dump()
             order_data["car_type"] = car_info.car_type if car_info else None
             enriched_order = OrderPending(**order_data)
@@ -104,7 +101,7 @@ class WorkerService:
 
 
     @staticmethod
-    def reject_order(db: Session, order_id: str, worker_id: str, reason: Optional[str] = None) -> Dict:
+    def reject_order(db: Session, order_id: str, worker_id: str) -> Dict:
         """Reject an assigned order and trigger automatic reassignment"""
         order_obj = order.get_by_order_id(db, order_id=order_id)
         if not order_obj:
@@ -118,12 +115,12 @@ class WorkerService:
         
         # Handle rejection through assignment service
         from app.services.assignment_service import AutoAssignmentService
-        success = AutoAssignmentService.handle_rejection(db, order_id=order_id, reason=reason)
+        success = AutoAssignmentService.handle_rejection(db, order_id=order_id)
         
         if success:
-            return {"message": "Order rejected and reassigned successfully", "order_id": order_id, "reason": reason}
+            return {"message": "Order rejected and reassigned successfully", "order_id": order_id}
         else:
-            return {"message": "Order rejected but no available workers for reassignment", "order_id": order_id, "reason": reason}
+            return {"message": "Order rejected but no available workers for reassignment", "order_id": order_id}
 
 
     @staticmethod

@@ -1,5 +1,5 @@
 from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.dbrm import Session
 
 from app.api import deps
@@ -34,7 +34,6 @@ def reject_order(
     *,
     db: Session = Depends(deps.get_db),
     order_id: str,
-    reason: Optional[str] = Body(None, embed=True),
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
@@ -42,7 +41,7 @@ def reject_order(
     """
     try:
         result = WorkerService.reject_order(
-            db=db, order_id=order_id, worker_id=current_user.user_id, reason=reason
+            db=db, order_id=order_id, worker_id=current_user.user_id
         )
         return result
     except ValueError as e:

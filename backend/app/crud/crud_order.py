@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 
@@ -76,7 +76,7 @@ class CRUDOrder:
     
     def get_multi_with_details(
         self, db: Session, skip: int = 0, limit: int = 100, status: Optional[int] = None
-    ) -> List[Union[OrderToAdmin, Order]]:
+    ) -> List[Order]:
         """Get all orders with additional details for admin viewing"""
         query = db.query(ServiceOrderModel)
         if status is not None:
@@ -125,15 +125,17 @@ class CRUDOrder:
     
     def update_order_status(self, db: Session, order_id: str, new_status: int) -> Order:
         """Update order status"""
-        db_obj = self.get_by_order_id(db, order_id=order_id)
+        db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:
             db_obj.status = new_status
-            if new_status == OrderStatus.COMPLETED:  # If completed
+            if new_status == OrderStatus.COMPLETED:
                 db_obj.end_time = datetime.now()
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
-        return Order.model_validate(db_obj)
+            return Order.model_validate(db_obj)
+        else:
+            raise ValueError("Order not found")
     
     def update_order_assignment(
         self, db: Session, order_id: str, worker_id: Optional[str], status: int
@@ -153,9 +155,9 @@ class CRUDOrder:
     ) -> int:
         """Get count of completed orders by worker in a date range"""
         from app.dbrm import Condition
-        return db.query(func.count(ServiceOrderModel.order_id)).filter(
+        return db.query(func.count(ServiceOrderModel.order_id)).where(
             Condition.eq(ServiceOrderModel.worker_id, worker_id),
-            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED),  # completed
+            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED),
             Condition.ge(ServiceOrderModel.end_time, start_date),
             Condition.le(ServiceOrderModel.end_time, end_date)
         ).scalar() or 0
@@ -163,7 +165,7 @@ class CRUDOrder:
     def add_customer_feedback(
         self, db: Session, *, order_id: str, rating: int, comment: Optional[str] = None
     ) -> Order:
-        db_obj = self.get_by_order_id(db, order_id=order_id)
+        db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:
             db_obj.rating = rating
             if comment:
@@ -171,7 +173,9 @@ class CRUDOrder:
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
-        return Order.model_validate(db_obj)
+            return Order.model_validate(db_obj)
+        else:
+            raise ValueError("Order not found")
     
     def get_total_orders_count(self, db: Session) -> int:
         return db.query(func.count(ServiceOrderModel.order_id)).scalar() or 0
@@ -196,14 +200,16 @@ class CRUDOrder:
 
     def set_expedite_flag(self, db: Session, order_id: str, expedite_time: datetime) -> Order:
         """Set expedite flag and timestamp for an order"""
-        db_obj = self.get_by_order_id(db, order_id=order_id)
+        db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:
             db_obj.expedite_flag = True
             db_obj.expedite_time = expedite_time
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
-        return Order.model_validate(db_obj)
+            return Order.model_validate(db_obj)
+        else:
+            raise ValueError("Order not found")
     
     def update_order_total_cost(self, db: Session, order_id: str, total_cost: Decimal) -> Order:
         """Update the total cost of an order"""
@@ -217,22 +223,11 @@ class CRUDOrder:
 
     def increment_assignment_attempts(self, db: Session, order_id: str) -> Order:
         """Increment assignment attempt counter and set deadline"""
-        from datetime import datetime, timedelta
+        from datetime import datetime
         db_obj = self.get_by_order_id(db, order_id=order_id)
         if db_obj:
             db_obj.assignment_attempts += 1
             db_obj.last_assignment_at = datetime.now()
-            db_obj.response_deadline = datetime.now() + timedelta(minutes=30)  # 30-minute deadline
-            db.add(db_obj)
-            db.commit()
-            db.refresh(db_obj)
-        return Order.model_validate(db_obj)
-        
-    def set_rejection_reason(self, db: Session, order_id: str, reason: str) -> Order:
-        """Set rejection reason for order"""
-        db_obj = self.get_by_order_id(db, order_id=order_id)
-        if db_obj:
-            db_obj.rejection_reason = reason
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)

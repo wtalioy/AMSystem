@@ -11,7 +11,7 @@ class UserBase(BaseModel):
 # For creating new users
 class UserCreate(UserBase):
     user_pwd: str
-    worker_type: Optional[int] = None  # Only used for workers
+    worker_type: Optional[str] = None
 
 
 # For user login
@@ -24,29 +24,30 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     user_name: Optional[str] = None
     user_pwd: Optional[str] = None
-    worker_type: Optional[int] = None
+    worker_type: Optional[str] = None
 
 
-# Main user schema (returned by API)
+# Main user schema
 class User(UserBase):
     user_id: str
-    worker_type: Optional[int] = None
+    user_type: str
+    worker_type: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 
-# Specialized user types (simplified)
-class Customer(User):
+# Specialized user types
+class Customer(UserBase):
     user_type: str = "customer"
 
 
-class Worker(User):
+class Worker(UserBase):
     user_type: str = "worker"
-    worker_type: int  # Required for workers
+    worker_type: str
 
 
-class Admin(User):
+class Admin(UserBase):
     user_type: str = "administrator"
 
 

@@ -1,9 +1,9 @@
-from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from typing import Optional, List, Dict
+from datetime import datetime
 from app.dbrm import Session
 
 from app.crud import order, user, car
-from app.schemas import OrderCreate, OrderUpdate, Order
+from app.schemas import OrderCreate, Order
 from app.core.audit_decorators import audit
 from app.core.enum import OrderStatus
 
@@ -105,3 +105,72 @@ class OrderService:
             "customer": customer_data,
             "worker": worker_data
         }
+
+
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def update_order_status(db: Session, order_id: str, new_status: int, audit_context=None) -> Order:
+        """Update the status of an order"""
+        # Validate status
+        valid_statuses = [OrderStatus.PENDING_ASSIGNMENT, OrderStatus.IN_PROGRESS, OrderStatus.COMPLETED]
+        if new_status not in valid_statuses:
+            raise ValueError(f"Invalid status: {new_status}")
+        
+        return order.update_order_status(db, order_id=order_id, new_status=new_status)
+
+
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def add_customer_feedback(
+        db: Session, 
+        order_id: str, 
+        rating: int, 
+        comment: Optional[str] = None, 
+        audit_context=None
+    ) -> Order:
+        """Add customer feedback (rating and comment) to a completed order"""
+        # Validate rating
+        if rating < 1 or rating > 5:
+            raise ValueError("Rating must be between 1 and 5")
+        
+        return order.add_customer_feedback(db, order_id=order_id, rating=rating, comment=comment)
+
+
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def expedite_order(db: Session, order_id: str, audit_context=None) -> Order:
+        """
+        Expedite an order - marks it for priority handling
+        
+        This sets the expedite flag and timestamp, which can be used by:
+        - Assignment algorithms to prioritize expedited orders
+        - Workers to see which orders need urgent attention
+        - Analytics to track expedited order performance
+        """
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            raise ValueError("Order not found")
+        
+        # Check if order can be expedited
+        if order_obj.status >= OrderStatus.COMPLETED:
+            raise ValueError("Cannot expedite completed or cancelled orders")
+        
+        # Check if already expedited
+        if order_obj.expedite_flag:
+            raise ValueError("Order is already expedited")
+        
+        # Set expedite flag with current timestamp
+        expedite_time = datetime.now()
+        updated_order = order.set_expedite_flag(db, order_id=order_id, expedite_time=expedite_time)
+        
+        # Optionally trigger re-assignment for better worker matching
+        # This could be enhanced to notify available workers immediately
+        try:
+            from app.services.assignment_service import AutoAssignmentService
+            if order_obj.status == OrderStatus.PENDING_ASSIGNMENT:
+                AutoAssignmentService.trigger_assignment(db, order_id, priority=True)
+        except Exception as e:
+            # Log error but don't fail the expedite request
+            print(f"Priority assignment failed for expedited order {order_id}: {e}")
+        
+        return updated_order

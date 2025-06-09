@@ -19,8 +19,6 @@ class ServiceOrder(Table):
     # New assignment tracking fields
     assignment_attempts = Column(Integer, nullable=False, default=0)
     last_assignment_at = Column(Timestamp, nullable=True)
-    response_deadline = Column(Timestamp, nullable=True)  # When worker must respond by
-    rejection_reason = Column(Text, nullable=True)  # Last rejection reason
     
     # Soft delete and audit fields
     created_at = Column(Timestamp, nullable=False, default='CURRENT_TIMESTAMP')

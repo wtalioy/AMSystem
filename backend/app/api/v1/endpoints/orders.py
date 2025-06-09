@@ -103,25 +103,6 @@ def get_order(
     return order
 
 
-# Admin order cost calculation
-@router.get("/cost", response_model=dict) 
-def calculate_order_cost_admin(
-    *,
-    db: Session = Depends(deps.get_db),
-    order_id: str = Query(..., description="Order ID to calculate cost for"), 
-    current_user: User = Depends(deps.get_current_admin),
-) -> Any:
-    """
-    Calculate the total cost for an order (Admin access)
-    """
-    order = OrderService.get_order_by_id(db=db, order_id=order_id)
-    if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    
-    return OrderService.calculate_order_cost(db=db, order_id=order_id)
-
-
-# Order status updates
 @router.patch("/status", response_model=Order)
 def update_order_status(
     *,

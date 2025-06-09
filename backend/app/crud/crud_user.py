@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, List, Tuple
+from typing import Optional, List
 import time
 import random
 import string
@@ -178,10 +178,7 @@ class CRUDWorker:
         return [User.model_validate(obj) for obj in objs]
     
     def get_available_workers(self, db: Session, worker_type: Optional[str] = None) -> List[User]:
-        query = db.query(WorkerModel).filter(
-            WorkerModel.availability_status == WorkerAvailabilityStatus.AVAILABLE,  # Available
-            WorkerModel.current_order_count < WorkerModel.max_concurrent_orders
-        )
+        query = db.query(WorkerModel).filter_by(availability_status=WorkerAvailabilityStatus.AVAILABLE)
         if worker_type is not None:
             query = query.filter_by(worker_type=worker_type)
         objs = query.all()
@@ -211,18 +208,6 @@ class CRUDWorker:
             db.commit()
             db.refresh(worker)
         return User.model_validate(worker)
-    
-    def update_order_count(self, db: Session, worker_id: str, increment: int) -> User:
-        worker = self.get_by_id(db, worker_id)
-        new_order_count = max(0, worker.current_order_count + increment)
-        if worker:
-            worker.current_order_count = new_order_count
-            worker.availability_status = WorkerAvailabilityStatus.BUSY if new_order_count > 0 else WorkerAvailabilityStatus.AVAILABLE
-            db.add(worker)
-            db.commit()
-            db.refresh(worker)
-        return User.model_validate(worker)
-
 
 
 class CRUDAdmin:

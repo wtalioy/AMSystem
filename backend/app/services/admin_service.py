@@ -272,7 +272,7 @@ class AdminService:
     @staticmethod
     def get_incomplete_orders_statistics(db: Session) -> List[IncompleteOrderStatistics]:
         """
-        Get all pending orders and their details
+        Get all incomplete orders and their details
         """
         in_progress_orders = order.get_incomplete_orders(db)
 

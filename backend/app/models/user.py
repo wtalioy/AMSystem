@@ -1,4 +1,5 @@
 from app.dbrm import Table, Column, String, TinyInt, Char, Timestamp, Integer, model_register
+from app.core.enum import WorkerAvailabilityStatus
 
 @model_register
 class User(Table):
@@ -30,10 +31,7 @@ class Worker(Table):
     user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id")
     worker_type = Column(TinyInt, foreign_key="Wage.worker_type", nullable=False)
     
-    # New availability tracking fields
-    availability_status = Column(Integer, nullable=False, default=0)  # 0: Available, 1: Busy, 2: Offline
-    max_concurrent_orders = Column(Integer, nullable=False, default=1)
-    current_order_count = Column(Integer, nullable=False, default=0)
+    availability_status = Column(Integer, nullable=False, default=WorkerAvailabilityStatus.AVAILABLE)
 
 
 @model_register(dependencies=["User"])
