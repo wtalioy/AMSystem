@@ -17,5 +17,5 @@ class Log(Table):
     updated_by = Column(Char(10), nullable=True)
     deleted_by = Column(Char(10), nullable=True)
 
-    order_id = Column(Char(10), primary_key=True, foreign_key='ServiceOrder.order_id', nullable=False, on_delete="CASCADE", on_update="CASCADE")
-    worker_id = Column(Char(10), foreign_key='Worker.user_id', nullable=False, on_delete="CASCADE", on_update="CASCADE")
+    order_id = Column(Char(10), primary_key=True, foreign_key='ServiceOrder.order_id', nullable=False, on_delete="CASCADE", on_update="CASCADE", index=True)
+    worker_id = Column(Char(10), foreign_key='Worker.user_id', nullable=False, on_delete="CASCADE", on_update="CASCADE", index=True)
