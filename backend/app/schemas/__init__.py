@@ -8,6 +8,7 @@ from app.schemas.user import *
 from app.schemas.wage import *
 from app.schemas.audit_log import *
 from app.schemas.admin_analytics import *
+from app.schemas.earnings import *
 
 __all__ = [
     "Car", "CarCreate", "CarUpdate", "CarInDB",
@@ -29,7 +30,12 @@ __all__ = [
     "AuditLog", "AuditLogCreate", "AuditLogUpdate", "AuditLogInDB", "AuditLogSummary", "RollbackRequest", "ChangeTrackingContext",
     
     # Admin Analytics Schemas
-    "VehicleFailurePattern", "CostAnalysisByPeriod", "LowRatedOrderData", "WorkerPerformanceSummary", 
+    "PeriodCostBreakdown", "VehicleFailurePattern", "CostAnalysisByPeriod", "LowRatedOrderData", "WorkerPerformanceSummary", 
     "NegativeFeedbackAnalysis", "WorkerProductivityAnalysis", "WorkerStatistics", "CarTypeStatistics", 
     "IncompleteOrderStatistics",
+    
+    # Earnings Schemas
+    "EarningsPeriod", "WorkSummary", "EarningsBreakdown", "OrderDetail", "WorkerMonthlyEarnings",
+    "DistributionDetail", "DistributionError", "MonthlyDistributionResults", "EarningsSummary", 
+    "WorkerTypeSummary", "EarningsReport", "FailedEarningsCalculation",
 ]

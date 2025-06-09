@@ -6,6 +6,7 @@ from app.dbrm import Session
 from app.crud import car, order, log, user, procedure, distribute, worker, wage
 from app.schemas import (
     Distribute, Order, DistributeCreate,
+    PeriodCostBreakdown,
     VehicleFailurePattern,
     CostAnalysisByPeriod,
     LowRatedOrderData,
@@ -115,19 +116,20 @@ class AdminService:
         else:
             end_dt = datetime.now()
         
-        # Get cost breakdown for the period
-        total_material_cost = log.get_total_material_cost_by_period(db, start_dt, end_dt)
-        total_labor_cost = log.get_total_labor_cost_by_period(db, start_dt, end_dt)
-        
-        # Get monthly/quarterly breakdown
+        # Get monthly/quarterly breakdown (already returns Pydantic models)
         period_breakdown = log.get_cost_breakdown_by_period(db, start_dt, end_dt, period_type)
+        
+        # Calculate totals from period breakdown data (avoid redundant queries)
+        total_material_cost = sum(period.material_cost for period in period_breakdown)
+        total_labor_cost = sum(period.labor_cost for period in period_breakdown)
+        total_cost = total_material_cost + total_labor_cost
         
         return CostAnalysisByPeriod(
             period_start=start_dt.isoformat(),
             period_end=end_dt.isoformat(),
             total_material_cost=total_material_cost,
             total_labor_cost=total_labor_cost,
-            total_cost=total_material_cost + total_labor_cost,
+            total_cost=total_cost,
             labor_material_ratio=(total_labor_cost / total_material_cost) if total_material_cost > 0 else 0,
             period_breakdown=period_breakdown
         )

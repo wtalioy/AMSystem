@@ -7,6 +7,7 @@ from .user_service import UserService
 from .wage_service import WageService
 from .worker_service import WorkerService
 from .audit_service import AuditService
+from .earnings_service import EarningsService
 
 __all__ = [
     "AdminService",
@@ -17,5 +18,6 @@ __all__ = [
     "UserService",
     "WageService",
     "WorkerService",
-    "AuditService"
+    "AuditService",
+    "EarningsService"
 ]

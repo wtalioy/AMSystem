@@ -150,18 +150,6 @@ class CRUDOrder:
             db.refresh(db_obj)
         return Order.model_validate(db_obj)
     
-    def get_completed_orders_count_by_worker_period(
-        self, db: Session, worker_id: str, start_date: datetime, end_date: datetime
-    ) -> int:
-        """Get count of completed orders by worker in a date range"""
-        from app.dbrm import Condition
-        return db.query(func.count(ServiceOrderModel.order_id)).where(
-            Condition.eq(ServiceOrderModel.worker_id, worker_id),
-            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED),
-            Condition.ge(ServiceOrderModel.end_time, start_date),
-            Condition.le(ServiceOrderModel.end_time, end_date)
-        ).scalar() or 0
-    
     def add_customer_feedback(
         self, db: Session, *, order_id: str, rating: int, comment: Optional[str] = None
     ) -> Order:
@@ -243,6 +231,35 @@ class CRUDOrder:
             db.commit()
             db.refresh(db_obj)
         return Order.model_validate(db_obj)
+    
+    def get_completed_orders_by_worker_period(
+        self, db: Session, worker_id: str, start_date: datetime, end_date: datetime
+    ) -> List[Order]:
+        """Get completed orders by worker within a date range"""
+        from app.dbrm import Condition
+        objs = db.query(ServiceOrderModel).filter(
+            Condition.eq(ServiceOrderModel.worker_id, worker_id),
+            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED),
+            Condition.gte(ServiceOrderModel.end_time, start_date),
+            Condition.lte(ServiceOrderModel.end_time, end_date)
+        ).all()
+        if not objs:
+            return []
+        return [Order.model_validate(obj) for obj in objs]
+    
+    def get_average_rating_by_worker_period(
+        self, db: Session, worker_id: str, start_date: datetime, end_date: datetime
+    ) -> Optional[float]:
+        """Get average rating for a worker within a date range"""
+        from app.dbrm import Condition
+        avg_rating = db.query(func.avg(ServiceOrderModel.rating)).filter(
+            Condition.eq(ServiceOrderModel.worker_id, worker_id),
+            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED),
+            Condition.gte(ServiceOrderModel.end_time, start_date),
+            Condition.lte(ServiceOrderModel.end_time, end_date),
+            ServiceOrderModel.rating.isnot(None)
+        ).scalar()
+        return float(avg_rating) if avg_rating else None
 
 
 order = CRUDOrder()

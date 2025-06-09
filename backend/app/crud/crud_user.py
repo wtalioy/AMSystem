@@ -196,8 +196,8 @@ class CRUDWorker:
         from app.dbrm import Condition
         return db.query(func.count(WorkerModel.user_id)).where(
             Condition.eq(WorkerModel.worker_type, worker_type),
-            Condition.ge(WorkerModel.created_at, start_time),
-            Condition.le(WorkerModel.created_at, end_time)
+            Condition.gte(WorkerModel.created_at, start_time),
+            Condition.lte(WorkerModel.created_at, end_time)
         ).scalar() or 0
     
     def update_availability(self, db: Session, worker_id: str, status: int) -> User:
@@ -208,6 +208,13 @@ class CRUDWorker:
             db.commit()
             db.refresh(worker)
         return User.model_validate(worker)
+    
+    def get_all_active_workers(self, db: Session) -> List[User]:
+        """Get all workers that are not deleted (active workers)"""
+        objs = db.query(WorkerModel).filter(WorkerModel.deleted_at.is_(None)).all()
+        if not objs:
+            return []
+        return [User.model_validate(obj) for obj in objs]
 
 
 class CRUDAdmin:

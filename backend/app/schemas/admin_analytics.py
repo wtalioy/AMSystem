@@ -4,6 +4,18 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 
+class PeriodCostBreakdown(BaseModel):
+    """Schema for cost breakdown by period (month/quarter)"""
+    period: str  # e.g., "2024-01" for month or "2024-Q1" for quarter
+    material_cost: float
+    labor_cost: float
+    total_cost: float
+    labor_material_ratio: float
+
+    class Config:
+        from_attributes = True
+
+
 class VehicleFailurePattern(BaseModel):
     """Schema for vehicle failure pattern analysis"""
     car_type: str
@@ -23,7 +35,7 @@ class CostAnalysisByPeriod(BaseModel):
     total_labor_cost: Decimal
     total_cost: Decimal
     labor_material_ratio: float
-    period_breakdown: List[Any]  # This could be further typed based on actual structure
+    period_breakdown: List[PeriodCostBreakdown]
 
     class Config:
         from_attributes = True
