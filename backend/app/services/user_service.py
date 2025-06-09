@@ -15,6 +15,10 @@ class UserService:
         if obj_in.user_type == "customer":
             user_obj = customer.create(db, obj_in=obj_in)
         elif obj_in.user_type == "worker":
+            from app.services import wage_service
+            wage_obj = wage_service.get_wage_by_worker_type(db, obj_in.worker_type)
+            if not wage_obj:
+                raise ValueError(f"Unsupported worker type: {obj_in.worker_type}")
             user_obj = worker.create(db, obj_in=obj_in)
         elif obj_in.user_type == "administrator":
             user_obj = admin.create(db, obj_in=obj_in)

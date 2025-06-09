@@ -35,7 +35,13 @@ def register_user(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this name already exists in the system",
         )
-    created_user = UserService.create_user(db=db, obj_in=user_in)
+    try:
+        created_user = UserService.create_user(db=db, obj_in=user_in)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
     
     # Add Location header for the newly created resource
     response.headers["Location"] = f"/api/v1/users/{created_user.user_id}"
