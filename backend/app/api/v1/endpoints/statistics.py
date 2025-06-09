@@ -5,11 +5,20 @@ from app.dbrm import Session
 
 from app.services import AdminService
 from app.api import deps
-from app.schemas import Admin
+from app.schemas import (
+    Admin,
+    CarTypeStatistics,
+    VehicleFailurePattern,
+    CostAnalysisByPeriod,
+    NegativeFeedbackAnalysis,
+    WorkerProductivityAnalysis,
+    WorkerStatistics,
+    IncompleteOrderStatistics,
+)
 
 router = APIRouter()
 
-@router.get("/cars", response_model=List[dict])
+@router.get("/cars", response_model=List[CarTypeStatistics])
 def get_car_statistics(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -20,7 +29,7 @@ def get_car_statistics(
     return AdminService.get_car_type_statistics(db)
 
 
-@router.get("/vehicles/failure-patterns", response_model=List[dict])
+@router.get("/vehicles/failure-patterns", response_model=List[VehicleFailurePattern])
 def get_vehicle_failure_patterns(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -31,7 +40,7 @@ def get_vehicle_failure_patterns(
     return AdminService.get_vehicle_failure_patterns(db)
 
 
-@router.get("/costs/analysis", response_model=dict)
+@router.get("/costs/analysis", response_model=CostAnalysisByPeriod)
 def get_cost_analysis(
     *,
     db: Session = Depends(deps.get_db),
@@ -48,7 +57,7 @@ def get_cost_analysis(
     )
 
 
-@router.get("/feedback/negative", response_model=dict)
+@router.get("/feedback/negative", response_model=NegativeFeedbackAnalysis)
 def get_negative_feedback_analysis(
     *,
     db: Session = Depends(deps.get_db),
@@ -61,7 +70,7 @@ def get_negative_feedback_analysis(
     return AdminService.get_negative_feedback_analysis(db, rating_threshold=rating_threshold)
 
 
-@router.get("/workers/productivity", response_model=List[dict])
+@router.get("/workers/productivity", response_model=List[WorkerProductivityAnalysis])
 def get_worker_productivity_analysis(
     *,
     db: Session = Depends(deps.get_db),
@@ -77,7 +86,7 @@ def get_worker_productivity_analysis(
     )
 
 
-@router.get("/workers", response_model=List[dict])
+@router.get("/workers", response_model=List[WorkerStatistics])
 def get_worker_statistics(
     *,
     db: Session = Depends(deps.get_db),
@@ -91,7 +100,7 @@ def get_worker_statistics(
     return AdminService.get_worker_statistics(db, start_time=start_time, end_time=end_time)
 
 
-@router.get("/incomplete-orders", response_model=List[dict])
+@router.get("/incomplete-orders", response_model=List[IncompleteOrderStatistics])
 def get_incomplete_orders_statistics(
     db: Session = Depends(deps.get_db),
     current_user: Admin = Depends(deps.get_current_admin),

@@ -7,6 +7,7 @@ from app.schemas.token import *
 from app.schemas.user import *
 from app.schemas.wage import *
 from app.schemas.audit_log import *
+from app.schemas.admin_analytics import *
 
 __all__ = [
     "Car", "CarCreate", "CarUpdate", "CarInDB",
@@ -26,4 +27,9 @@ __all__ = [
     "Wage", "WageCreate", "WageUpdate", "WageInDB",
     
     "AuditLog", "AuditLogCreate", "AuditLogUpdate", "AuditLogInDB", "AuditLogSummary", "RollbackRequest", "ChangeTrackingContext",
+    
+    # Admin Analytics Schemas
+    "VehicleFailurePattern", "CostAnalysisByPeriod", "LowRatedOrderData", "WorkerPerformanceSummary", 
+    "NegativeFeedbackAnalysis", "WorkerProductivityAnalysis", "WorkerStatistics", "CarTypeStatistics", 
+    "IncompleteOrderStatistics",
 ]
