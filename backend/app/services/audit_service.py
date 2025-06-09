@@ -77,12 +77,10 @@ class AuditService:
             table_name=table_name,
             record_id=record_id,
             operation=operation,
-            old_values=json.dumps(old_data) if old_data else None,
-            new_values=json.dumps(new_data) if new_data else None,
+            old_values=old_data,
+            new_values=new_data,
             user_id=context.user_id if context else None
         )
-        audit_entry.old_values = json.loads(audit_entry.old_values) if audit_entry.old_values else None
-        audit_entry.new_values = json.loads(audit_entry.new_values) if audit_entry.new_values else None
         return audit_entry
     
     @staticmethod
@@ -91,9 +89,6 @@ class AuditService:
     ) -> List[AuditLog]:
         """Get audit trail for a specific record"""
         audit_entries = audit_log.get_audit_trail_for_record(db, record_id, skip, limit)
-        for entry in audit_entries:
-            entry.old_values = json.loads(entry.old_values) if entry.old_values else None
-            entry.new_values = json.loads(entry.new_values) if entry.new_values else None
         return audit_entries
     
     @staticmethod
@@ -117,7 +112,4 @@ class AuditService:
     ) -> List[AuditLog]:
         """Get recent changes within specified hours"""
         audit_entries = audit_log.get_recent_changes(db, hours, skip, limit)
-        for entry in audit_entries:
-            entry.old_values = json.loads(entry.old_values) if entry.old_values else None
-            entry.new_values = json.loads(entry.new_values) if entry.new_values else None
         return audit_entries

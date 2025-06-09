@@ -6,6 +6,7 @@ from app.models import AuditLog as AuditLogModel
 from app.schemas import AuditLog, AuditLogSummary
 import random
 import string
+import json
 
 
 class CRUDAuditLog:
@@ -16,8 +17,8 @@ class CRUDAuditLog:
         table_name: str,
         record_id: str,
         operation: str,
-        old_values: Optional[Dict] = None,
-        new_values: Optional[Dict] = None,
+        old_values: Optional[Dict[str, Any]] = None,
+        new_values: Optional[Dict[str, Any]] = None,
         user_id: Optional[str] = None
     ) -> AuditLog:
         """Create a new audit log entry"""
@@ -32,13 +33,13 @@ class CRUDAuditLog:
                 if field in old_values and old_values[field] != value
             ]
         
-        audit_entry = AuditLog(
+        audit_entry = AuditLogModel(
             audit_id=audit_id,
             table_name=table_name,
             record_id=record_id,
             operation=operation.upper(),
-            old_values=old_values,
-            new_values=new_values,
+            old_values=json.dumps(old_values) if old_values else None,
+            new_values=json.dumps(new_values) if new_values else None,
             changed_fields=changed_fields,
             user_id=user_id
         )
@@ -46,6 +47,9 @@ class CRUDAuditLog:
         db.add(audit_entry)
         db.commit()
         db.refresh(audit_entry)
+
+        audit_entry.old_values = json.loads(audit_entry.old_values) if audit_entry.old_values else None
+        audit_entry.new_values = json.loads(audit_entry.new_values) if audit_entry.new_values else None
         return AuditLog.model_validate(audit_entry)
     
     def get_audit_trail_for_record(
@@ -60,7 +64,6 @@ class CRUDAuditLog:
             return []
         return [AuditLog.model_validate(obj) for obj in objs]
 
-    
     def get_recent_changes(
         self, db: Session, hours: int = 24, skip: int = 0, limit: int = 100
     ) -> List[AuditLog]:
@@ -74,6 +77,9 @@ class CRUDAuditLog:
         
         if not objs:
             return []
+        for obj in objs:
+            obj.old_values = json.loads(obj.old_values) if obj.old_values else None
+            obj.new_values = json.loads(obj.new_values) if obj.new_values else None
         return [AuditLog.model_validate(obj) for obj in objs]
     
     
@@ -89,6 +95,8 @@ class CRUDAuditLog:
         ).first()
         
         if obj and obj.old_values:
+            obj.old_values = json.loads(obj.old_values) if obj.old_values else None
+            obj.new_values = json.loads(obj.new_values) if obj.new_values else None
             return AuditLog.model_validate(obj)
         return None
     
