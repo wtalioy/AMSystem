@@ -91,8 +91,8 @@ class CRUDUser:
         db.commit()
         return User.model_validate(obj)
 
-    def authenticate(self, db: Session, *, user_name: str, password: str) -> Optional[UserModel]:
-        user = self.get_by_name(db, user_name=user_name)
+    def authenticate(self, db: Session, *, user_name: str, password: str) -> Optional[User]:
+        user = db.query(UserModel).filter_by(user_name=user_name).first()
         if not user:
             return None
         if not verify_password(password, user.user_pwd):
@@ -128,7 +128,7 @@ class CRUDCustomer:
         db.commit()
 
         db.refresh(user_obj)
-        return User.model_validate(customer_obj)
+        return User.model_validate(user_obj)
 
 
 class CRUDWorker:
@@ -242,7 +242,7 @@ class CRUDAdmin:
         db.commit()
 
         db.refresh(user_obj)
-        return User.model_validate(admin_obj)
+        return User.model_validate(user_obj)
 
 
 user = CRUDUser()

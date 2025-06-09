@@ -22,13 +22,13 @@ class User(Table):
 class Customer(Table):
     __tablename__ = 'Customer'
 
-    user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id")
+    user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id", on_delete="CASCADE")
 
 @model_register(dependencies=["User", "Wage"])
 class Worker(Table):
     __tablename__ = 'Worker'
 
-    user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id")
+    user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id", on_delete="CASCADE")
     worker_type = Column(VarChar(20), foreign_key="Wage.worker_type", nullable=False)
     
     availability_status = Column(Integer, nullable=False, default=WorkerAvailabilityStatus.AVAILABLE)
@@ -38,4 +38,4 @@ class Worker(Table):
 class Administrator(Table):
     __tablename__ = 'Administrator'
 
-    user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id")
+    user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id", on_delete="CASCADE")

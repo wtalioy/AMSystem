@@ -30,7 +30,6 @@ class UserUpdate(BaseModel):
 # Main user schema
 class User(UserBase):
     user_id: str
-    user_type: str
     worker_type: Optional[str] = None
 
     class Config:
