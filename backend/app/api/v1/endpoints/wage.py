@@ -1,12 +1,12 @@
 from typing import Any, List
 from decimal import Decimal
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.dbrm import Session
 
 from app.services import WorkerService, WageService
 from app.api import deps
-from app.schemas import Worker, Wage, WageCreate, Admin
+from app.schemas import Worker, Wage, WageCreate, Admin, WageUpdate
 
 router = APIRouter()
 
@@ -45,12 +45,12 @@ def get_worker_income(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 # Wage management
-@router.post("/", response_model=Wage) # Root path for /wages
+@router.post("/", response_model=Wage)
 def create_wage_rate(
     *,
     db: Session = Depends(deps.get_db),
     wage_in: WageCreate,
-    current_user: Admin = Depends(deps.get_current_admin), # Assuming Admin dependency
+    current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Create a new wage rate for a worker type
@@ -67,7 +67,7 @@ def create_wage_rate(
 @router.get("/", response_model=List[Wage])
 def get_wage_rates(
     db: Session = Depends(deps.get_db),
-    current_user: Admin = Depends(deps.get_current_admin), # Assuming Admin dependency
+    current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get all wage rates
@@ -79,16 +79,15 @@ def get_wage_rates(
 def update_wage_rate(
     *,
     db: Session = Depends(deps.get_db),
-    worker_type: int = Query(...),
-    new_wage: int = Body(..., embed=True), # Assuming new_wage is an int based on original
-    current_user: Admin = Depends(deps.get_current_admin), # Assuming Admin dependency
+    wage_in: WageUpdate,
+    current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Update wage rate for a worker type
     """
-    wage = WageService.get_wage_by_worker_type(db, worker_type=worker_type)
+    wage = WageService.get_wage_by_worker_type(db, worker_type=wage_in.worker_type)
     if not wage:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wage rate not found")
     return WageService.update_wage_rate(
-        db=db, worker_type=worker_type, new_wage_per_hour=new_wage
+        db=db, worker_type=wage_in.worker_type, new_wage_per_hour=wage_in.wage_per_hour
     )
