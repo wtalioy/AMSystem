@@ -66,18 +66,9 @@ class CRUDUser:
     def update(
         self, db: Session, *, obj_old: User, obj_in: UserUpdate
     ) -> User:
-        # if isinstance(obj_in, dict):
-        #     update_data = obj_in
-        # else:
-        #     update_data = obj_in.model_dump(exclude_unset=True)
-        # if update_data.get("user_pwd"):
-        #     hashed_password = get_password_hash(update_data["user_pwd"])
-        #     del update_data["user_pwd"]
-        #     update_data["user_pwd"] = hashed_password
-        # return User.model_validate(super().update(db, db_obj=db_obj, obj_in=update_data))
-        for field in obj_in:
+        for field, value in obj_in.model_dump(exclude_unset=True).items():
             if hasattr(obj_old, field):
-                setattr(obj_old, field, obj_in[field])
+                setattr(obj_old, field, value)
 
         if hasattr(obj_old, "user_pwd"):
             obj_old.user_pwd = get_password_hash(obj_old.user_pwd)
@@ -110,17 +101,6 @@ class CRUDUser:
 
     def is_active(self, user: UserModel) -> bool:
         return True
-
-    def get_all_worker_types(self, db: Session) -> List[Tuple[int]]:
-        return db.query(func.distinct(WorkerModel.worker_type)).all()
-
-    def count_workers_by_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
-        from app.dbrm import Condition
-        return db.query(func.count(WorkerModel.user_id)).where(
-            Condition.eq(WorkerModel.worker_type, worker_type),
-            Condition.ge(WorkerModel.created_at, start_time),
-            Condition.le(WorkerModel.created_at, end_time)
-        ).scalar() or 0
 
 
 class CRUDCustomer:
@@ -191,13 +171,13 @@ class CRUDWorker:
             worker_type=worker_obj.worker_type
         )
         
-    def get_workers_by_type(self, db: Session, *, worker_type: int) -> List[User]:
+    def get_workers_by_type(self, db: Session, *, worker_type: str) -> List[User]:
         objs = db.query(WorkerModel).filter_by(worker_type=worker_type).all()
         if not objs:
             return []
         return [User.model_validate(obj) for obj in objs]
     
-    def get_available_workers(self, db: Session, worker_type: Optional[int] = None) -> List[User]:
+    def get_available_workers(self, db: Session, worker_type: Optional[str] = None) -> List[User]:
         query = db.query(WorkerModel).filter(
             WorkerModel.availability_status == WorkerAvailabilityStatus.AVAILABLE,  # Available
             WorkerModel.current_order_count < WorkerModel.max_concurrent_orders
@@ -208,6 +188,20 @@ class CRUDWorker:
         if not objs:
             return []
         return [User.model_validate(obj) for obj in objs]
+    
+    def get_all_worker_types(self, db: Session) -> List[str]:
+        objs = db.query(func.distinct(WorkerModel.worker_type)).all()
+        if not objs:
+            return []
+        return [obj[0] for obj in objs]
+
+    def count_workers_by_type(self, db: Session, worker_type: str, start_time: str, end_time: str) -> int:
+        from app.dbrm import Condition
+        return db.query(func.count(WorkerModel.user_id)).where(
+            Condition.eq(WorkerModel.worker_type, worker_type),
+            Condition.ge(WorkerModel.created_at, start_time),
+            Condition.le(WorkerModel.created_at, end_time)
+        ).scalar() or 0
     
     def update_availability(self, db: Session, worker_id: str, status: int) -> User:
         worker = self.get_by_id(db, worker_id)

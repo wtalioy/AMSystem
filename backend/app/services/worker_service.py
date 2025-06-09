@@ -72,7 +72,7 @@ class WorkerService:
     
 
     @staticmethod
-    def get_wage_rate(db: Session, worker_type: int) -> Decimal:
+    def get_wage_rate(db: Session, worker_type: str) -> Decimal:
         """Get the wage rate for a specific worker type"""
         wage_rate = wage.get_by_type(db, worker_type=worker_type)
         if not wage_rate:

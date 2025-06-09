@@ -44,9 +44,9 @@ class CRUDCar:
         """
         Update a car
         """
-        for field in obj_in:
+        for field, value in obj_in.model_dump(exclude_unset=True).items():
             if hasattr(obj_old, field):
-                setattr(obj_old, field, obj_in[field])
+                setattr(obj_old, field, value)
         
         db_obj = CarModel(
             car_id=obj_old.car_id,

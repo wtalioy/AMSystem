@@ -7,7 +7,7 @@ from app.schemas import WageCreate, Wage
 
 
 class CRUDWage:
-    def get_by_type(self, db: Session, worker_type: int) -> Optional[Wage]:
+    def get_by_type(self, db: Session, worker_type: str) -> Optional[Wage]:
         obj = db.query(WageModel).filter_by(worker_type=worker_type).first()
         if not obj:
             return None
@@ -18,6 +18,12 @@ class CRUDWage:
         if not objs:
             return []
         return [Wage.model_validate(obj) for obj in objs]
+    
+    def get_all_types(self, db: Session) -> List[str]:
+        objs = db.query(WageModel).all()
+        if not objs:
+            return []
+        return [obj.worker_type for obj in objs]
     
     def create(self, db: Session, *, obj_in: WageCreate) -> Wage:
         db_obj = WageModel(
@@ -30,7 +36,7 @@ class CRUDWage:
         return Wage.model_validate(db_obj)
     
     def update_wage_rate(
-        self, db: Session, *, worker_type: int, new_wage_per_hour: int
+        self, db: Session, *, worker_type: str, new_wage_per_hour: int
     ) -> Wage:
         db_obj = self.get_by_type(db, worker_type=worker_type)
         if db_obj:

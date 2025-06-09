@@ -8,7 +8,7 @@ class WageService:
     """Service for wage operations"""
 
     @staticmethod
-    def get_wage_by_worker_type(db: Session, worker_type: int) -> Optional[Wage]:
+    def get_wage_by_worker_type(db: Session, worker_type: str) -> Optional[Wage]:
         """Get wage rate for a specific worker type"""
         return wage.get_by_type(db, worker_type=worker_type)
 
@@ -23,6 +23,6 @@ class WageService:
         return wage.get_multi(db=db)
 
     @staticmethod
-    def update_wage_rate(db: Session, worker_type: int, new_wage_per_hour: int) -> Wage:
+    def update_wage_rate(db: Session, worker_type: str, new_wage_per_hour: int) -> Wage:
         """Update wage rate for a specific worker type"""
         return wage.update_wage_rate(db=db, worker_type=worker_type, new_wage_per_hour=new_wage_per_hour)

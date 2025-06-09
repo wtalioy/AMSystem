@@ -1,7 +1,7 @@
 from typing import Optional, List
 from app.dbrm import Session
 
-from app.crud import user as user_crud, customer, worker, admin
+from app.crud import user as user_crud, customer, worker, admin, wage
 from app.schemas import User, UserUpdate, UserCreate
 from app.core.audit_decorators import audit
 
@@ -105,3 +105,7 @@ class UserService:
             return None
         
         return user
+    
+    @staticmethod
+    def get_valid_worker_types(db: Session) -> List[str]:
+        return wage.get_all_types(db)

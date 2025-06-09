@@ -1,4 +1,4 @@
-from typing import Any, List, Dict, Union
+from typing import Any, List, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
@@ -8,6 +8,16 @@ from app.api import deps
 from app.schemas import User, UserUpdate, UserCreate, Customer, Worker, Admin
 
 router = APIRouter()
+
+@router.get("/worker-types", response_model=List[str])
+def get_worker_types(
+    db: Session = Depends(deps.get_db),
+) -> Any:
+    """
+    Get all worker types
+    """
+    return UserService.get_valid_worker_types(db)
+
 
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 def register_user(
@@ -51,7 +61,7 @@ def get_current_user(
     return complete_user
 
 
-@router.put("/me", response_model=User, deprecated=True)
+@router.put("/me", response_model=User)
 def update_current_user(
     *,
     db: Session = Depends(deps.get_db),
@@ -59,23 +69,10 @@ def update_current_user(
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Update current user profile (full update)
-    """
-    return User
-
-
-@router.patch("/me", response_model=User)
-def partial_update_current_user(
-    *,
-    db: Session = Depends(deps.get_db),
-    user_in: Dict[str, Any],
-    current_user: User = Depends(deps.get_current_user),
-) -> Any:
-    """
-    Partially update current user profile
+    Update current user profile
     """
     audit_context = deps.get_audit_context(current_user)
-    return UserService.partial_update_user(db=db, user_id=current_user.user_id, obj_in=user_in, audit_context=audit_context)
+    return UserService.update_user(db=db, user_id=current_user.user_id, obj_in=user_in, audit_context=audit_context)
 
 
 # Admin operations on users
