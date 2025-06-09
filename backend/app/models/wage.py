@@ -4,5 +4,5 @@ from app.dbrm import Table, Column, VarChar, Integer, model_register
 class Wage(Table):
     __tablename__ = 'Wage'
     
-    worker_type = Column(VarChar(20), nullable=False, primary_key=True, on_delete="SET NULL", on_update="CASCADE")
+    worker_type = Column(VarChar(20), nullable=False, primary_key=True)
     wage_per_hour = Column(Integer, nullable=False)

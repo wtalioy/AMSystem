@@ -29,5 +29,5 @@ class ServiceOrder(Table):
     deleted_by = Column(Char(10), nullable=True)
 
     worker_id = Column(Char(10), foreign_key='Worker.user_id', nullable=True, on_delete="SET NULL", on_update="CASCADE", index=True)
-    car_id = Column(Char(10), foreign_key='Car.car_id', nullable=False, on_delete="SET NULL", on_update="CASCADE", index=True)
-    customer_id = Column(Char(10), foreign_key='Customer.user_id', nullable=False, on_delete="SET NULL", on_update="CASCADE", index=True)
+    car_id = Column(Char(10), foreign_key='Car.car_id', nullable=False, on_delete="CASCADE", on_update="CASCADE", index=True)
+    customer_id = Column(Char(10), foreign_key='Customer.user_id', nullable=False, on_delete="CASCADE", on_update="CASCADE", index=True)

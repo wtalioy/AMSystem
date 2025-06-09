@@ -5,6 +5,6 @@ class Car(Table):
     __tablename__ = "Car"
     
     car_id = Column(Char(10), nullable=False, primary_key=True)
-    car_type = Column(Integer, nullable=False, on_delete="SET NULL", on_update="CASCADE")
+    car_type = Column(Integer, nullable=False)
     
     customer_id = Column(Char(10), foreign_key='Customer.user_id')

@@ -1,4 +1,4 @@
-from app.dbrm import Table, Column, String, TinyInt, Char, Timestamp, Integer, model_register
+from app.dbrm import Table, Column, String, VarChar, Char, Timestamp, Integer, model_register
 from app.core.enum import WorkerAvailabilityStatus
 
 @model_register
@@ -29,7 +29,7 @@ class Worker(Table):
     __tablename__ = 'Worker'
 
     user_id = Column(Char(10), nullable=False, primary_key=True, foreign_key="User.user_id")
-    worker_type = Column(TinyInt, foreign_key="Wage.worker_type", nullable=False)
+    worker_type = Column(VarChar(20), foreign_key="Wage.worker_type", nullable=False)
     
     availability_status = Column(Integer, nullable=False, default=WorkerAvailabilityStatus.AVAILABLE)
 
