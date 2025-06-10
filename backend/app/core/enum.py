@@ -12,8 +12,6 @@ class OrderStatus(IntEnum):
     ASSIGNED = 1
     IN_PROGRESS = 2
     COMPLETED = 3
-    CANCELLED = 4
-    REJECTED = 5
 
 
 class WorkerAvailabilityStatus(IntEnum):
