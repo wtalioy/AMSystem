@@ -1,11 +1,11 @@
-from typing import Any, List, Union
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
 
 from app.services import UserService
 from app.api import deps
-from app.schemas import User, UserUpdate, UserCreate, Customer, Worker, Admin
+from app.schemas import User, UserUpdate, UserCreate
 
 router = APIRouter()
 
@@ -50,21 +50,21 @@ def register_user(
 
 
 # Current user profile management
-@router.get("/me", response_model=Union[Customer, Worker, Admin, User])
+@router.get("/me", response_model=User)
 def get_current_user(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Get current user profile with complete information based on user type
+    Get current user profile
     """
-    complete_user = UserService.get_user_by_id(db, user_id=current_user.user_id, typed=True)
-    if not complete_user:
+    user = UserService.get_user_by_id(db, user_id=current_user.user_id)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    return complete_user
+    return user
 
 
 @router.put("/me", response_model=User)
@@ -86,7 +86,7 @@ def update_current_user(
 def get_user_by_id(
     user_id: str,
     db: Session = Depends(deps.get_db),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get a specific user by ID (admin only)
@@ -106,7 +106,7 @@ def get_users(
     db: Session = Depends(deps.get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get all users (admin only) with pagination
@@ -122,7 +122,7 @@ def update_user(
     db: Session = Depends(deps.get_db),
     user_id: str,
     user_in: UserUpdate,
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Update a specific user (admin only)
@@ -142,7 +142,7 @@ def delete_user(
     *,
     db: Session = Depends(deps.get_db),
     user_id: str,
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> None:
     """
     Delete a specific user (admin only)

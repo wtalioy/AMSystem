@@ -5,7 +5,7 @@ from app.dbrm import Session
 
 from app.api import deps
 from app.services import CarService, OrderService
-from app.schemas import User, OrderCreate, OrderToCustomer
+from app.schemas import User, OrderCreate, OrderToCustomer, OrderToAdmin
 from app.core.enum import OrderStatus
 
 router = APIRouter()
@@ -46,7 +46,7 @@ def create_order(
 
 
 @router.get("/", response_model=List[OrderToCustomer])
-def get_orders(
+def get_owned_orders(
     *,
     db: Session = Depends(deps.get_db),
     page: int = Query(1, ge=1, description="Page number"),
@@ -55,12 +55,31 @@ def get_orders(
     current_user: User = Depends(deps.get_current_customer),
 ) -> Any:
     """
-    Get own orders
+    Get owned orders (customer)
     """
     skip = (page - 1) * page_size
     
     return OrderService.get_customer_orders(
         db=db, customer_id=current_user.user_id, skip=skip, limit=page_size, status=status_filter
+    )
+
+
+@router.get("/all", response_model=List[OrderToAdmin])
+def get_all_orders(
+    *,
+    db: Session = Depends(deps.get_db),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    status_filter: Optional[int] = Query(None, description="Filter by order status"),
+    current_user: User = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Get all orders with pagination and filtering (admin)
+    """
+    skip = (page - 1) * page_size
+    
+    return OrderService.get_all_orders(
+        db=db, skip=skip, limit=page_size, status=status_filter
     )
 
 
