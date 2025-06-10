@@ -2,7 +2,6 @@ from typing import List, Optional, Dict
 
 from app.dbrm import Session
 
-
 from app.models import ServiceProcedure as ServiceProcedureModel
 from app.schemas import ProcedureCreate, ProcedureUpdate, Procedure
 from app.core.enum import ProcedureStatus
@@ -49,26 +48,25 @@ class CRUDProcedure:
     
 
     def update_procedure_status(
-        self, db: Session, obj_olds: List[Procedure], obj_ins: List[ProcedureUpdate]
-    ) -> List[ProcedureUpdate]:
+        self, db: Session, obj_ins: List[ProcedureUpdate]
+    ) -> List[Procedure]:
         db_objs = []
         
-        for obj_old, obj_in in zip(obj_olds, obj_ins):
+        for obj_in in obj_ins:
             db_obj = ServiceProcedureModel(
                 order_id=obj_in.order_id,
-                procedure_text=obj_old.procedure_text,
-                current_status=obj_in.current_status,
-                procedure_id=obj_in.procedure_id
+                procedure_id=obj_in.procedure_id,
+                current_status=obj_in.current_status
             )
             db.add(db_obj)
-            db_objs.append(ProcedureUpdate.model_validate(db_obj))
+            db_objs.append(db_obj)
         
         db.commit()
         
         for obj in db_objs:
             db.refresh(obj)
                 
-        return db_objs
+        return [Procedure.model_validate(obj) for obj in db_objs]
     
 
     def get_procedure_progress(self, db: Session, order_id: str) -> Dict[str, int]:
