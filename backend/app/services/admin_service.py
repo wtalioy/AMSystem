@@ -116,10 +116,30 @@ class AdminService:
         else:
             end_dt = datetime.now()
         
-        # Get monthly/quarterly breakdown (already returns Pydantic models)
-        period_breakdown = log.get_cost_breakdown_by_period(db, start_dt, end_dt, period_type)
+        # Get separate breakdowns using new methods
+        material_breakdown = order.get_material_cost_breakdown_by_period(db, start_dt, end_dt, period_type)
+        labor_breakdown = distribute.get_labor_cost_breakdown_by_period(db, start_dt, end_dt, period_type)
         
-        # Calculate totals from period breakdown data (avoid redundant queries)
+        # Combine results into period breakdown
+        all_periods = set(material_breakdown.keys()) | set(labor_breakdown.keys())
+        period_breakdown = []
+        
+        for period in sorted(all_periods):
+            material_cost = material_breakdown.get(period, 0.0)
+            labor_cost = labor_breakdown.get(period, 0.0)
+            total_cost = material_cost + labor_cost
+            labor_material_ratio = labor_cost / material_cost if material_cost > 0 else 0.0
+            
+            period_data = PeriodCostBreakdown(
+                period=period,
+                material_cost=material_cost,
+                labor_cost=labor_cost,
+                total_cost=total_cost,
+                labor_material_ratio=labor_material_ratio
+            )
+            period_breakdown.append(period_data)
+        
+        # Calculate totals from period breakdown data
         total_material_cost = sum(period.material_cost for period in period_breakdown)
         total_labor_cost = sum(period.labor_cost for period in period_breakdown)
         total_cost = total_material_cost + total_labor_cost
