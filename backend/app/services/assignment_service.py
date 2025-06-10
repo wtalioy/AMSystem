@@ -25,7 +25,6 @@ class AutoAssignmentService:
         
         # Update order: assign worker, set status to assigned
         order.update_order_assignment(db, order_id=order_id, worker_id=selected_worker.user_id, status=OrderStatus.ASSIGNED)
-        order.increment_assignment_attempts(db, order_id=order_id)
         
         # Update worker's availability status
         worker.update_availability(db, worker_id=selected_worker.user_id, status=WorkerAvailabilityStatus.BUSY)
