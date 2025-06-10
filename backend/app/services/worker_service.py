@@ -3,15 +3,17 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from app.dbrm import Session
 
-from app.crud import order, log, wage, worker, car
-from app.schemas import LogCreate, Log, OrderPending, Order
-from app.core.enum import OrderStatus
+from app.crud import order, log, wage, worker, procedure
+from app.schemas import LogCreate, Log, Order
+from app.core.enum import OrderStatus, ProcedureStatus
+from app.core.audit_decorators import audit
 
 
 class WorkerService:
     """Service for worker operations"""
 
     @staticmethod
+    @audit("Log", "CREATE")
     def create_maintenance_log(
         db: Session, 
         obj_in: LogCreate,
@@ -31,30 +33,6 @@ class WorkerService:
         """Get all maintenance logs for a worker"""
         logs = log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
         return logs
-
-
-    @staticmethod
-    def get_pending_orders(
-        db: Session, skip: int = 0, limit: int = 100
-    ) -> List[OrderPending]:
-        """Get all pending orders for workers"""
-        pending_orders = order.get_orders_by_status(
-            db,
-            status=OrderStatus.PENDING_ASSIGNMENT,
-            skip=skip,
-            limit=limit
-        )
-    
-        result = []
-        for pending_order in pending_orders:
-            car_info = car.get_by_car_id(db, car_id=pending_order.car_id)
-            order_data = pending_order.model_dump()
-            order_data["car_type"] = car_info.car_type if car_info else None
-            enriched_order = OrderPending(**order_data)
-            
-            result.append(enriched_order)
-        
-        return result
     
 
     @staticmethod
@@ -118,6 +96,23 @@ class WorkerService:
     ) -> List[Order]:
         """Get orders assigned to a specific worker"""
         return order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
+    
+
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def complete_order(db: Session, order_id: str, worker_id: str, audit_context=None) -> Order:
+        """Mark an order as completed"""
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            raise ValueError("Order not found")
+        if order_obj.worker_id != worker_id:
+            raise ValueError("Order is not assigned to this worker")
+        procedures = procedure.get_procedures_by_order(db, order_id=order_id)      
+        for procedure_obj in procedures:
+            if procedure_obj.current_status != ProcedureStatus.COMPLETED:
+                raise ValueError(f"Procedure {procedure_obj.procedure_id} is not in completed state")
+        total_cost = log.get_total_cost_by_order(db, order_id=order_id)
+        return order.complete_order(db, order_id=order_id, total_cost=total_cost)
 
 
     @staticmethod

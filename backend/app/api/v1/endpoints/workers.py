@@ -49,6 +49,27 @@ def reject_order(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
+    
+@router.post("/orders/{order_id}/complete")
+def complete_order(
+    *,
+    db: Session = Depends(deps.get_db),
+    order_id: str,
+    current_user: User = Depends(deps.get_current_worker),
+) -> Any:
+    """
+    Complete an assigned order
+    """
+    try:
+        result = WorkerService.complete_order(
+            db=db, order_id=order_id, worker_id=current_user.user_id
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
 
 @router.get("/orders/assigned", response_model=List[OrderToWorker])
 def get_assigned_orders(

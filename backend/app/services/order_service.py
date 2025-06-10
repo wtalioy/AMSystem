@@ -1,9 +1,7 @@
-from asyncio import log
 from typing import Optional, List, Dict
-from datetime import datetime
 from app.dbrm import Session
 
-from app.crud import order, user, car, log
+from app.crud import order, user, car
 from app.schemas import OrderCreate, Order
 from app.core.audit_decorators import audit
 from app.core.enum import OrderStatus
@@ -55,15 +53,8 @@ class OrderService:
         if not order_obj:
             return False
         
-        order.remove(db, id=order_obj.id)
+        order.remove(db, order_id=order_id)
         return True
-
-
-    @staticmethod
-    def get_pending_orders(db: Session, skip: int = 0, limit: int = 100) -> List[Order]:
-        """Get all pending orders (admin function)"""
-        orders = order.get_by_status(db, status=OrderStatus.PENDING_ASSIGNMENT, skip=skip, limit=limit)
-        return orders
 
 
     @staticmethod
@@ -71,14 +62,6 @@ class OrderService:
         """Get all orders (admin function)"""
         orders = order.get_multi(db, skip=skip, limit=limit)
         return orders
-
-
-    @staticmethod
-    @audit("Order", "UPDATE")
-    def complete_order(db: Session, order_id: str, audit_context=None) -> Order:
-        """Mark an order as completed"""
-        total_cost = log.get_total_cost_by_order(db, order_id=order_id)
-        return order.complete_order(db, order_id=order_id, total_cost=total_cost)
 
 
     @staticmethod
