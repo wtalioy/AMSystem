@@ -124,39 +124,24 @@ def add_order_feedback(
 
 
 # Order expedite functionality  
-@router.post("/expedite", response_model=OrderToCustomer)
+@router.post("/{order_id}/expedite", response_model=OrderToCustomer)
 def expedite_order(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str = Body(...),
+    order_id: str,
     current_user: User = Depends(deps.get_current_customer),
 ) -> Any:
     """
     Expedite an order - customer requests priority handling
     """
-    order = OrderService.get_order_by_id(db=db, order_id=order_id)
-    if not order:
+    try:
+        audit_context = deps.get_audit_context(current_user)
+        return OrderService.expedite_order(db=db, order_id=order_id, user_id=current_user.user_id, audit_context=audit_context)
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Order not found"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
         )
-    
-    # Only the customer who owns the order can expedite it
-    if order.customer_id != current_user.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Not authorized to expedite this order"
-        )
-    
-    # Can only expedite non-completed orders
-    if order.status >= 2:  # 2 = completed, 3 = cancelled
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-            detail="Cannot expedite completed or cancelled orders"
-        )
-
-    audit_context = deps.get_audit_context(current_user)
-    return OrderService.expedite_order(db=db, order_id=order_id, audit_context=audit_context)
 
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)

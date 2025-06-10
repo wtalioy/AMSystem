@@ -143,7 +143,7 @@ class OrderService:
 
     @staticmethod
     @audit("Order", "UPDATE")
-    def expedite_order(db: Session, order_id: str, audit_context=None) -> Order:
+    def expedite_order(db: Session, order_id: str, user_id: str, audit_context=None) -> Order:
         """
         Expedite an order - marks it for priority handling
         
@@ -155,6 +155,9 @@ class OrderService:
         order_obj = order.get_by_order_id(db, order_id=order_id)
         if not order_obj:
             raise ValueError("Order not found")
+        
+        if order_obj.customer_id != user_id:
+            raise ValueError("Not authorized to expedite this order")
         
         # Check if order can be expedited
         if order_obj.status >= OrderStatus.COMPLETED:
