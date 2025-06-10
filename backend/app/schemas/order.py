@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, field_validator
@@ -36,15 +37,18 @@ class OrderInDBBase(OrderBase):
     end_time: Optional[datetime] = None
     rating: Optional[int] = None
     comment: Optional[str] = None
-    status: int  # 0: pending, 1: in progress, 2: completed
+    status: int
     customer_id: str
     worker_id: Optional[str] = None
+    total_cost: Optional[Decimal] = None
+    expedite_flag: bool = False
+    assignment_attempts: int = 0
+    last_assignment_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
-# Properties to return via API
 class Order(OrderInDBBase):
     pass
 
@@ -56,30 +60,24 @@ class OrderToWorker(OrderBase):
     end_time: Optional[datetime] = None
     rating: Optional[int] = None
     comment: Optional[str] = None
-    status: int  # 0: pending, 1: in progress, 2: completed
-
-    class Config:
-        from_attributes = True
+    status: int
+    expedite_flag: bool = False
 
 
 # Properties to return to customers
-class OrderToCustomer(OrderInDBBase):
+class OrderToCustomer(OrderToWorker):
+    pass
 
-    class Config:
-        from_attributes = True
+
+# Properties sto return to admins
+class OrderToAdmin(OrderInDBBase):
+    pass
 
 
 class OrderPending(OrderBase):
     order_id: str
     start_time: datetime
-    car_type: Optional[int] = None
-
-    class Config:
-        from_attributes = True
-
-
-# Properties sto return to admins
-class OrderToAdmin(OrderInDBBase):
+    car_type: Optional[str] = None
 
     class Config:
         from_attributes = True

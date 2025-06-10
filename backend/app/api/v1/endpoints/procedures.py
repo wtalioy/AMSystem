@@ -9,7 +9,7 @@ from app.schemas import Procedure, Worker, User, ProcedureCreate, ProcedureUpdat
 
 router = APIRouter()
 
-@router.post("/", response_model=List[Procedure])
+@router.post("/", response_model=List[Procedure], status_code=status.HTTP_201_CREATED)
 def create_order_procedures(
     *,
     db: Session = Depends(deps.get_db),

@@ -1,16 +1,17 @@
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Response, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
 
 from app.api import deps
 from app.services import CarService, OrderService
-from app.schemas import User, Order, OrderCreate
+from app.schemas import User, OrderCreate, OrderToCustomer
+from app.core.enum import OrderStatus
 
 router = APIRouter()
 
 # Order CRUD operations
-@router.post("/", response_model=Order, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=OrderToCustomer, status_code=status.HTTP_201_CREATED)
 def create_order(
     *,
     db: Session = Depends(deps.get_db),
@@ -44,108 +45,31 @@ def create_order(
         )
 
 
-@router.get("/", response_model=List[Order])
+@router.get("/", response_model=List[OrderToCustomer])
 def get_orders(
     *,
     db: Session = Depends(deps.get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     status_filter: Optional[int] = Query(None, description="Filter by order status"),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User = Depends(deps.get_current_customer),
 ) -> Any:
     """
-    Get orders based on user role with pagination and filtering:
-    - Customers: Get their own orders
-    - Admins: Get all orders
+    Get own orders
     """
     skip = (page - 1) * page_size
     
-    if current_user.user_type == "customer":
-        return OrderService.get_customer_orders(
-            db=db, customer_id=current_user.user_id, skip=skip, limit=page_size,
-            status=status_filter
-        )
-    elif current_user.user_type == "administrator":
-        return OrderService.get_all_orders(
-            db=db, skip=skip, limit=page_size, status=status_filter
-        )
-    else:
-        # Workers should use the worker-specific endpoints
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workers should use worker-specific endpoints",
-        )
-
-
-@router.get("/{order_id}", response_model=Order)
-def get_order(
-    *,
-    db: Session = Depends(deps.get_db),
-    order_id: str = Path(..., regex="^[a-zA-Z0-9]{10}$", description="The 10-character ID of the order to retrieve."),
-    current_user: User = Depends(deps.get_current_user),
-) -> Any:
-    """
-    Get a specific order by ID
-    """
-    order = OrderService.get_order_by_id(db=db, order_id=order_id)
-    if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Order not found"
-        )
-    
-    if current_user.user_type == "customer" and order.customer_id != current_user.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Not authorized to access this order"
-        )
-    
-    return order
-
-
-@router.patch("/status", response_model=Order)
-def update_order_status(
-    *,
-    db: Session = Depends(deps.get_db),
-    order_id: str = Query(..., description="Order ID to update status"),
-    new_status: int = Body(..., embed=True),
-    current_user: User = Depends(deps.get_current_user),
-) -> Any:
-    """
-    Update the status of an order
-    """
-    order = OrderService.get_order_by_id(db=db, order_id=order_id)
-    if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Order not found"
-        )
-    
-    # Only workers and admins can update order status
-    if current_user.user_type not in ["worker", "administrator"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Not authorized to update order status"
-        )
-
-    try:
-        audit_context = deps.get_audit_context(current_user)
-        return OrderService.update_order_status(
-            db=db, order_id=order_id, new_status=new_status, audit_context=audit_context
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
-        )
+    return OrderService.get_customer_orders(
+        db=db, customer_id=current_user.user_id, skip=skip, limit=page_size, status=status_filter
+    )
 
 
 # Order feedback
-@router.post("/feedback", response_model=Order)
+@router.post("/feedback", response_model=OrderToCustomer)
 def add_order_feedback(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str = Query(..., description="Order ID to add feedback"),
+    order_id: str = Body(...),
     rating: int = Body(..., ge=1, le=5),
     comment: Optional[str] = Body(None),
     current_user: User = Depends(deps.get_current_customer),
@@ -168,7 +92,7 @@ def add_order_feedback(
         )
     
     # Order must be completed to add feedback
-    if order.status != 2:  # 2 = completed
+    if order.status != OrderStatus.COMPLETED:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
             detail="Order must be completed to add feedback"
@@ -181,11 +105,11 @@ def add_order_feedback(
 
 
 # Order expedite functionality  
-@router.post("/{order_id}/expedite", response_model=Order)
+@router.post("/expedite", response_model=OrderToCustomer)
 def expedite_order(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str,
+    order_id: str = Body(...),
     current_user: User = Depends(deps.get_current_customer),
 ) -> Any:
     """
@@ -242,11 +166,10 @@ def cancel_order(
                 status_code=status.HTTP_403_FORBIDDEN, 
                 detail="Not authorized to cancel this order"
             )
-        # Customers can only cancel pending orders
-        if order.status != 0:  # 0 = pending
+        if order.status > OrderStatus.ASSIGNED:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-                detail="Only pending orders can be cancelled"
+                detail="Only orders not started can be cancelled"
             )
     elif current_user.user_type != "administrator":
         raise HTTPException(

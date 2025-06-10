@@ -45,7 +45,7 @@ def get_worker_income(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 # Wage management
-@router.post("/", response_model=Wage)
+@router.post("/", response_model=Wage, status_code=status.HTTP_201_CREATED)
 def create_wage_rate(
     *,
     db: Session = Depends(deps.get_db),
