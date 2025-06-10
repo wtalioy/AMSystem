@@ -14,25 +14,14 @@ class WorkerService:
     @staticmethod
     def create_maintenance_log(
         db: Session, 
-        worker_id: str, 
-        order_id: str, 
-        consumption: str,
-        cost: Decimal,
-        duration: Decimal
+        obj_in: LogCreate,
+        worker_id: str
     ) -> Log:
         """Create a new maintenance log for an order"""
-        order_obj = order.get_by_order_id(db, order_id=order_id)
+        order_obj = order.get_by_order_id(db, order_id=obj_in.order_id)
         if not order_obj:
             raise ValueError("Order does not exist")
-        
-        # Create log entry
-        log_in = LogCreate(
-            consumption=consumption,
-            cost=cost,
-            duration=duration,
-            order_id=order_id
-        )
-        return log.create_log_for_order(db=db, obj_in=log_in, worker_id=worker_id)
+        return log.create_log_for_order(db=db, obj_in=obj_in, worker_id=worker_id)
 
 
     @staticmethod
