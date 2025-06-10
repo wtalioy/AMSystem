@@ -3,10 +3,11 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, Query
 from app.dbrm import Session
 
-from app.services import AdminService
+from app.services import AdminService, OrderService
 from app.api import deps
 from app.schemas import (
-    Admin,
+    User,
+    OrderToAdmin,
     CarTypeStatistics,
     VehicleFailurePattern,
     CostAnalysisByPeriod,
@@ -18,10 +19,29 @@ from app.schemas import (
 
 router = APIRouter()
 
+@router.get("/orders", response_model=List[OrderToAdmin])
+def get_orders(
+    *,
+    db: Session = Depends(deps.get_db),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    status_filter: Optional[int] = Query(None, description="Filter by order status"),
+    current_user: User = Depends(deps.get_current_admin),
+) -> Any:
+    """
+    Get orders with pagination and filtering:
+    """
+    skip = (page - 1) * page_size
+    
+    return OrderService.get_all_orders(
+        db=db, skip=skip, limit=page_size, status=status_filter
+    )
+
+
 @router.get("/cars", response_model=List[CarTypeStatistics])
 def get_car_statistics(
     db: Session = Depends(deps.get_db),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get statistics about car types, repairs, and costs
@@ -32,7 +52,7 @@ def get_car_statistics(
 @router.get("/vehicles/failure-patterns", response_model=List[VehicleFailurePattern])
 def get_vehicle_failure_patterns(
     db: Session = Depends(deps.get_db),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Analyze most common failure types by vehicle type
@@ -47,7 +67,7 @@ def get_cost_analysis(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     period_type: str = Query("month", description="Period type: month or quarter"),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get cost analysis by time period with labor vs materials breakdown
@@ -62,7 +82,7 @@ def get_negative_feedback_analysis(
     *,
     db: Session = Depends(deps.get_db),
     rating_threshold: int = Query(3, ge=1, le=5, description="Rating threshold (orders below this rating)"),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Analyze orders with low ratings and associated worker performance
@@ -76,7 +96,7 @@ def get_worker_productivity_analysis(
     db: Session = Depends(deps.get_db),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Analyze worker productivity metrics by specialty
@@ -92,7 +112,7 @@ def get_worker_statistics(
     db: Session = Depends(deps.get_db),
     start_time: str,
     end_time: str,
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get statistics about worker types, their tasks, and productivity
@@ -103,7 +123,7 @@ def get_worker_statistics(
 @router.get("/incomplete-orders", response_model=List[IncompleteOrderStatistics])
 def get_incomplete_orders_statistics(
     db: Session = Depends(deps.get_db),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get statistics about incomplete orders
