@@ -11,7 +11,7 @@ from app.schemas.admin_analytics import *
 from app.schemas.earnings import *
 
 __all__ = [
-    "Car", "CarCreate", "CarUpdate", "CarInDB",
+    "Car", "CarCreate", "CarUpdate", "CarInDB", "CarType",
     
     "Distribute", "DistributeCreate", "DistributeUpdate", "DistributeInDB",
     

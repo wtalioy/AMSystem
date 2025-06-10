@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from app.dbrm import Session
 
 from app.crud import car, order, log
-from app.schemas import CarCreate, CarUpdate, Car
+from app.schemas import CarCreate, CarUpdate, Car, CarType
 from app.core.audit_decorators import audit
 
 
@@ -10,9 +10,28 @@ class CarService:
     """Service for car operations"""
 
     @staticmethod
+    def get_valid_car_types(db: Session) -> List[str]:
+        """Get all car types"""
+        return car.get_all_car_types(db)
+    
+
+    @staticmethod
+    @audit("CarType", "CREATE")
+    def create_car_type(db: Session, obj_in: CarType, audit_context=None) -> CarType:
+        """Create a new car type"""
+        car_types = car.get_all_car_types(db)
+        if obj_in.car_type in car_types:
+            raise ValueError(f"Car type already exists: {obj_in.car_type}")
+        return car.create_car_type(db, obj_in=obj_in)
+    
+
+    @staticmethod
     @audit("Car", "CREATE")
     def create_car(db: Session, obj_in: CarCreate, customer_id: str, audit_context=None) -> Car:
         """Register a new car for a customer"""
+        car_types = car.get_all_car_types(db)
+        if obj_in.car_type not in car_types:
+            raise ValueError(f"Unsupported car type: {obj_in.car_type}")
         return car.create_car_with_owner(
             db=db, obj_in=obj_in, customer_id=customer_id
         )
@@ -83,7 +102,7 @@ class CarService:
 
 
     @staticmethod
-    def get_cars_by_type(db: Session, car_type: int) -> List[Car]:
+    def get_cars_by_type(db: Session, car_type: str) -> List[Car]:
         """Get all cars of a specific type"""
         cars = car.get_cars_by_type(db, car_type=car_type)
         return cars

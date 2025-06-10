@@ -1,9 +1,9 @@
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional
 
 from app.dbrm import Session, func
 
-from app.models import Car as CarModel
-from app.schemas import CarCreate, Car, CarUpdate
+from app.models import Car as CarModel, CarType as CarTypeModel
+from app.schemas import CarCreate, Car, CarUpdate, CarType
 
 
 class CRUDCar:
@@ -19,11 +19,18 @@ class CRUDCar:
             return []
         return [Car.model_validate(obj) for obj in objs]
         
-    def get_cars_by_type(self, db: Session, car_type: int, skip: int = 0, limit: int = 100) -> List[Car]:
+    def get_cars_by_type(self, db: Session, car_type: str, skip: int = 0, limit: int = 100) -> List[Car]:
         objs = db.query(CarModel).filter_by(car_type=car_type).offset(skip).limit(limit).all()
         if not objs:
             return []
         return [Car.model_validate(obj) for obj in objs]
+    
+    def create_car_type(self, db: Session, obj_in: CarType) -> CarType:
+        db_obj = CarTypeModel(car_type=obj_in.car_type)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return CarType.model_validate(db_obj)
     
     def create_car_with_owner(
         self, db: Session, *, obj_in: CarCreate, customer_id: str
@@ -59,10 +66,13 @@ class CRUDCar:
         db.refresh(obj_old)
         return Car.model_validate(db_obj)
     
-    def get_all_car_types(self, db: Session) -> List[Tuple[int]]:
-        return db.query(func.distinct(CarModel.car_type)).all()
+    def get_all_car_types(self, db: Session) -> List[str]:
+        objs = db.query(CarTypeModel).all()
+        if not objs:
+            return []
+        return [obj.car_type for obj in objs]
 
-    def count_cars_by_type(self, db: Session, car_type: int) -> int:
+    def count_cars_by_type(self, db: Session, car_type: str) -> int:
         return db.query(func.count(CarModel.car_id)).filter_by(
             car_type=car_type
         ).scalar() or 0

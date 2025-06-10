@@ -4,9 +4,42 @@ from app.dbrm import Session
 
 from app.api import deps
 from app.services import CarService
-from app.schemas import Car, CarCreate, CarUpdate, User, Customer
+from app.schemas import Car, CarCreate, CarUpdate, User, Customer, CarType
 
 router = APIRouter()
+
+@router.get("/types", response_model=List[str])
+def get_car_types(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Get all car types
+    """
+    return CarService.get_valid_car_types(db)
+
+
+@router.post("/types", response_model=CarType)
+def create_car_type(
+    *,
+    db: Session = Depends(deps.get_db),
+    car_type: CarType,
+    current_user: User = Depends(deps.get_current_admin),
+) -> Any:
+
+    """
+    Create a new car type
+    """
+    try:
+        audit_context = deps.get_audit_context(current_user)
+        return CarService.create_car_type(db, obj_in=car_type, audit_context=audit_context)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
 
 @router.post("/", response_model=Car, status_code=status.HTTP_201_CREATED)
 def create_car(
@@ -24,14 +57,20 @@ def create_car(
             status_code=status.HTTP_409_CONFLICT,
             detail="The car with this ID already exists in the system",
         )
-    audit_context = deps.get_audit_context(current_user)
-    car = CarService.create_car(
-        db=db, obj_in=car_in, customer_id=current_user.user_id, audit_context=audit_context
-    )
-    
-    # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/cars/{car.car_id}"
-    return car
+    try:
+        audit_context = deps.get_audit_context(current_user)
+        car = CarService.create_car(
+            db=db, obj_in=car_in, customer_id=current_user.user_id, audit_context=audit_context
+        )
+        
+        # Add Location header for the newly created resource
+        response.headers["Location"] = f"/api/v1/cars/{car.car_id}"
+        return car
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.get("/", response_model=List[Car])
