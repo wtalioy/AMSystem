@@ -85,11 +85,13 @@ class CRUDUser:
         db.refresh(db_obj)
         return User.model_validate(db_obj)
     
-    def remove(self, db: Session, *, user_id: str) -> User:
+    def remove(self, db: Session, *, user_id: str) -> bool:
         obj = db.query(UserModel).filter_by(user_id=user_id).first()
-        db.delete(obj)
-        db.commit()
-        return User.model_validate(obj)
+        if obj:
+            db.delete(obj)
+            db.commit()
+            return True
+        return False
 
     def authenticate(self, db: Session, *, user_name: str, password: str) -> Optional[User]:
         user = db.query(UserModel).filter_by(user_name=user_name).first()

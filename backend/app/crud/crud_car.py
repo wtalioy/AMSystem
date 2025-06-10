@@ -77,5 +77,13 @@ class CRUDCar:
             car_type=car_type
         ).scalar() or 0
 
+    def remove(self, db: Session, car_id: str) -> bool:
+        db_obj = db.query(CarModel).filter_by(car_id=car_id).first()
+        if db_obj:
+            db.delete(db_obj)
+            db.commit()
+            return True
+        return False
+
 
 car = CRUDCar()

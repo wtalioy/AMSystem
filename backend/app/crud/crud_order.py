@@ -274,6 +274,14 @@ class CRUDOrder:
             breakdown[period] = float(material_cost) if material_cost else 0.0
         
         return breakdown
+    
+    def remove(self, db: Session, order_id: str) -> bool:
+        db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
+        if db_obj:
+            db.delete(db_obj)
+            db.commit()
+            return True
+        return False
 
 
 order = CRUDOrder()
