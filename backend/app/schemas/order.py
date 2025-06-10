@@ -72,12 +72,3 @@ class OrderToCustomer(OrderToWorker):
 # Properties sto return to admins
 class OrderToAdmin(OrderInDBBase):
     pass
-
-
-class OrderPending(OrderBase):
-    order_id: str
-    start_time: datetime
-    car_type: Optional[str] = None
-
-    class Config:
-        from_attributes = True

@@ -17,7 +17,7 @@ __all__ = [
     
     "Log", "LogCreate", "LogUpdate", "LogInDB",
 
-    "Order", "OrderCreate", "OrderUpdate", "OrderInDB", "OrderToCustomer", "OrderToWorker", "OrderToAdmin", "OrderPending",
+    "Order", "OrderCreate", "OrderUpdate", "OrderInDB", "OrderToCustomer", "OrderToWorker", "OrderToAdmin",
 
     "Procedure", "ProcedureCreate", "ProcedureUpdate", "ProcedureInDB",
     
