@@ -1,5 +1,6 @@
 from typing import List, Optional
 from decimal import Decimal
+from datetime import datetime
 
 from app.dbrm import Session, func
 
@@ -25,9 +26,12 @@ class CRUDDistribute:
     def create_distribution(
         self, db: Session, *, obj_in: DistributeCreate
     ) -> Distribute:
+        from datetime import datetime
+        
         db_obj = DistributeModel(
             amount=obj_in.amount,
-            worker_id=obj_in.worker_id
+            worker_id=obj_in.worker_id,
+            distribute_time=datetime.now()
         )
         db.add(db_obj)
         db.commit()
@@ -44,6 +48,32 @@ class CRUDDistribute:
         if not objs:
             return []
         return [Distribute.model_validate(obj) for obj in objs]
+
+    def get_labor_cost_breakdown_by_period(self, db: Session, start_date: datetime, end_date: datetime, period_type: str = "month") -> dict:
+        """Get labor cost breakdown by period from distribute payments"""
+        from app.dbrm import Condition, func
+        
+        if period_type == "quarter":
+            date_part = func.concat(
+                func.extract('year', DistributeModel.distribute_time), 
+                '-Q', 
+                func.ceil(func.arithmetic(func.extract('month', DistributeModel.distribute_time), '/', 3))
+            )
+        else:
+            date_part = func.date_format(DistributeModel.distribute_time, '%Y-%m')
+        
+        labor_query = db.query(date_part, func.sum(DistributeModel.amount)).where(
+            Condition.gte(DistributeModel.distribute_time, start_date),
+            Condition.lte(DistributeModel.distribute_time, end_date)
+        ).group_by(date_part)
+        
+        labor_results = labor_query.all()
+        
+        breakdown = {}
+        for period, labor_cost in labor_results:
+            breakdown[period] = float(labor_cost) if labor_cost else 0.0
+        
+        return breakdown
 
 
 distribute = CRUDDistribute()

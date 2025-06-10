@@ -100,7 +100,7 @@ class CRUDOrder:
         db_obj = ServiceOrderModel(
             order_id=order_id,
             description=obj_in.description,
-            start_time=str(obj_in.start_time),
+            start_time=obj_in.start_time,
             end_time=None,
             car_id=obj_in.car_id,
             customer_id=customer_id,
@@ -112,14 +112,6 @@ class CRUDOrder:
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
-        
-        # Trigger automatic assignment
-        try:
-            from app.services.assignment_service import AutoAssignmentService
-            AutoAssignmentService.trigger_assignment(db, db_obj.order_id)
-        except Exception as e:
-            # Log error but don't fail order creation
-            print(f"Assignment failed for order {db_obj.order_id}: {e}")
         
         return Order.model_validate(db_obj)
     
@@ -141,10 +133,15 @@ class CRUDOrder:
         self, db: Session, order_id: str, worker_id: Optional[str], status: int
     ) -> Order:
         """Update order worker assignment and status"""
-        db_obj = self.get_by_order_id(db, order_id=order_id)
+        db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:
             db_obj.worker_id = worker_id
             db_obj.status = status
+
+            if status == OrderStatus.ASSIGNED:
+                db_obj.assignment_attempts += 1
+                db_obj.last_assignment_at = datetime.now()
+
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
@@ -186,33 +183,22 @@ class CRUDOrder:
             return []
         return [Order.model_validate(obj) for obj in objs]
 
-    def set_expedite_flag(self, db: Session, order_id: str, expedite_time: datetime) -> Order:
+    def set_expedite_flag(self, db: Session, order_id: str) -> Order:
         """Set expedite flag and timestamp for an order"""
         db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:
             db_obj.expedite_flag = True
-            db_obj.expedite_time = expedite_time
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
             return Order.model_validate(db_obj)
         else:
             raise ValueError("Order not found")
-    
-    def update_order_total_cost(self, db: Session, order_id: str, total_cost: Decimal) -> Order:
-        """Update the total cost of an order"""
-        db_obj = self.get_by_order_id(db, order_id=order_id)
-        if db_obj:
-            db_obj.total_cost = total_cost
-            db.add(db_obj)
-            db.commit()
-            db.refresh(db_obj)
-        return Order.model_validate(db_obj)
 
     def increment_assignment_attempts(self, db: Session, order_id: str) -> Order:
         """Increment assignment attempt counter and set deadline"""
         from datetime import datetime
-        db_obj = self.get_by_order_id(db, order_id=order_id)
+        db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:
             db_obj.assignment_attempts += 1
             db_obj.last_assignment_at = datetime.now()
@@ -221,12 +207,13 @@ class CRUDOrder:
             db.refresh(db_obj)
         return Order.model_validate(db_obj)
     
-    def complete_order(self, db: Session, order_id: str) -> Order:
+    def complete_order(self, db: Session, order_id: str, total_cost: Decimal) -> Order:
         """Mark an order as completed"""
-        db_obj = self.get_by_order_id(db, order_id=order_id)
+        db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:
             db_obj.status = OrderStatus.COMPLETED
             db_obj.end_time = datetime.now()
+            db_obj.total_cost = total_cost
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
@@ -250,16 +237,43 @@ class CRUDOrder:
     def get_average_rating_by_worker_period(
         self, db: Session, worker_id: str, start_date: datetime, end_date: datetime
     ) -> Optional[float]:
-        """Get average rating for a worker within a date range"""
+        """Get average rating for completed orders by worker in a specific period"""
         from app.dbrm import Condition
-        avg_rating = db.query(func.avg(ServiceOrderModel.rating)).filter(
+        result = db.query(func.avg(ServiceOrderModel.rating)).where(
             Condition.eq(ServiceOrderModel.worker_id, worker_id),
-            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED),
             Condition.gte(ServiceOrderModel.end_time, start_date),
             Condition.lte(ServiceOrderModel.end_time, end_date),
-            ServiceOrderModel.rating.isnot(None)
+            Condition.not_null(ServiceOrderModel.rating)
         ).scalar()
-        return float(avg_rating) if avg_rating else None
+        
+        return float(result) if result else None
+
+    def get_material_cost_breakdown_by_period(self, db: Session, start_date: datetime, end_date: datetime, period_type: str = "month") -> dict:
+        """Get material cost breakdown by period from order total_cost"""
+        from app.dbrm import Condition, func
+        
+        if period_type == "quarter":
+            date_part = func.concat(
+                func.extract('year', ServiceOrderModel.end_time), 
+                '-Q', 
+                func.ceil(func.arithmetic(func.extract('month', ServiceOrderModel.end_time), '/', 3))
+            )
+        else:
+            date_part = func.date_format(ServiceOrderModel.end_time, '%Y-%m')
+        
+        material_query = db.query(date_part, func.sum(ServiceOrderModel.total_cost)).where(
+            Condition.gte(ServiceOrderModel.end_time, start_date),
+            Condition.lte(ServiceOrderModel.end_time, end_date),
+            Condition.not_null(ServiceOrderModel.total_cost)
+        ).group_by(date_part)
+        
+        material_results = material_query.all()
+        
+        breakdown = {}
+        for period, material_cost in material_results:
+            breakdown[period] = float(material_cost) if material_cost else 0.0
+        
+        return breakdown
 
 
 order = CRUDOrder()

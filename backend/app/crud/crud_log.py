@@ -1,10 +1,10 @@
 from typing import List
+from decimal import Decimal
 
 from app.dbrm import Session, func
 
-
 from app.models import Log as LogModel
-from app.schemas import LogCreate, Log, PeriodCostBreakdown
+from app.schemas import LogCreate, Log
 
 
 class CRUDLog:
@@ -100,17 +100,17 @@ class CRUDLog:
         
         return Log.model_validate(db_obj)
     
-    def get_total_duration_by_worker(self, db: Session, worker_id: str) -> float:
+    def get_total_duration_by_worker(self, db: Session, worker_id: str) -> Decimal:
         result = db.query(func.sum(LogModel.duration)).filter_by(
             worker_id=worker_id
         ).scalar()
-        return float(result) if result else 0.0
+        return Decimal(result) if result else 0.0
     
-    def get_total_cost_by_order(self, db: Session, order_id: str) -> float:
+    def get_total_cost_by_order(self, db: Session, order_id: str) -> Decimal:
         result = db.query(func.sum(LogModel.cost)).filter_by(
             order_id=order_id
         ).scalar()
-        return float(result) if result else 0.0
+        return Decimal(result) if result else 0.0
     
     def get_logs_by_order_and_worker(
         self, db: Session, order_id: str, worker_id: str
@@ -123,86 +123,6 @@ class CRUDLog:
         if not objs:
             return []
         return [Log.model_validate(obj) for obj in objs]
-
-
-    def get_cost_breakdown_by_period(self, db: Session, start_date, end_date, period_type: str = "month") -> List[PeriodCostBreakdown]:
-        """Get detailed cost breakdown by month or quarter using enhanced DBRM"""
-        from app.models import Distribute
-        from app.dbrm import Condition, func
-        
-        if period_type == "quarter":
-            # Group by quarter using enhanced DBRM functions
-            material_date_part = func.concat(
-                func.extract('year', LogModel.log_time), 
-                '-Q', 
-                func.ceil(func.arithmetic(func.extract('month', LogModel.log_time), '/', 3))
-            )
-            labor_date_part = func.concat(
-                func.extract('year', Distribute.distribute_time), 
-                '-Q', 
-                func.ceil(func.arithmetic(func.extract('month', Distribute.distribute_time), '/', 3))
-            )
-        else:
-            # Group by month using enhanced DBRM functions
-            material_date_part = func.date_format(LogModel.log_time, '%Y-%m')
-            labor_date_part = func.date_format(Distribute.distribute_time, '%Y-%m')
-        
-        # Get material costs by period from logs using enhanced DBRM
-        material_query = db.query(material_date_part, func.sum(LogModel.cost)).where(
-            Condition.gte(LogModel.log_time, start_date),
-            Condition.lte(LogModel.log_time, end_date)
-        ).group_by(material_date_part)
-        
-        material_results = material_query.all()
-        
-        # Get labor costs by period from actual payments using enhanced DBRM
-        labor_query = db.query(labor_date_part, func.sum(Distribute.amount)).where(
-            Condition.gte(Distribute.distribute_time, start_date),
-            Condition.lte(Distribute.distribute_time, end_date)
-        ).group_by(labor_date_part)
-        
-        labor_results = labor_query.all()
-        
-        # Combine results
-        breakdown = {}
-        
-        # Add material costs
-        for period, material_cost in material_results:
-            breakdown[period] = {
-                'period': period,
-                'material_cost': float(material_cost) if material_cost else 0.0,
-                'labor_cost': 0.0
-            }
-        
-        # Add labor costs
-        for period, labor_cost in labor_results:
-            if period not in breakdown:
-                breakdown[period] = {
-                    'period': period,
-                    'material_cost': 0.0,
-                    'labor_cost': 0.0
-                }
-            breakdown[period]['labor_cost'] = float(labor_cost) if labor_cost else 0.0
-        
-        # Convert to Pydantic models and calculate totals
-        result = []
-        for period_data in breakdown.values():
-            material_cost = period_data['material_cost']
-            labor_cost = period_data['labor_cost']
-            total_cost = material_cost + labor_cost
-            labor_material_ratio = labor_cost / material_cost if material_cost > 0 else 0.0
-            
-            period_breakdown = PeriodCostBreakdown(
-                period=period_data['period'],
-                material_cost=material_cost,
-                labor_cost=labor_cost,
-                total_cost=total_cost,
-                labor_material_ratio=labor_material_ratio
-            )
-            result.append(period_breakdown)
-        
-        # Return sorted list by period
-        return sorted(result, key=lambda x: x.period)
 
 
 log = CRUDLog()
