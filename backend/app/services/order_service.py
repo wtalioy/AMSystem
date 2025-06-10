@@ -1,8 +1,9 @@
+from asyncio import log
 from typing import Optional, List, Dict
 from datetime import datetime
 from app.dbrm import Session
 
-from app.crud import order, user, car
+from app.crud import order, user, car, log
 from app.schemas import OrderCreate, Order
 from app.core.audit_decorators import audit
 from app.core.enum import OrderStatus
@@ -15,7 +16,10 @@ class OrderService:
     @audit("Order", "CREATE")
     def create_order(db: Session, obj_in: OrderCreate, customer_id: str, audit_context=None) -> Order:
         """Create a new service order"""
-        return order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
+        order_obj = order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
+        from app.services.assignment_service import AutoAssignmentService
+        AutoAssignmentService.trigger_assignment(db, order_obj.order_id)
+        return order_obj
 
 
     @staticmethod
@@ -26,16 +30,16 @@ class OrderService:
 
 
     @staticmethod
-    def get_customer_orders(db: Session, customer_id: str, skip: int = 0, limit: int = 100) -> List[Order]:
+    def get_customer_orders(db: Session, customer_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None) -> List[Order]:
         """Get all orders for a customer with pagination"""
-        orders = order.get_orders_by_customer(db, customer_id=customer_id, skip=skip, limit=limit)
+        orders = order.get_orders_by_customer(db, customer_id=customer_id, skip=skip, limit=limit, status=status)
         return orders
 
 
     @staticmethod
-    def get_worker_orders(db: Session, worker_id: str, skip: int = 0, limit: int = 100) -> List[Order]:
+    def get_worker_orders(db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None) -> List[Order]:
         """Get all orders assigned to a worker with pagination"""
-        orders = order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
+        orders = order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
         return orders
 
 
@@ -73,7 +77,8 @@ class OrderService:
     @audit("Order", "UPDATE")
     def complete_order(db: Session, order_id: str, audit_context=None) -> Order:
         """Mark an order as completed"""
-        return order.complete_order(db, order_id)
+        total_cost = log.get_total_cost_by_order(db, order_id=order_id)
+        return order.complete_order(db, order_id=order_id, total_cost=total_cost)
 
 
     @staticmethod
@@ -159,16 +164,15 @@ class OrderService:
         if order_obj.expedite_flag:
             raise ValueError("Order is already expedited")
         
-        # Set expedite flag with current timestamp
-        expedite_time = datetime.now()
-        updated_order = order.set_expedite_flag(db, order_id=order_id, expedite_time=expedite_time)
+        # Set expedite flag
+        updated_order = order.set_expedite_flag(db, order_id=order_id)
         
         # Optionally trigger re-assignment for better worker matching
         # This could be enhanced to notify available workers immediately
         try:
             from app.services.assignment_service import AutoAssignmentService
             if order_obj.status == OrderStatus.PENDING_ASSIGNMENT:
-                AutoAssignmentService.trigger_assignment(db, order_id, priority=True)
+                AutoAssignmentService.trigger_assignment(db, order_id=order_id)
         except Exception as e:
             # Log error but don't fail the expedite request
             print(f"Priority assignment failed for expedited order {order_id}: {e}")
