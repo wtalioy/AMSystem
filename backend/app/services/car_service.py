@@ -97,7 +97,7 @@ class CarService:
         if not car_obj:
             return False
         
-        car.remove(db, id=car_obj.id)
+        car.remove(db, car_id=car_id)
         return True
 
 

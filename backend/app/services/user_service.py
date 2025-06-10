@@ -62,7 +62,7 @@ class UserService:
         if not user:
             return False
         
-        user_crud.remove(db, user_id=user.user_id)
+        user_crud.remove(db, user_id=user_id)
         return True
 
     @staticmethod
