@@ -2,15 +2,11 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-# Base user schema
-class UserBase(BaseModel):
-    user_name: str
-    user_type: str
-
-
 # For creating new users
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    user_name: str
     user_pwd: str
+    user_type: str
     worker_type: Optional[str] = None
 
 
@@ -28,25 +24,32 @@ class UserUpdate(BaseModel):
 
 
 # Main user schema
-class User(UserBase):
+class User(BaseModel):
     user_id: str
+    user_name: Optional[str] = None
+    user_type: Optional[str] = None
     worker_type: Optional[str] = None
+    availability_status: Optional[int] = None
 
     class Config:
         from_attributes = True
 
 
 # Specialized user types
-class Customer(UserBase):
+class Customer(BaseModel):
+    user_id: str
     user_type: str = "customer"
 
 
-class Worker(UserBase):
+class Worker(BaseModel):
+    user_id: str
     user_type: str = "worker"
     worker_type: str
+    availability_status: int
 
 
-class Admin(UserBase):
+class Admin(BaseModel):
+    user_id: str
     user_type: str = "administrator"
 
 
