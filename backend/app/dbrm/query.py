@@ -1,3 +1,5 @@
+from datetime import datetime
+
 class Condition:
     
     @staticmethod
@@ -339,7 +341,7 @@ class Insert:
             for val in row:
                 if val is None:
                     row_values.append("NULL")
-                elif isinstance(val, str):
+                elif isinstance(val, (str, datetime)):
                     row_values.append(f"'{val}'")
                 else:
                     row_values.append(str(val))
@@ -396,7 +398,7 @@ class Update:
         for col, val in self.set_clauses.items():
             if val is None:
                 set_parts.append(f"{col} = NULL")
-            elif isinstance(val, str):
+            elif isinstance(val, (str, datetime)):
                 set_parts.append(f"{col} = '{val}'")
             else:
                 set_parts.append(f"{col} = {val}")
