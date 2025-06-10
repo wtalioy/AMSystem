@@ -166,42 +166,6 @@ def update_car(
     )
 
 
-@router.patch("/{car_id}", response_model=Car)
-def partial_update_car(
-    *,
-    db: Session = Depends(deps.get_db),
-    car_id: str,
-    car_in: Dict[str, Any],
-    current_user: User = Depends(deps.get_current_user),
-) -> Any:
-    """
-    Partially update car information
-    """
-    car = CarService.get_car_by_id(db=db, car_id=car_id)
-    if not car:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Car not found"
-        )
-    
-    # Only owner or admin can update car
-    if current_user.user_type == "customer" and car.customer_id != current_user.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Not authorized to update this car"
-        )
-    elif current_user.user_type == "worker":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workers cannot update car information"
-        )
-    
-    audit_context = deps.get_audit_context(current_user)
-    return CarService.partial_update_car(
-        db=db, car_id=car_id, obj_in=car_in, audit_context=audit_context
-    )
-
-
 @router.delete("/{car_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_car(
     *,

@@ -5,7 +5,7 @@ from app.dbrm import Session
 
 from app.services import ProcedureService, OrderService
 from app.api import deps
-from app.schemas import Procedure, Worker, User, ProcedureCreate, ProcedureUpdate
+from app.schemas import Procedure, User, ProcedureCreate, ProcedureUpdate
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ def create_order_procedures(
     *,
     db: Session = Depends(deps.get_db),
     procedures: List[ProcedureCreate],
-    current_user: Worker = Depends(deps.get_current_worker),
+    current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
     Create procedures for an order
@@ -53,12 +53,12 @@ def get_order_procedures(
     return ProcedureService.get_procedure_progress(db=db, order_id=order_id)
 
 
-@router.patch("/", response_model=List[ProcedureUpdate])
+@router.patch("/", response_model=List[Procedure])
 def update_procedure_status(
     *,
     db: Session = Depends(deps.get_db),
     procedures: List[ProcedureUpdate] = Body(...),
-    current_user: Worker = Depends(deps.get_current_worker),
+    current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
     Update the status of multiple procedures
@@ -70,7 +70,7 @@ def update_procedure_status(
         )
     try:
         results = ProcedureService.update_procedure_status(
-            db=db, procedures=procedures, worker_id=current_user.user_id
+            db=db, procedure_updates=procedures, worker_id=current_user.user_id
         )
         return results
     except ValueError as e:
