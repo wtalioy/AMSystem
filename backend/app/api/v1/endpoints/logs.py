@@ -1,12 +1,12 @@
 from typing import Any, List
 from decimal import Decimal
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.dbrm import Session
 
-from app.services import worker_service
+from app.services import WorkerService
 from app.api import deps
-from app.schemas import Log, Worker
+from app.schemas import Log, Worker, LogCreate
 
 router = APIRouter()
 
@@ -14,10 +14,7 @@ router = APIRouter()
 def create_maintenance_log(
     *,
     db: Session = Depends(deps.get_db),
-    order_id: str = Body(...),
-    consumption: str = Body(...),
-    cost: float = Body(...),
-    duration: float = Body(...),
+    log_in: LogCreate,
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
@@ -25,13 +22,8 @@ def create_maintenance_log(
     """
     try:
         # This might need to be refactored to a generic log_service if logs are not worker-specific
-        return worker_service.create_maintenance_log(
-            db=db,
-            worker_id=current_user.user_id,
-            order_id=order_id,
-            consumption=consumption,
-            cost=Decimal(str(cost)),
-            duration=Decimal(str(duration))
+        return WorkerService.create_maintenance_log(
+            db=db, obj_in=log_in, worker_id=current_user.user_id
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
@@ -50,6 +42,6 @@ def get_worker_logs(
     """
     skip = (page - 1) * page_size
     # This might need to be refactored to a generic log_service
-    return worker_service.get_worker_logs(
+    return WorkerService.get_worker_logs(
         db=db, worker_id=current_user.user_id, skip=skip, limit=page_size
     )

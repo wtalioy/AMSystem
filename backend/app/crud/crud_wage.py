@@ -2,30 +2,41 @@ from typing import List, Optional
 
 from app.dbrm import Session
 
-from app.crud.base import CRUDBase
-from app.models.wage import Wage
-from app.schemas.wage import WageCreate, WageUpdate
+from app.models import Wage as WageModel
+from app.schemas import WageCreate, Wage
 
 
-class CRUDWage(CRUDBase[Wage, WageCreate, WageUpdate]):
-    def get_by_type(self, db: Session, worker_type: int) -> Optional[Wage]:
-        return db.query(Wage).filter_by(worker_type=worker_type).first()
+class CRUDWage:
+    def get_by_type(self, db: Session, worker_type: str) -> Optional[Wage]:
+        obj = db.query(WageModel).filter_by(worker_type=worker_type).first()
+        if not obj:
+            return None
+        return Wage.model_validate(obj)
     
-    def get_all_wages(self, db: Session) -> List[Wage]:
-        return db.query(Wage).all()
+    def get_multi(self, db: Session) -> List[Wage]:
+        objs = db.query(WageModel).all()
+        if not objs:
+            return []
+        return [Wage.model_validate(obj) for obj in objs]
     
-    def create_wage(self, db: Session, *, obj_in: WageCreate) -> Wage:
-        db_obj = Wage(
+    def get_all_types(self, db: Session) -> List[str]:
+        objs = db.query(WageModel).all()
+        if not objs:
+            return []
+        return [obj.worker_type for obj in objs]
+    
+    def create(self, db: Session, *, obj_in: WageCreate) -> Wage:
+        db_obj = WageModel(
             worker_type=obj_in.worker_type,
             wage_per_hour=obj_in.wage_per_hour
         )
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
-        return db_obj
+        return Wage.model_validate(db_obj)
     
     def update_wage_rate(
-        self, db: Session, *, worker_type: int, new_wage_per_hour: int
+        self, db: Session, *, worker_type: str, new_wage_per_hour: int
     ) -> Wage:
         db_obj = self.get_by_type(db, worker_type=worker_type)
         if db_obj:
@@ -33,7 +44,7 @@ class CRUDWage(CRUDBase[Wage, WageCreate, WageUpdate]):
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
-        return db_obj
+        return Wage.model_validate(db_obj)
 
 
-wage = CRUDWage(Wage)
+wage = CRUDWage()

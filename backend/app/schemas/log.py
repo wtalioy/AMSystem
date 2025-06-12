@@ -13,7 +13,7 @@ class LogBase(BaseModel):
 
 # Properties to receive via API on creation
 class LogCreate(LogBase):
-    worker_id: Optional[str] = None
+    order_id: str
 
 
 # Properties to receive via API on update
@@ -26,6 +26,7 @@ class LogUpdate(BaseModel):
 # Properties shared by models stored in DB
 class LogInDBBase(LogBase):
     log_time: datetime
+    order_id: str
     worker_id: str
 
     class Config:

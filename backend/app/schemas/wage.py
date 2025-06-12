@@ -9,17 +9,17 @@ class WageBase(BaseModel):
 
 # Properties to receive via API on creation
 class WageCreate(WageBase):
-    worker_type: int
+    worker_type: str
 
 
 # Properties to receive via API on update
 class WageUpdate(WageBase):
-    pass
+    worker_type: str
 
 
 # Properties shared by models stored in DB
 class WageInDBBase(WageBase):
-    worker_type: int
+    worker_type: str
 
     class Config:
         from_attributes = True

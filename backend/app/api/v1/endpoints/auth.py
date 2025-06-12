@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.dbrm import Session
 
 from app.api import deps
-from app.services import auth_service
+from app.services import AuthService
 from app.schemas import Token, User, UserLogin
 
 router = APIRouter()
@@ -16,7 +16,7 @@ def login_for_access_token(
     """
     JSON-based token login endpoint, get an access token for future requests
     """
-    user = auth_service.authenticate_user(
+    user = AuthService.authenticate_user(
         db, user_name=user_login.user_name, password=user_login.user_pwd
     )
     if not user:
@@ -25,7 +25,7 @@ def login_for_access_token(
             detail="Incorrect user ID or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return auth_service.create_access_token(user_id=user.user_id)
+    return AuthService.create_access_token(user_id=user.user_id)
 
 
 @router.get("/verify", response_model=dict)
@@ -78,4 +78,4 @@ def refresh_access_token(
     Gets a new token with extended expiration time.
     Using the current valid token as authentication.
     """
-    return auth_service.create_access_token(user_id=current_user.user_id)
+    return AuthService.create_access_token(user_id=current_user.user_id)

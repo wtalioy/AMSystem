@@ -1,33 +1,27 @@
-from typing import Optional
 from pydantic import BaseModel
 
 
-# Shared properties
 class ProcedureBase(BaseModel):
-    procedure_text: str
     order_id: str
-    current_status: int = 0  # 0: pending, 1: in progress, 2: completed
 
 
-# Properties to receive via API on creation
 class ProcedureCreate(ProcedureBase):
-    pass
+    procedure_text: str
 
 
-# Properties to receive via API on update
-class ProcedureUpdate(BaseModel):
-    procedure_text: Optional[str] = None
-    current_status: Optional[int] = None
+class ProcedureUpdate(ProcedureBase):
+    procedure_id: int
+    current_status: int
 
 
-# Properties shared by models stored in DB
 class ProcedureInDBBase(ProcedureBase):
     procedure_id: int
+    procedure_text: str
+    current_status: int
 
     class Config:
         from_attributes = True
 
 
-# Properties to return via API
 class Procedure(ProcedureInDBBase):
     pass

@@ -2,112 +2,58 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-# Shared properties
-class UserBase(BaseModel):
+# For creating new users
+class UserCreate(BaseModel):
     user_name: str
-
-
-# Properties to receive via API on creation
-class UserCreate(UserBase):
     user_pwd: str
     user_type: str
+    worker_type: Optional[str] = None
 
 
-# Properties to receive via API on login
+# For user login
 class UserLogin(BaseModel):
     user_name: str
     user_pwd: str
 
 
-# Properties to receive via API on update
+# For updating users
 class UserUpdate(BaseModel):
     user_name: Optional[str] = None
     user_pwd: Optional[str] = None
+    worker_type: Optional[str] = None
 
 
-# Properties shared by models stored in DB
-class UserInDBBase(UserBase):
+# Main user schema
+class User(BaseModel):
     user_id: str
-    user_type: str
+    user_name: Optional[str] = None
+    user_type: Optional[str] = None
+    worker_type: Optional[str] = None
+    availability_status: Optional[int] = None
 
     class Config:
         from_attributes = True
 
 
-# Properties to return via API
-class User(UserInDBBase):
-    pass
-
-
-# Properties stored in DB
-class UserInDB(UserInDBBase):
-    user_pwd: str
-
-
-# Customer schemas
-class CustomerBase(UserBase):
-    pass
-
-
-class CustomerCreate(UserCreate):
+# Specialized user types
+class Customer(BaseModel):
+    user_id: str
     user_type: str = "customer"
 
 
-class CustomerUpdate(UserUpdate):
-    pass
-
-
-class CustomerInDBBase(UserInDBBase):
-    class Config:
-        from_attributes = True
-
-
-class Customer(CustomerInDBBase):
-    pass
-
-
-# Worker schemas
-class WorkerBase(UserBase):
-    worker_type: int
-
-
-class WorkerCreate(UserCreate):
+class Worker(BaseModel):
+    user_id: str
     user_type: str = "worker"
-    worker_type: int
+    worker_type: str
+    availability_status: int
 
 
-class WorkerUpdate(UserUpdate):
-    worker_type: Optional[int] = None
-
-
-class WorkerInDBBase(UserInDBBase):
-    worker_type: int
-
-    class Config:
-        from_attributes = True
-
-
-class Worker(WorkerInDBBase):
-    pass
-
-
-# Administrator schemas
-class AdminBase(UserBase):
-    pass
-
-
-class AdminCreate(UserCreate):
+class Admin(BaseModel):
+    user_id: str
     user_type: str = "administrator"
 
 
-class AdminUpdate(UserUpdate):
-    pass
-
-
-class AdminInDBBase(UserInDBBase):
-    class Config:
-        from_attributes = True
-
-
-class Admin(AdminInDBBase):
-    pass
+# For backward compatibility with existing CRUD operations
+CustomerCreate = UserCreate
+WorkerCreate = UserCreate  
+AdminCreate = UserCreate

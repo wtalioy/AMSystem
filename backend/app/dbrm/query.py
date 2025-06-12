@@ -1,36 +1,85 @@
+from datetime import datetime
+
 class Condition:
     
     @staticmethod
+    def _format_value(value):
+        """Format a value for SQL queries"""
+        from datetime import datetime, date
+        if isinstance(value, str):
+            return f"'{value}'"
+        elif isinstance(value, (datetime, date)):
+            return f"'{value}'"
+        elif value is None:
+            return "NULL"
+        else:
+            return str(value)
+    
+    @staticmethod
     def eq(column, value):
-        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
-        value_str = f"'{value}'" if isinstance(value, str) else str(value)
-        return f"{column} = {value_str}"
+        if hasattr(column, 'parent') and hasattr(column.parent, '__tablename__') and hasattr(column, 'name'):
+            column_str = f"{column.parent.__tablename__}.{column.name}"
+        elif hasattr(column, 'name'):
+            column_str = column.name
+        else:
+            column_str = str(column)
+        value_str = Condition._format_value(value)
+        return f"{column_str} = {value_str}"
     
     @staticmethod
     def ne(column, value):
-        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
-        value_str = f"'{value}'" if isinstance(value, str) else str(value)
-        return f"{column} != {value_str}"
+        if hasattr(column, 'parent') and hasattr(column.parent, '__tablename__') and hasattr(column, 'name'):
+            column_str = f"{column.parent.__tablename__}.{column.name}"
+        elif hasattr(column, 'name'):
+            column_str = column.name
+        else:
+            column_str = str(column)
+        value_str = Condition._format_value(value)
+        return f"{column_str} != {value_str}"
     
     @staticmethod
     def gt(column, value):
-        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
-        return f"{column} > {value}"
+        if hasattr(column, 'parent') and hasattr(column.parent, '__tablename__') and hasattr(column, 'name'):
+            column_str = f"{column.parent.__tablename__}.{column.name}"
+        elif hasattr(column, 'name'):
+            column_str = column.name
+        else:
+            column_str = str(column)
+        value_str = Condition._format_value(value)
+        return f"{column_str} > {value_str}"
 
     @staticmethod
     def gte(column, value):
-        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
-        return f"{column} >= {value}"
+        if hasattr(column, 'parent') and hasattr(column.parent, '__tablename__') and hasattr(column, 'name'):
+            column_str = f"{column.parent.__tablename__}.{column.name}"
+        elif hasattr(column, 'name'):
+            column_str = column.name
+        else:
+            column_str = str(column)
+        value_str = Condition._format_value(value)
+        return f"{column_str} >= {value_str}"
     
     @staticmethod
     def lt(column, value):
-        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
-        return f"{column} < {value}"
+        if hasattr(column, 'parent') and hasattr(column.parent, '__tablename__') and hasattr(column, 'name'):
+            column_str = f"{column.parent.__tablename__}.{column.name}"
+        elif hasattr(column, 'name'):
+            column_str = column.name
+        else:
+            column_str = str(column)
+        value_str = Condition._format_value(value)
+        return f"{column_str} < {value_str}"
 
     @staticmethod
     def lte(column, value):
-        column = f"{column.parent.__tablename__}.{column.name}" if hasattr(column, 'parent') else column
-        return f"{column} <= {value}"
+        if hasattr(column, 'parent') and hasattr(column.parent, '__tablename__') and hasattr(column, 'name'):
+            column_str = f"{column.parent.__tablename__}.{column.name}"
+        elif hasattr(column, 'name'):
+            column_str = column.name
+        else:
+            column_str = str(column)
+        value_str = Condition._format_value(value)
+        return f"{column_str} <= {value_str}"
     
     @staticmethod
     def like(column, pattern):
@@ -113,6 +162,7 @@ class Select:
         return self
     
     def order_by(self, *columns):
+        columns = [f"{col.parent.__tablename__}.{col.name}" for col in columns if hasattr(col, 'parent')]
         self.order_by_columns.extend(columns)
         return self
         
@@ -292,7 +342,7 @@ class Insert:
             for val in row:
                 if val is None:
                     row_values.append("NULL")
-                elif isinstance(val, str):
+                elif isinstance(val, (str, datetime)):
                     row_values.append(f"'{val}'")
                 else:
                     row_values.append(str(val))
@@ -349,7 +399,7 @@ class Update:
         for col, val in self.set_clauses.items():
             if val is None:
                 set_parts.append(f"{col} = NULL")
-            elif isinstance(val, str):
+            elif isinstance(val, (str, datetime)):
                 set_parts.append(f"{col} = '{val}'")
             else:
                 set_parts.append(f"{col} = {val}")

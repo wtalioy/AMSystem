@@ -1,103 +1,70 @@
-from typing import Any, List, Dict, Optional, Union
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
 
-from app.services import user_service
+from app.services import UserService
 from app.api import deps
-from app.schemas import User, UserUpdate, CustomerCreate, WorkerCreate, AdminCreate, Customer, Worker, Admin
+from app.schemas import User, UserUpdate, UserCreate
 
 router = APIRouter()
 
-# Register endpoints organized by user type
-@router.post("/customers", response_model=Customer, status_code=status.HTTP_201_CREATED)
-def create_customer(
-    *, 
-    db: Session = Depends(deps.get_db), 
-    customer_in: CustomerCreate,
-    response: Response
+@router.get("/worker-types", response_model=List[str])
+def get_worker_types(
+    db: Session = Depends(deps.get_db),
 ) -> Any:
     """
-    Register a new customer
+    Get all worker types
     """
-    user = user_service.get_user_by_name(db, user_name=customer_in.user_name)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The user with this name already exists in the system",
-        )
-    created_customer = user_service.create_customer(db=db, customer_in=customer_in)
-    
-    # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_customer.user_id}"
-        
-    return created_customer
+    return UserService.get_valid_worker_types(db)
 
 
-@router.post("/workers", response_model=Worker, status_code=status.HTTP_201_CREATED)
-def create_worker(
+@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+def register_user(
     *,
     db: Session = Depends(deps.get_db),
-    worker_in: WorkerCreate,
+    user_in: UserCreate,
     response: Response
 ) -> Any:
     """
-    Register a new worker
+    Register a new user
     """
-    user = user_service.get_user_by_name(db, user_name=worker_in.user_name)
+    user = UserService.get_user_by_name(db, user_name=user_in.user_name)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this name already exists in the system",
         )
-    created_worker = user_service.create_worker(db=db, worker_in=worker_in)
-    
-    # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_worker.user_id}"
-        
-    return created_worker
-
-
-@router.post("/admins", response_model=Admin, status_code=status.HTTP_201_CREATED)
-def create_admin(
-    *,
-    db: Session = Depends(deps.get_db),
-    admin_in: AdminCreate,
-    response: Response
-) -> Any:
-    """
-    Register a new admin (admin only)
-    """
-    user = user_service.get_user_by_name(db, user_name=admin_in.user_name)
-    if user:
+    try:
+        created_user = UserService.create_user(db=db, obj_in=user_in)
+    except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The user with this name already exists in the system",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
         )
-    created_admin = user_service.create_admin(db=db, admin_in=admin_in)
     
     # Add Location header for the newly created resource
-    response.headers["Location"] = f"/api/v1/users/{created_admin.user_id}"
-        
-    return created_admin
+    response.headers["Location"] = f"/api/v1/users/{created_user.user_id}"
+
+    return created_user
 
 
 # Current user profile management
-@router.get("/me", response_model=Union[Customer, Worker, Admin, User])
+@router.get("/me", response_model=User)
 def get_current_user(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Get current user profile with complete information based on user type
+    Get current user profile
     """
-    complete_user = user_service.get_user_by_id(db, user_id=current_user.user_id, typed=True)
-    if not complete_user:
+    user = UserService.get_user_by_id(db, user_id=current_user.user_id)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    return complete_user
+    return user
 
 
 @router.put("/me", response_model=User)
@@ -108,22 +75,10 @@ def update_current_user(
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Update current user profile (full update)
+    Update current user profile
     """
-    return user_service.update_user(db=db, user_id=current_user.user_id, user_in=user_in)
-
-
-@router.patch("/me", response_model=User)
-def partial_update_current_user(
-    *,
-    db: Session = Depends(deps.get_db),
-    user_in: Dict[str, Any],
-    current_user: User = Depends(deps.get_current_user),
-) -> Any:
-    """
-    Partially update current user profile
-    """
-    return user_service.partial_update_user(db=db, user_id=current_user.user_id, obj_in=user_in)
+    audit_context = deps.get_audit_context(current_user)
+    return UserService.update_user(db=db, user_id=current_user.user_id, obj_in=user_in, audit_context=audit_context)
 
 
 # Admin operations on users
@@ -131,12 +86,12 @@ def partial_update_current_user(
 def get_user_by_id(
     user_id: str,
     db: Session = Depends(deps.get_db),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get a specific user by ID (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=user_id)
+    user = UserService.get_user_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -151,13 +106,13 @@ def get_users(
     db: Session = Depends(deps.get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get all users (admin only) with pagination
     """
     skip = (page - 1) * page_size
-    users = user_service.get_all_users(db, skip=skip, limit=page_size)
+    users = UserService.get_all_users(db, skip=skip, limit=page_size)
     return users
 
 
@@ -167,18 +122,19 @@ def update_user(
     db: Session = Depends(deps.get_db),
     user_id: str,
     user_in: UserUpdate,
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Update a specific user (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=user_id)
+    user = UserService.get_user_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this ID does not exist in the system",
         )
-    return user_service.update_user(db=db, user_id=user_id, user_in=user_in)
+    audit_context = deps.get_audit_context(current_user)
+    return UserService.update_user(db=db, user_id=user_id, user_in=user_in, audit_context=audit_context)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -186,16 +142,17 @@ def delete_user(
     *,
     db: Session = Depends(deps.get_db),
     user_id: str,
-    current_user: Admin = Depends(deps.get_current_admin),
+    current_user: User = Depends(deps.get_current_admin),
 ) -> None:
     """
     Delete a specific user (admin only)
     """
-    user = user_service.get_user_by_id(db, user_id=user_id)
+    user = UserService.get_user_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this ID does not exist in the system",
         )
-    user_service.delete_user(db=db, user_id=user_id)
+    audit_context = deps.get_audit_context(current_user)
+    UserService.delete_user(db=db, user_id=user_id, audit_context=audit_context)
     return None

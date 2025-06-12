@@ -1,149 +1,166 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from app.dbrm import Session
-from decimal import Decimal
 
-from app.crud import order, car, log, procedure, worker, wage
-from app.schemas import Order, OrderCreate, Procedure, ProcedureCreate, OrderToCustomer, OrderToAdmin
-
-
-def create_order(db: Session, obj_in: OrderCreate, customer_id: str) -> OrderCreate:
-    """Create a new repair order"""
-    # Verify the car belongs to the customer
-    car_obj = car.get_by_car_id(db, car_id=obj_in.car_id)
-    if not car_obj or car_obj.customer_id != customer_id:
-        raise ValueError("Car does not exist or does not belong to customer")
-    
-    # Create the order
-    return OrderCreate.model_validate(
-        order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
-    )
+from app.crud import order, user, car
+from app.schemas import OrderCreate, Order
+from app.core.audit_decorators import audit
+from app.core.enum import OrderStatus
 
 
-def get_order_by_id(db: Session, order_id: str) -> Optional[Order]:
-    """Get a specific order by ID"""
-    return Order.model_validate(
-        order.get_by_order_id(db, order_id=order_id)
-    )
+class OrderService:
+    """Service for order operations"""
+
+    @staticmethod
+    @audit("Order", "CREATE")
+    def create_order(db: Session, obj_in: OrderCreate, customer_id: str, audit_context=None) -> Order:
+        """Create a new service order"""
+        order_obj = order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
+        from app.services.assignment_service import AutoAssignmentService
+        AutoAssignmentService.trigger_assignment(db, order_obj.order_id)
+        return order_obj
 
 
-def get_orders_for_customer(
-    db: Session, customer_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
-) -> List[OrderToCustomer]:
-    """
-    Get all orders for a customer with pagination and optional status filtering
-    """
-    orders = order.get_orders_by_customer(
-        db, customer_id=customer_id, skip=skip, limit=limit, status=status
-    )
-    orders = [OrderToCustomer.model_validate(o) for o in orders]
-    return orders
+    @staticmethod
+    def get_order_by_id(db: Session, order_id: str) -> Optional[Order]:
+        """Get a specific order by ID"""
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        return order_obj
 
 
-def get_all_orders(
-    db: Session, skip: int = 0, limit: int = 100, status: Optional[int] = None
-) -> List[OrderToAdmin]:
-    """
-    Get all orders with pagination and optional status filtering (admin function)
-    """
-    orders = order.get_multi_with_details(db, skip=skip, limit=limit, status=status)
-    orders = [OrderToAdmin.model_validate(o) for o in orders]
-    return orders
+    @staticmethod
+    def get_customer_orders(db: Session, customer_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None) -> List[Order]:
+        """Get all orders for a customer with pagination"""
+        orders = order.get_orders_by_customer(db, customer_id=customer_id, skip=skip, limit=limit, status=status)
+        return orders
 
 
-def update_order_status(db: Session, order_id: str, new_status: int) -> Optional[Order]:
-    """
-    Update the status of an order
-    
-    Status codes:
-    0 - Pending
-    1 - In Progress
-    2 - Completed
-    3 - Cancelled
-    
-    Raises ValueError if the status transition is invalid
-    """
-    order_obj = order.get_by_order_id(db, order_id=order_id)
-    if not order_obj:
-        return None
-    
-    # Validate status transition
-    if new_status not in [0, 1, 2, 3]:
-        raise ValueError(f"Invalid status code: {new_status}")
-    
-    # Check for valid transitions
-    current_status = order_obj.status
-    
-    # Cannot change from completed or cancelled to other statuses
-    if current_status == 2 and new_status != 2:
-        raise ValueError("Cannot change status of a completed order")
-    
-    if current_status == 3 and new_status != 3:
-        raise ValueError("Cannot change status of a cancelled order")
-    
-    # Update the status
-    return Order.model_validate(order.update_status(db, order_id=order_id, new_status=new_status))
+    @staticmethod
+    def get_worker_orders(db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None) -> List[Order]:
+        """Get all orders assigned to a worker with pagination"""
+        orders = order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
+        return orders
 
 
-def add_customer_feedback(
-    db: Session, order_id: str, rating: int, comment: Optional[str] = None
-) -> Optional[OrderToCustomer]:
-    """Add customer feedback to an order"""
-    return OrderToCustomer.model_validate(
-        order.add_customer_feedback(db=db, order_id=order_id, rating=rating, comment=comment)
-    )
+    @staticmethod
+    @audit("Order", "DELETE")
+    def delete_order(db: Session, order_id: str, audit_context=None) -> bool:
+        """
+        Delete an order from the database
+        
+        Returns True if order was deleted, False if order was not found
+        """
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            return False
+        
+        order.remove(db, order_id=order_id)
+        return True
 
 
-def add_procedure_to_order(
-    db: Session, order_id: str, procedure_text: str
-) -> Procedure:
-    """Add a repair procedure to an order"""
-    procedure_in = ProcedureCreate(
-        order_id=order_id,
-        procedure_text=procedure_text,
-        current_status=0  # Initially pending
-    )
-    return Procedure.model_validate(
-        procedure.create_procedure_for_order(db=db, obj_in=procedure_in)
-    )
+    @staticmethod
+    def get_all_orders(db: Session, skip: int = 0, limit: int = 100) -> List[Order]:
+        """Get all orders (admin function)"""
+        orders = order.get_multi(db, skip=skip, limit=limit)
+        return orders
 
 
-def delete_order(db: Session, order_id: str) -> bool:
-    """
-    Delete an order from the database
-    
-    Returns True if order was deleted, False if order was not found
-    
-    Note: This will also delete all associated procedures and logs due to
-    database cascade delete constraints
-    """
-    order_obj = order.get_by_order_id(db, order_id=order_id)
-    if not order_obj:
-        return False
-    
-    order.remove(db, id=order_obj.id)
-    return True
+    @staticmethod
+    def get_order_details_with_car(db: Session, order_id: str) -> Optional[Dict]:
+        """
+        Get order details along with car information
+        
+        Returns a dictionary containing order and car data
+        """
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            return None
+        
+        # Get car information
+        car_obj = car.get_by_car_id(db, car_id=order_obj.car_id)
+        car_data = car_obj.__dict__ if car_obj else None
+        
+        # Get customer information
+        customer_obj = user.get_by_id(db, user_id=order_obj.customer_id)
+        customer_data = customer_obj.__dict__ if customer_obj else None
+        
+        # Get worker information
+        worker_obj = user.get_by_id(db, user_id=order_obj.worker_id) if order_obj.worker_id else None
+        worker_data = worker_obj.__dict__ if worker_obj else None
+        
+        return {
+            "order": order_obj.__dict__,
+            "car": car_data,
+            "customer": customer_data,
+            "worker": worker_data
+        }
 
 
-def calculate_order_cost(db: Session, order_id: str) -> Dict:
-    """Calculate the total cost for an order (material cost + labor cost)"""
-    # Get all logs for this order
-    logs = log.get_logs_by_order(db, order_id=order_id)
-    
-    # Calculate material cost
-    material_cost = sum(log_entry.cost for log_entry in logs)
-    
-    # Calculate labor cost
-    labor_cost = Decimal('0.0')
-    for log_entry in logs:
-        worker_obj = worker.get_by_id(db, worker_id=log_entry.worker_id)
-        if worker_obj:
-            wage_rate = wage.get_by_type(db, worker_type=worker_obj.worker_type)
-            if wage_rate:
-                labor_cost += log_entry.duration * Decimal(str(wage_rate.wage_per_hour))
-    
-    return {
-        "order_id": order_id,
-        "material_cost": material_cost,
-        "labor_cost": labor_cost,
-        "total_cost": material_cost + labor_cost
-    }
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def update_order_status(db: Session, order_id: str, new_status: int, audit_context=None) -> Order:
+        """Update the status of an order"""
+        # Validate status
+        valid_statuses = [OrderStatus.PENDING_ASSIGNMENT, OrderStatus.IN_PROGRESS, OrderStatus.COMPLETED]
+        if new_status not in valid_statuses:
+            raise ValueError(f"Invalid status: {new_status}")
+        
+        return order.update_order_status(db, order_id=order_id, new_status=new_status)
+
+
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def add_customer_feedback(
+        db: Session, 
+        order_id: str, 
+        rating: int, 
+        comment: Optional[str] = None, 
+        audit_context=None
+    ) -> Order:
+        """Add customer feedback (rating and comment) to a completed order"""
+        # Validate rating
+        if rating < 1 or rating > 5:
+            raise ValueError("Rating must be between 1 and 5")
+        
+        return order.add_customer_feedback(db, order_id=order_id, rating=rating, comment=comment)
+
+
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def expedite_order(db: Session, order_id: str, user_id: str, audit_context=None) -> Order:
+        """
+        Expedite an order - marks it for priority handling
+        
+        This sets the expedite flag and timestamp, which can be used by:
+        - Assignment algorithms to prioritize expedited orders
+        - Workers to see which orders need urgent attention
+        - Analytics to track expedited order performance
+        """
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            raise ValueError("Order not found")
+        
+        if order_obj.customer_id != user_id:
+            raise ValueError("Not authorized to expedite this order")
+        
+        # Check if order can be expedited
+        if order_obj.status >= OrderStatus.COMPLETED:
+            raise ValueError("Cannot expedite completed or cancelled orders")
+        
+        # Check if already expedited
+        if order_obj.expedite_flag:
+            raise ValueError("Order is already expedited")
+        
+        # Set expedite flag
+        updated_order = order.set_expedite_flag(db, order_id=order_id)
+        
+        # Optionally trigger re-assignment for better worker matching
+        # This could be enhanced to notify available workers immediately
+        try:
+            from app.services.assignment_service import AutoAssignmentService
+            if order_obj.status == OrderStatus.PENDING_ASSIGNMENT:
+                AutoAssignmentService.trigger_assignment(db, order_id=order_id)
+        except Exception as e:
+            # Log error but don't fail the expedite request
+            print(f"Priority assignment failed for expedited order {order_id}: {e}")
+        
+        return updated_order

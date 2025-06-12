@@ -1,119 +1,167 @@
 from typing import List, Dict, Optional
 from decimal import Decimal
-from enum import IntEnum
+from datetime import datetime, timedelta
 from app.dbrm import Session
 
-from app.crud import order, log, distribute, wage, worker, car
-from app.schemas import LogCreate, Log, OrderPending, OrderToWorker
+from app.crud import order, log, wage, worker, procedure
+from app.schemas import LogCreate, Log, Order
+from app.core.enum import OrderStatus, ProcedureStatus
+from app.core.audit_decorators import audit
 
 
-class ProcedureStatus(IntEnum):
-    PENDING = 0    # pending
-    IN_PROGRESS = 1  # in progress
-    COMPLETED = 2  # completed
+class WorkerService:
+    """Service for worker operations"""
+
+    @staticmethod
+    @audit("Log", "CREATE")
+    def create_maintenance_log(
+        db: Session, 
+        obj_in: LogCreate,
+        worker_id: str
+    ) -> Log:
+        """Create a new maintenance log for an order"""
+        order_obj = order.get_by_order_id(db, order_id=obj_in.order_id)
+        if not order_obj:
+            raise ValueError("Order does not exist")
+        return log.create_log_for_order(db=db, obj_in=obj_in, worker_id=worker_id)
 
 
-def create_maintenance_log(
-    db: Session, 
-    worker_id: str, 
-    order_id: str, 
-    consumption: str,
-    cost: Decimal,
-    duration: Decimal
-) -> Log:
-    """Create a new maintenance log for an order"""
-    order_obj = order.get_by_order_id(db, order_id=order_id)
-    if not order_obj:
-        raise ValueError("Order does not exist")
+    @staticmethod
+    def get_worker_logs(
+        db: Session, worker_id: str, skip: int = 0, limit: int = 100
+    ) -> List[Log]:
+        """Get all maintenance logs for a worker"""
+        logs = log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
+        return logs
     
-    # Create log entry
-    log_in = LogCreate(
-        consumption=consumption,
-        cost=cost,
-        duration=duration,
-        order_id=order_id
-    )
-    return Log.model_validate(
-        log.create_log_for_order(db=db, obj_in=log_in, worker_id=worker_id)
-    )
+
+    @staticmethod
+    def get_wage_rate(db: Session, worker_type: str) -> Decimal:
+        """Get the wage rate for a specific worker type"""
+        wage_rate = wage.get_by_type(db, worker_type=worker_type)
+        if not wage_rate:
+            raise ValueError(f"No wage rate found for worker type {worker_type}")
+        return wage_rate.wage_per_hour
 
 
-def get_worker_logs(
-    db: Session, worker_id: str, skip: int = 0, limit: int = 100
-) -> List[Log]:
-    """Get all maintenance logs for a worker"""
-    logs = log.get_logs_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
-    logs = [Log.model_validate(l) for l in logs]
-    return logs
-
-
-def get_owner_orders(
-    db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
-) -> List[OrderToWorker]:
-    """Get all orders owned by a worker with optional status filtering"""
-    return OrderToWorker.model_validate(
-        order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
-    )
-
-
-def get_pending_orders(
-    db: Session, skip: int = 0, limit: int = 100
-) -> List[OrderPending]:
-    """Get all pending orders for workers"""
-    # Get all pending orders from database (ServiceOrder models)
-    pending_orders = order.get_pending_orders(
-        db, skip=skip, limit=limit
-    )
-    
-    # Convert to OrderPending models and enrich with car type information
-    result = []
-    for db_order in pending_orders:
-        pending_order = OrderPending.model_validate(db_order)
-        car_info = car.get_by_car_id(db, car_id=db_order.car_id)
-        order_data = pending_order.model_dump()
-        order_data["car_type"] = car_info.car_type if car_info else None
-        enriched_order = OrderPending(**order_data)
+    @staticmethod
+    def accept_order(db: Session, order_id: str, worker_id: str) -> Dict:
+        """Accept an assigned order and create procedures"""
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            raise ValueError("Order not found")
         
-        result.append(enriched_order)
-    
-    return result
+        if order_obj.worker_id != worker_id:
+            raise ValueError("Order is not assigned to this worker")
+            
+        if order_obj.status != OrderStatus.ASSIGNED:
+            raise ValueError("Order is not in assigned state")
+        
+        # Handle acceptance through assignment service
+        from app.services.assignment_service import AutoAssignmentService
+        success = AutoAssignmentService.handle_acceptance(db, order_id=order_id, worker_id=worker_id)
+        
+        if not success:
+            raise ValueError("Failed to accept order")
+        
+        return {"message": "Order accepted successfully", "order_id": order_id}
+
+
+    @staticmethod
+    def reject_order(db: Session, order_id: str, worker_id: str) -> Dict:
+        """Reject an assigned order and trigger automatic reassignment"""
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            raise ValueError("Order not found")
+        
+        if order_obj.worker_id != worker_id:
+            raise ValueError("Order is not assigned to this worker")
+            
+        if order_obj.status != OrderStatus.ASSIGNED:
+            raise ValueError("Order is not in assigned state")
+        
+        # Handle rejection through assignment service
+        from app.services.assignment_service import AutoAssignmentService
+        success = AutoAssignmentService.handle_rejection(db, order_id=order_id)
+        
+        if success:
+            return {"message": "Order rejected and reassigned successfully", "order_id": order_id}
+        else:
+            return {"message": "Order rejected but no available workers for reassignment", "order_id": order_id}
+
+
+    @staticmethod
+    def get_assigned_orders(
+        db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
+    ) -> List[Order]:
+        """Get orders assigned to a specific worker"""
+        return order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
     
 
-def get_wage_rate(db: Session, worker_type: int) -> Decimal:
-    """Get the wage rate for a specific worker type"""
-    wage_rate = wage.get_wage_rate_by_type(db, worker_type=worker_type)
-    if not wage_rate:
-        raise ValueError(f"No wage rate found for worker type {worker_type}")
-    return wage_rate.wage_per_hour
+    @staticmethod
+    @audit("Order", "UPDATE")
+    def complete_order(db: Session, order_id: str, worker_id: str, audit_context=None) -> Order:
+        """Mark an order as completed"""
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            raise ValueError("Order not found")
+        if order_obj.worker_id != worker_id:
+            raise ValueError("Order is not assigned to this worker")
+        procedures = procedure.get_procedures_by_order(db, order_id=order_id)      
+        for procedure_obj in procedures:
+            if procedure_obj.current_status != ProcedureStatus.COMPLETED:
+                raise ValueError(f"Procedure {procedure_obj.procedure_id} is not in completed state")
+        total_cost = log.get_total_cost_by_order(db, order_id=order_id)
+        return order.complete_order(db, order_id=order_id, total_cost=total_cost)
 
 
-def calculate_worker_income(db: Session, worker_id: str) -> Dict:
-    """Calculate a worker's total income based on their logs"""
-    # Get the worker to check their type
-    worker_obj = worker.get_by_id(db, worker_id=worker_id)
-    if not worker_obj:
-        raise ValueError("Worker not found")
-    
-    # Get the wage rate
-    wage_rate = get_wage_rate(db, worker_type=worker_obj.worker_type)
-    
-    # Get total hours worked
-    total_hours = log.get_total_duration_by_worker(db, worker_id=worker_id)
-    
-    # Calculate income
-    total_income = Decimal(str(total_hours)) * wage_rate
-    
-    # Check for distributed payments
-    distributed = distribute.get_distributions_by_worker(db, worker_id=worker_id)
-    distributed_amount = sum(item.amount for item in distributed) if distributed else Decimal('0.0')
-    
-    # Return the results
-    return {
-        "worker_id": worker_id,
-        "worker_type": worker_obj.worker_type,
-        "wage_rate": wage_rate,
-        "total_hours": total_hours,
-        "calculated_income": total_income,
-        "distributed_amount": distributed_amount,
-        "remaining_amount": total_income - distributed_amount
-    }
+    @staticmethod
+    def calculate_worker_earnings(
+        db: Session, worker_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> Dict:
+        """Calculate worker earnings for a specified period"""
+        worker_obj = worker.get_by_id(db, worker_id=worker_id)
+        if not worker_obj:
+            raise ValueError("Worker not found")
+        
+        # Get wage rate
+        wage_rate = WorkerService.get_wage_rate(db, worker_type=worker_obj.worker_type)
+        
+        # Parse date range
+        if start_date:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        else:
+            start_dt = datetime.now() - timedelta(days=30)  # Default to last 30 days
+            
+        if end_date:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        else:
+            end_dt = datetime.now()
+        
+        # Get logs for the period (will need to implement these CRUD functions)
+        # total_hours = log.get_total_duration_by_worker_period(
+        #     db, worker_id=worker_id, start_date=start_dt, end_date=end_dt
+        # )
+        
+        # For now, use existing function and note limitation
+        total_hours = log.get_total_duration_by_worker(db, worker_id=worker_id)
+        
+        # Calculate earnings
+        earnings = Decimal(str(total_hours)) * wage_rate
+        
+        # Get completed orders count (will need to implement)
+        # completed_orders = order.get_completed_orders_count_by_worker_period(
+        #     db, worker_id=worker_id, start_date=start_dt, end_date=end_dt
+        # )
+        completed_orders = 0  # Placeholder
+        
+        return {
+            "worker_id": worker_id,
+            "worker_type": worker_obj.worker_type,
+            "period_start": start_dt.isoformat(),
+            "period_end": end_dt.isoformat(),
+            "hourly_rate": wage_rate,
+            "total_hours": total_hours,
+            "total_earnings": earnings,
+            "orders_completed": completed_orders
+        }

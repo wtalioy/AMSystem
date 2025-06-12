@@ -146,7 +146,7 @@ class Session:
     def query(self, col_or_model_class) -> 'Select':
         from .query import Select
         if hasattr(col_or_model_class, 'parent'):
-            return Select(col_or_model_class, session=self).from__(col_or_model_class.parent)
+            return Select(col_or_model_class, session=self).from_(col_or_model_class.parent)
         return Select(session=self).from_(col_or_model_class)
 
     def add(self, obj):

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from app.dbrm import Session
 
 from app.api import deps
-from app.services import admin_service 
+from app.services import AdminService
 from app.schemas import Distribute, Admin
 
 router = APIRouter()
@@ -20,7 +20,7 @@ def get_payment_distributions(
     """
     Get all payment distributions to workers. (Admin only)
     """
-    return admin_service.get_all_distributions(db=db)
+    return AdminService.get_all_distributions(db=db)
 
 
 @router.post("/", response_model=Distribute, status_code=status.HTTP_201_CREATED)
@@ -35,7 +35,7 @@ def create_payment_distribution(
     Record a payment distribution to a worker. (Admin only)
     """
     try:
-        return admin_service.distribute_payment(
+        return AdminService.distribute_payment(
             db=db, worker_id=worker_id, amount=Decimal(str(amount))
         )
     except ValueError as e:
