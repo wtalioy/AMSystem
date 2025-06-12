@@ -16,24 +16,26 @@ export default {
 
   // 客户注册接口
   async registerCustomer(data) {
-    return axios.post(`${API_BASE}/users/customers`, {
+    return axios.post(`${API_BASE}/users/register`, {
       user_name: data.user_name,  // 使用后端要求的字段名
       user_pwd: data.user_pwd,    // 使用后端要求的字段名
-      user_type: 'customer'       // 使用后端要求的字段名
+      user_type: 'customer' ,      // 使用后端要求的字段名
+      worker_type: null         //工人特定字段, 客户没有这个字段
     })
   },
   // 管理员注册接口
   async registerAdmin(data) {
-    return axios.post(`${API_BASE}/users/admins`, {
+    return axios.post(`${API_BASE}/users/register`, {
       user_name: data.user_name,
       user_pwd: data.user_pwd,
-      user_type: 'admin'
+      user_type: 'admin',
+      worker_type: null      // 管理员没有工人类型字段
     })
   },
 
   // 工人注册接口
   async registerWorker(data) {
-    return axios.post(`${API_BASE}/users/workers`, {
+    return axios.post(`${API_BASE}/users/register`, {
       user_name: data.user_name,
       user_pwd: data.user_pwd,
       user_type: 'worker',
