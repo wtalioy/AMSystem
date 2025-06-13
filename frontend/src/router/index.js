@@ -85,8 +85,12 @@ const routes = [
         {
           path: 'orders/:order_id/procedures',
           component: () => import('@/views/orders/OrderProcedures.vue'), // 👈 创建这个新页面
-          meta: { role: 'customer' }
-        }
+          meta: { role: 'worker' }
+        },
+         // 收入历史
+    { path: 'earnings', component: () => import('@/views/worker/EarningsHistory.vue') },
+    { path: 'earnings/monthly', component: () => import('@/views/worker/MonthlyEarnings.vue') },
+
       ]
     },
 
