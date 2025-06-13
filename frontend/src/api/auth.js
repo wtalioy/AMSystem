@@ -33,6 +33,11 @@ export default {
     })
   },
 
+   // 新增获取工人类型接口
+   async getWorkerTypes() {
+    return axios.get(`${API_BASE}/users/worker-types`)
+   },
+
   // 工人注册接口
   async registerWorker(data) {
     return axios.post(`${API_BASE}/users/register`, {

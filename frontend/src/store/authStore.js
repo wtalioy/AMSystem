@@ -4,7 +4,8 @@ import authAPI from '@/api/auth'
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('token') || null,
-    userType: localStorage.getItem('userType') || null
+    userType: localStorage.getItem('userType') || null,
+    workerTypes: [] //新增工人类型列表
   }),
 
   actions: {
@@ -88,6 +89,17 @@ export const useAuthStore = defineStore('auth', {
         return { success: true }
       } catch (error) {
         this.handleRegistrationError(error)
+      }
+    },
+
+    //获取工人类型
+    async fetchWorkerTypes() {
+      try {
+        const response = await authAPI.getWorkerTypes()
+        this.workerTypes = response.data
+      } catch (error) {
+        console.error('获取工人类型失败:', error)
+        throw new Error('无法获取工种列表')
       }
     },
     // 错误处理复用

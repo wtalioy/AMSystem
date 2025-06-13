@@ -38,7 +38,7 @@ const handleRegister = async (formData) => {
     const result = await authStore.registerWorker({
       user_name: formData.username,
       user_pwd: formData.password,
-      worker_type: formData.workerType
+      worker_type: String(formData.workerType)  //确保转换为字符串
     })
 
     if (result?.success) {

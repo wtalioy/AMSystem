@@ -9,22 +9,22 @@ const routes = [
     { 
       path: '/login',
       component: () => import('@/views/auth/Login.vue'),
-      meta: { guestOnly: true }
+      meta: {  }
     },
     {
       path: '/register/customer',
       component: () => import('@/views/auth/RegisterCustomer.vue'),
-      meta: { guestOnly: true }
+      meta: {  }
     },
     {
       path: '/register/worker',
       component: () => import('@/views/auth/RegisterWorker.vue'),
-      meta: { requiresAdmin: true }
+      meta: {  }
     },
     {
       path: '/register/admin',
       component: () => import('@/views/auth/RegisterAdmin.vue'),
-      meta: { requiresAdmin: true }
+      meta: {  }
     },
   
     // 仪表盘路由组
@@ -41,7 +41,7 @@ const routes = [
         return '/dashboard/customer'
       case 'worker':
         return '/dashboard/worker'
-      case 'admin':
+      case 'administrator':
         return '/dashboard/admin'
       default:
         return '/unauthorized'  // 🚫 未知角色，跳转至错误页

@@ -1,3 +1,29 @@
+<script setup>
+import { ref } from 'vue'
+import { useAuthStore } from '@/store/authStore'
+import { onMounted } from 'vue'
+
+const authStore = useAuthStore()
+onMounted(async () => {
+  await authStore.fetchWorkerTypes()
+})
+
+defineProps({
+  role: {
+    type: String,
+    required: true
+  }
+})
+
+// 只保留API需要的字段
+const formData = ref({
+  username: '',
+  password: '',
+  workerType: ''
+})
+</script>
+
+
 <template>
   <form @submit.prevent="$emit('register', formData)">
     <!-- 所有角色通用字段 -->
@@ -12,36 +38,27 @@
     </div>
 
     <!-- 工人特有字段 -->
-    <template v-if="role === 'worker'">
-      <div class="form-group">
-        <label>工种类型</label>
-        <select v-model="formData.workerType" required>
-          <option value="0">初级技师</option>
-          <option value="1">高级技师</option>
-        </select>
-      </div>
-    </template>
+    
+<template v-if="role === 'worker'">
+  <div class="form-group">
+    <label>工种类型</label>
+    <select v-model="formData.workerType" required>
+      <option 
+        v-for="(type) in authStore.workerTypes" 
+        :key="type" 
+        :value="type"
+      >
+        {{ type }}
+      </option>
+    </select>
+  </div>
+</template>
 
     <button type="submit" class="submit-btn">注册</button>
   </form>
 </template>
 
-<script setup>
-import { ref } from 'vue'
 
-defineProps({
-  role: {
-    type: String,
-    required: true
-  }
-})
-
-// 只保留API需要的字段
-const formData = ref({
-  username: '',
-  password: '',
-})
-</script>
 
 <style scoped>
 .form-group {
