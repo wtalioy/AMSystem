@@ -28,48 +28,72 @@ const routes = [
     },
   
     // 仪表盘路由组
+{
+  path: '/dashboard',
+  component: () => import('@/layouts/DashboardLayout.vue'),
+  meta: { requiresAuth: true },
+  
+  // ✅ 新增重定向逻辑：根据用户角色重定向
+  redirect: (to) => {
+    const userType = localStorage.getItem('userType')  // 👈 或从 Pinia/SessionStorage 中获取
+    switch (userType) {
+      case 'customer':
+        return '/dashboard/customer'
+      case 'worker':
+        return '/dashboard/worker'
+      case 'admin':
+        return '/dashboard/admin'
+      default:
+        return '/unauthorized'  // 🚫 未知角色，跳转至错误页
+    }
+  },
+
+  children: [
+    // 客户专属路由
     {
-      path: '/dashboard',
-      component: () => import('@/layouts/DashboardLayout.vue'),
-      meta: { requiresAuth: true },
+      path: 'customer',
+      component: () => import('@/views/dashboard/Customer.vue'),
+      meta: { role: 'customer' },
       children: [
-        // 客户专属路由
-        {
-          path: 'customer',
-          component: () => import('@/views/dashboard/Customer.vue'),
-          meta: { role: 'customer' },
-          children: [
-            { path: 'cars', component: () => import('@/views/cars/CarList.vue') },
-            { path: 'cars/:id', component: () => import('@/views/cars/CarDetail.vue') },
-            { path: 'orders/create', component: () => import('@/views/orders/CreateOrder.vue') }
-          ]
-        },
+        // 👇 默认子路由：欢迎页
+        { path: '', component: () => import('@/views/dashboard/CustomerWelcome.vue') },
         
-        // 技师专属路由
-        {
-          path: 'worker',
-          component: () => import('@/views/dashboard/Worker.vue'),
-          meta: { role: 'worker' },
-           children: [
-             { path: 'orders', component: () => import('@/views/worker/MyOrders.vue') },
-             { path: 'orders/pending', component: () => import('@/views/worker/PendingOrders.vue') },
-             { path: 'logs', component: () => import('@/views/worker/WorkLogs.vue') }
-           ]
-        },
-        
-        // 管理员专属路由
-        {
-          path: 'admin',
-          component: () => import('@/views/dashboard/Admin.vue'),
-          meta: { role: 'admin' },
-           children: [
-             { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
-             { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
-             { path: 'stats/cars', component: () => import('@/views/admin/CarStatistics.vue') }
-           ]
-        }
+        // 其他功能页
+        { path: 'cars', component: () => import('@/views/cars/CarList.vue') },
+        { path: 'cars/add', component: () => import('@/views/cars/CarAdd.vue') },
+        { path: 'cars/:id', component: () => import('@/views/cars/CarDetail.vue') },
+        { path: 'cars/:id/maintenance-history', component: () => import('@/views/cars/CarMaintenanceHistory.vue') },
+        { path: 'orders/create', component: () => import('@/views/orders/CreateOrder.vue') },
+        { path: 'orders', component: () => import('@/views/orders/OrderList.vue') } // 记得这个组件加上
       ]
     },
+
+    // 技师专属路由
+    {
+      path: 'worker',
+      component: () => import('@/views/dashboard/Worker.vue'),
+      meta: { role: 'worker' },
+      children: [
+        { path: 'orders', component: () => import('@/views/worker/MyOrders.vue') },
+        { path: 'orders/pending', component: () => import('@/views/worker/PendingOrders.vue') },
+        { path: 'logs', component: () => import('@/views/worker/WorkLogs.vue') }
+      ]
+    },
+
+    // 管理员专属路由
+    {
+      path: 'admin',
+      component: () => import('@/views/dashboard/Admin.vue'),
+      meta: { role: 'admin' },
+      children: [
+        { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
+        { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
+        { path: 'stats/cars', component: () => import('@/views/admin/CarStatistics.vue') }
+      ]
+    }
+  ]
+},
+
     
     // 公共页面
     { path: '/unauthorized', component: () => import('@/views/errors/Unauthorized.vue') },
