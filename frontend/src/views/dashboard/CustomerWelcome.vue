@@ -35,6 +35,7 @@
   import { useRouter } from 'vue-router'
   import { useAuthStore } from '@/store/authStore'
   import carApi from '@/api/cars'
+  import ordersApi from '@/api/orders'
   
   const router = useRouter()
   const authStore = useAuthStore()
@@ -50,9 +51,14 @@
   onMounted(async () => {
     userName.value = authStore.user?.name || '客户'
     try {
-      const res = await carApi.getCars()
-      carCount.value = res.data?.results?.length || 0
-      pendingOrders.value = 2
+      const [carsRes, ordersRes] = await Promise.all([
+        carApi.getCars(),
+        ordersApi.getOrders({ status: 0 })
+      ])
+      carCount.value = carsRes.data?.results?.length || 0
+      pendingOrders.value = ordersRes.data?.results?.filter(
+        order => order.status === 0
+      ).length || 0
     } catch (error) {
       console.error('获取仪表盘数据失败:', error)
     }
@@ -114,4 +120,3 @@
     }
   }
   </style>
-  
