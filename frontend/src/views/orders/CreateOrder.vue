@@ -50,6 +50,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
+import ordersApi from '@/api/orders'  // 新增API导入
+import { ElMessage } from 'element-plus'  // 新增消息提示
+
+// ... 已有代码保持不变 ...
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -61,27 +65,25 @@ const form = ref({
   description: ''
 })
 
-const fetchCars = async () => {
-  try {
-    // TODO: 调用API获取用户车辆列表
-    cars.value = [
-      { id: 1, license: '沪A12345' },
-      { id: 2, license: '沪B67890' }
-    ]
-  } catch (error) {
-    console.error('获取车辆列表失败:', error)
-  }
-}
+
 
 const submitForm = async () => {
   try {
-    // TODO: 调用API创建订单
-    console.log('提交订单:', form.value)
-    router.push('/dashboard/customer')
+    const payload = {
+      car_id: form.value.carId,
+      description: form.value.description,
+      start_time: form.value.appointment
+    }
+
+    await ordersApi.createOrder(payload)
+    ElMessage.success('订单创建成功')
+    router.push('/dashboard/customer/orders') // 或你跳转的目标页
   } catch (error) {
     console.error('订单创建失败:', error)
+    ElMessage.error('订单创建失败，请检查输入信息')
   }
 }
+
 
 const resetForm = () => {
   form.value = {
