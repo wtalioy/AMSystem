@@ -1,0 +1,180 @@
+<template>
+  <div class="order-management">
+    <div class="filter-container">
+      <el-select 
+        v-model="filterStatus"
+        placeholder="筛选状态"
+        @change="fetchOrders"
+        style="width: 200px; margin-right: 15px"
+      >
+        <el-option
+          v-for="status in statusOptions"
+          :key="status.value"
+          :label="status.label"
+          :value="status.value"
+        />
+      </el-select>
+    </div>
+
+    <el-table 
+      :data="orderList" 
+      v-loading="loading"
+      style="width: 100%; margin-top: 20px"
+    >
+      <el-table-column prop="order_id" label="订单号" width="180" />
+      <el-table-column prop="car_id" label="车牌号" width="150" />
+      <el-table-column prop="status" label="状态" width="120">
+        <template #default="scope">
+          <el-tag :type="statusTagType(scope.row.status)">
+            {{ scope.row.status }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="create_time" label="创建时间" width="180">
+        <template #default="scope">
+          {{ formatTime(scope.row.create_time) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="220">
+        <template #default="scope">
+          <el-button
+            v-if="scope.row.status === 'pending'"
+            type="warning"
+            size="small"
+            @click="handleUrgent(scope.row.order_id)"
+          >
+            加急
+          </el-button>
+          <el-button
+            v-if="['pending', 'processing'].includes(scope.row.status)"
+            type="danger"
+            size="small"
+            @click="handleCancel(scope.row.order_id)"
+          >
+            取消
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-pagination
+      background
+      layout="prev, pager, next"
+      :total="total"
+      :page-size="pageSize"
+      @current-change="handlePageChange"
+      style="margin-top: 20px"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import dayjs from 'dayjs'
+import ordersAPI from '@/api/orders'
+
+const orderList = ref([])
+const loading = ref(true)
+const total = ref(0)
+const pageSize = ref(10)
+const currentPage = ref(1)
+const filterStatus = ref('all')
+
+const statusOptions = [
+  { value: 'all', label: '全部状态' },
+  { value: 'pending', label: '待处理' },
+  { value: 'processing', label: '处理中' },
+  { value: 'completed', label: '已完成' },
+  { value: 'cancelled', label: '已取消' }
+]
+
+const statusTagType = (status) => {
+  const types = {
+    pending: 'warning',
+    processing: 'primary',
+    completed: 'success',
+    cancelled: 'info'
+  }
+  return types[status] || ''
+}
+
+const formatTime = (time) => {
+  return dayjs(time).format('YYYY-MM-DD HH:mm')
+}
+
+const fetchOrders = async () => {
+  try {
+    loading.value = true
+    const params = {
+      page: currentPage.value,
+      page_size: pageSize.value,
+      status: filterStatus.value === 'all' ? undefined : filterStatus.value
+    }
+    
+    const response = await ordersAPI.getOrders(params)
+    orderList.value = response.data.items
+    total.value = response.data.total
+  } catch (error) {
+    ElMessage.error('获取订单列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handlePageChange = (page) => {
+  currentPage.value = page
+  fetchOrders()
+}
+
+const handleUrgent = async (orderId) => {
+  try {
+    await ElMessageBox.confirm('确认要加急此订单吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await ordersAPI.urgentOrder(orderId)
+    ElMessage.success('订单已加急')
+    fetchOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+const handleCancel = async (orderId) => {
+  try {
+    await ElMessageBox.confirm('确认要取消此订单吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await ordersAPI.cancelOrder(orderId)
+    ElMessage.success('订单已取消')
+    fetchOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('取消失败')
+    }
+  }
+}
+
+onMounted(() => {
+  fetchOrders()
+})
+</script>
+
+<style scoped>
+.order-management {
+  padding: 20px;
+}
+.filter-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+</style>

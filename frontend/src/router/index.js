@@ -64,7 +64,12 @@ const routes = [
         { path: 'cars/:id', component: () => import('@/views/cars/CarDetail.vue') },
         { path: 'cars/:id/maintenance-history', component: () => import('@/views/cars/CarMaintenanceHistory.vue') },
         { path: 'orders/create', component: () => import('@/views/orders/CreateOrder.vue') },
-        { path: 'orders', component: () => import('@/views/orders/OrderList.vue') } // 记得这个组件加上
+        { path: 'orders', component: () => import('@/views/orders/OrderList.vue') }, // 记得这个组件加上
+        {
+          path: 'orders/:order_id/procedures',
+          component: () => import('@/views/orders/OrderProcedures.vue'), // 👈 创建这个新页面
+          meta: { role: 'customer' }
+        }
       ]
     },
 
@@ -76,7 +81,12 @@ const routes = [
       children: [
         { path: 'orders', component: () => import('@/views/worker/MyOrders.vue') },
         { path: 'orders/pending', component: () => import('@/views/worker/PendingOrders.vue') },
-        { path: 'logs', component: () => import('@/views/worker/WorkLogs.vue') }
+        { path: 'logs', component: () => import('@/views/worker/WorkLogs.vue') },
+        {
+          path: 'orders/:order_id/procedures',
+          component: () => import('@/views/orders/OrderProcedures.vue'), // 👈 创建这个新页面
+          meta: { role: 'customer' }
+        }
       ]
     },
 
