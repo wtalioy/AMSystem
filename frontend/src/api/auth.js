@@ -28,7 +28,7 @@ export default {
     return axios.post(`${API_BASE}/users/register`, {
       user_name: data.user_name,
       user_pwd: data.user_pwd,
-      user_type: 'admin',
+      user_type: 'administrator',
       worker_type: null      // 管理员没有工人类型字段
     })
   },
