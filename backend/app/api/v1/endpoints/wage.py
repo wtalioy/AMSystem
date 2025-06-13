@@ -28,22 +28,6 @@ def get_worker_wage_rate(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/income", response_model=dict)
-def get_worker_income(
-    *,
-    db: Session = Depends(deps.get_db),
-    current_user: Worker = Depends(deps.get_current_worker),
-) -> Any:
-    """
-    Get the worker's calculated income based on hours worked
-    """
-    try:
-        return WorkerService.calculate_worker_earnings(
-            db=db, worker_id=current_user.user_id
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
 # Wage management
 @router.post("/", response_model=Wage, status_code=status.HTTP_201_CREATED)
 def create_wage_rate(
