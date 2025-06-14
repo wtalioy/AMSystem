@@ -3,6 +3,7 @@ from typing import Any, List
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from app.dbrm import Session
 
+from app.core.database import get_db
 from app.services import ProcedureService, OrderService
 from app.api import deps
 from app.schemas import Procedure, User, ProcedureCreate, ProcedureUpdate
@@ -12,7 +13,7 @@ router = APIRouter()
 @router.post("/", response_model=List[Procedure], status_code=status.HTTP_201_CREATED)
 def create_order_procedures(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     procedures: List[ProcedureCreate],
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
@@ -30,7 +31,7 @@ def create_order_procedures(
 @router.get("/", response_model=List[Procedure])
 def get_order_procedures(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_id: str = Query(..., description="Order ID to get procedures for"),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
@@ -56,7 +57,7 @@ def get_order_procedures(
 @router.patch("/", response_model=List[Procedure])
 def update_procedure_status(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     procedures: List[ProcedureUpdate] = Body(...),
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:

@@ -14,7 +14,7 @@ from app.core.exceptions import add_exception_handlers
 
 from app.dbrm import Engine, Session
 from app.dbrm.decorators import create_all_tables
-from backend.app.schedulers.earning_scheduler import start_scheduler, stop_scheduler
+from app.core.startup import startup_background_services, shutdown_background_services
 
 # Configure logging
 logs_dir = Path(__file__).parent / "logs"
@@ -51,10 +51,10 @@ async def startup_db_client(app: FastAPI):
         else:
             logger.warning("Database initialization may not have completed successfully, please check configuration or logs")
         
-        # Start the scheduler for automatic earnings distribution
-        logger.info("Starting earnings scheduler...")
-        start_scheduler()
-        logger.info("Earnings scheduler started successfully")
+        # Start background services (earnings scheduler + assignment processor)
+        logger.info("Starting background services...")
+        startup_background_services()
+        logger.info("Background services started successfully")
         
         yield
     except Exception as e:
@@ -62,10 +62,10 @@ async def startup_db_client(app: FastAPI):
         logger.warning("Application will continue to start, but database functionality may be unavailable")
         app.created_tables = []
     finally:
-        # Stop the scheduler when the app shuts down
-        logger.info("Stopping earnings scheduler...")
-        stop_scheduler()
-        logger.info("Earnings scheduler stopped")
+        # Stop background services when the app shuts down
+        logger.info("Stopping background services...")
+        shutdown_background_services()
+        logger.info("Background services stopped")
 
 app = FastAPI(
     title="Automobile Maintenance System API",

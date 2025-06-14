@@ -194,13 +194,8 @@ class CRUDWorker:
             return []
         return [obj[0] for obj in objs]
 
-    def count_workers_by_type(self, db: Session, worker_type: str, start_time: str, end_time: str) -> int:
-        from app.dbrm import Condition
-        return db.query(func.count(WorkerModel.user_id)).where(
-            Condition.eq(WorkerModel.worker_type, worker_type),
-            Condition.gte(WorkerModel.created_at, start_time),
-            Condition.lte(WorkerModel.created_at, end_time)
-        ).scalar() or 0
+    def count_workers_by_type(self, db: Session, worker_type: str) -> int:
+        return db.query(func.count(WorkerModel.user_id)).filter_by(worker_type=worker_type).scalar() or 0
     
     def update_availability(self, db: Session, worker_id: str, status: int) -> User:
         worker = self.get_by_id(db, worker_id)
@@ -210,6 +205,13 @@ class CRUDWorker:
             db.commit()
             db.refresh(worker)
         return User.model_validate(worker)
+    
+    def get_workers_by_status(self, db: Session, status: int) -> List[User]:
+        """Get workers by availability status"""
+        objs = db.query(WorkerModel).filter_by(availability_status=status).all()
+        if not objs:
+            return []
+        return [User.model_validate(obj) for obj in objs]
     
     def get_all_active_workers(self, db: Session) -> List[User]:
         """Get all workers that are not deleted (active workers)"""

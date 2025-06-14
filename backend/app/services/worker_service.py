@@ -7,6 +7,7 @@ from app.crud import order, log, wage, worker, procedure
 from app.schemas import LogCreate, Log, Order
 from app.core.enum import OrderStatus, ProcedureStatus
 from app.core.audit_decorators import audit
+from app.background.assignment_processor import trigger_assignment, process_pending_assignments
 
 
 class WorkerService:
@@ -57,12 +58,7 @@ class WorkerService:
         if order_obj.status != OrderStatus.ASSIGNED:
             raise ValueError("Order is not in assigned state")
         
-        # Handle acceptance through assignment service
-        from app.services.assignment_service import AutoAssignmentService
-        success = AutoAssignmentService.handle_acceptance(db, order_id=order_id, worker_id=worker_id)
-        
-        if not success:
-            raise ValueError("Failed to accept order")
+        order.update_order_status(db, order_id=order_id, new_status=OrderStatus.IN_PROGRESS)
         
         return {"message": "Order accepted successfully", "order_id": order_id}
 
@@ -80,14 +76,18 @@ class WorkerService:
         if order_obj.status != OrderStatus.ASSIGNED:
             raise ValueError("Order is not in assigned state")
         
-        # Handle rejection through assignment service
-        from app.services.assignment_service import AutoAssignmentService
-        success = AutoAssignmentService.handle_rejection(db, order_id=order_id)
+        # Reset order to pending assignment
+        order.update_order_assignment(db, order_id=order_id, worker_id=None, status=OrderStatus.PENDING_ASSIGNMENT)
         
-        if success:
-            return {"message": "Order rejected and reassigned successfully", "order_id": order_id}
-        else:
-            return {"message": "Order rejected but no available workers for reassignment", "order_id": order_id}
+        # Try to reassign to another worker
+        assigned = trigger_assignment(db, order_id)
+        
+        # If assignment failed, process other pending assignments
+        # The rejected order will be processed in the next cycle
+        if not assigned:
+            process_pending_assignments(db)
+        
+        return {"message": "Order rejected successfully", "order_id": order_id}
 
 
     @staticmethod

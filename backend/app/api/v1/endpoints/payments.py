@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from app.dbrm import Session
 
 from app.api import deps
+from app.core.database import get_db
 from app.services import AdminService
 from app.schemas import Distribute, Admin
 
@@ -14,7 +15,7 @@ router = APIRouter()
 # Payment distributions (Admin only)
 @router.get("/", response_model=List[Distribute])
 def get_payment_distributions(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: Admin = Depends(deps.get_current_admin)
 ) -> Any:
     """
@@ -26,7 +27,7 @@ def get_payment_distributions(
 @router.post("/", response_model=Distribute, status_code=status.HTTP_201_CREATED)
 def create_payment_distribution(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     worker_id: str = Body(...),
     amount: float = Body(...),
     current_user: Admin = Depends(deps.get_current_admin)

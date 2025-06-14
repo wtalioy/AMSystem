@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.dbrm import Session
 
 from app.api import deps
+from app.core.database import get_db
 from app.services import WorkerService, EarningsService
 from app.schemas import User, OrderToWorker, WorkerMonthlyEarnings
 
@@ -11,7 +12,7 @@ router = APIRouter()
 @router.post("/orders/{order_id}/accept")
 def accept_order(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_id: str,
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
@@ -32,7 +33,7 @@ def accept_order(
 @router.post("/orders/{order_id}/reject")
 def reject_order(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_id: str,
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
@@ -53,7 +54,7 @@ def reject_order(
 @router.post("/orders/{order_id}/complete")
 def complete_order(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_id: str,
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
@@ -74,7 +75,7 @@ def complete_order(
 @router.get("/orders/assigned", response_model=List[OrderToWorker])
 def get_assigned_orders(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     status_filter: Optional[int] = Query(None, description="Filter by order status"),
@@ -92,7 +93,7 @@ def get_assigned_orders(
 @router.get("/my-earnings/monthly", response_model=WorkerMonthlyEarnings)
 def get_my_monthly_earnings(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     year: int = Query(..., description="Year"),
     month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
     current_user: User = Depends(deps.get_current_worker),
@@ -115,7 +116,7 @@ def get_my_monthly_earnings(
 @router.get("/my-earnings/history", response_model=List[WorkerMonthlyEarnings])
 def get_my_earnings_history(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     months_back: int = Query(12, ge=1, le=24, description="Number of months back to retrieve"),
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:

@@ -3,8 +3,9 @@ from typing import Any, Dict, List, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from app.dbrm import Session
 
+from app.core.database import get_db
 from app.services.earnings_service import EarningsService
-from app.schedulers.earning_scheduler import get_scheduler
+from app.background.earnings_scheduler import get_scheduler
 from app.api import deps
 from app.schemas import (
     Admin, WorkerMonthlyEarnings, FailedEarningsCalculation, 
@@ -17,7 +18,7 @@ router = APIRouter()
 @router.get("/{worker_id}/monthly", response_model=WorkerMonthlyEarnings)
 def get_worker_monthly_earnings(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     worker_id: str = Path(..., description="Worker ID"),
     year: int = Query(..., description="Year"),
     month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
@@ -41,7 +42,7 @@ def get_worker_monthly_earnings(
 @router.get("/{worker_id}/history", response_model=List[WorkerMonthlyEarnings])
 def get_worker_earnings_history(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     worker_id: str = Path(..., description="Worker ID"),
     months_back: int = Query(12, ge=1, le=24, description="Number of months back to retrieve"),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -64,7 +65,7 @@ def get_worker_earnings_history(
 @router.get("/all-workers/monthly", response_model=List[Union[WorkerMonthlyEarnings, FailedEarningsCalculation]])
 def get_all_workers_monthly_earnings(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     year: int = Query(..., description="Year"),
     month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -87,7 +88,7 @@ def get_all_workers_monthly_earnings(
 @router.get("/summary-report", response_model=EarningsReport)
 def get_earnings_summary_report(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     year: int = Query(..., description="Year"),
     month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -110,7 +111,7 @@ def get_earnings_summary_report(
 @router.post("/distribute/monthly", response_model=MonthlyDistributionResults)
 def run_monthly_distribution(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     year: int = Query(..., description="Year"),
     month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -120,7 +121,7 @@ def run_monthly_distribution(
     """
     try:
         scheduler = get_scheduler()
-        result = scheduler.run_earnings_distribution_now(year=year, month=month)
+        result = scheduler.run_earnings_distribution_now(db=db, year=year, month=month)
         
         if "error" in result:
             raise HTTPException(

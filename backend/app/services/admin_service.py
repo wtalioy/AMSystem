@@ -272,7 +272,7 @@ class AdminService:
 
         result = []
         for worker_type in worker_types:
-            worker_count = worker.count_workers_by_type(db, worker_type, start_time, end_time)
+            worker_count = worker.count_workers_by_type(db, worker_type)
             task_count = log.count_tasks_by_worker_type(db, worker_type, start_time, end_time)
             total_hours = log.calculate_total_hours_by_worker_type(db, worker_type, start_time, end_time)
 

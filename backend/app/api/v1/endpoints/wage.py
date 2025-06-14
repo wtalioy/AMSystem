@@ -4,6 +4,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.dbrm import Session
 
+from app.core.database import get_db
 from app.services import WorkerService, WageService
 from app.api import deps
 from app.schemas import Worker, Wage, WageCreate, Admin, WageUpdate
@@ -14,7 +15,7 @@ router = APIRouter()
 @router.get("/worker-wage-rate", response_model=Decimal)
 def get_worker_wage_rate(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
     """
@@ -32,7 +33,7 @@ def get_worker_wage_rate(
 @router.post("/", response_model=Wage, status_code=status.HTTP_201_CREATED)
 def create_wage_rate(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     wage_in: WageCreate,
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
@@ -50,7 +51,7 @@ def create_wage_rate(
 
 @router.get("/", response_model=List[Wage])
 def get_wage_rates(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
@@ -62,7 +63,7 @@ def get_wage_rates(
 @router.put("/", response_model=Wage)
 def update_wage_rate(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     wage_in: WageUpdate,
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:

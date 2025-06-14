@@ -5,6 +5,7 @@ from app.crud import order, user, car
 from app.schemas import OrderCreate, Order
 from app.core.audit_decorators import audit
 from app.core.enum import OrderStatus
+from app.background.assignment_processor import trigger_assignment
 
 
 class OrderService:
@@ -15,8 +16,7 @@ class OrderService:
     def create_order(db: Session, obj_in: OrderCreate, customer_id: str, audit_context=None) -> Order:
         """Create a new service order"""
         order_obj = order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
-        from app.services.assignment_service import AutoAssignmentService
-        AutoAssignmentService.trigger_assignment(db, order_obj.order_id)
+        trigger_assignment(db, order_obj.order_id)
         return order_obj
 
 
@@ -97,18 +97,6 @@ class OrderService:
 
     @staticmethod
     @audit("Order", "UPDATE")
-    def update_order_status(db: Session, order_id: str, new_status: int, audit_context=None) -> Order:
-        """Update the status of an order"""
-        # Validate status
-        valid_statuses = [OrderStatus.PENDING_ASSIGNMENT, OrderStatus.IN_PROGRESS, OrderStatus.COMPLETED]
-        if new_status not in valid_statuses:
-            raise ValueError(f"Invalid status: {new_status}")
-        
-        return order.update_order_status(db, order_id=order_id, new_status=new_status)
-
-
-    @staticmethod
-    @audit("Order", "UPDATE")
     def add_customer_feedback(
         db: Session, 
         order_id: str, 
@@ -156,9 +144,8 @@ class OrderService:
         # Optionally trigger re-assignment for better worker matching
         # This could be enhanced to notify available workers immediately
         try:
-            from app.services.assignment_service import AutoAssignmentService
             if order_obj.status == OrderStatus.PENDING_ASSIGNMENT:
-                AutoAssignmentService.trigger_assignment(db, order_id=order_id)
+                trigger_assignment(db, order_id=order_id)
         except Exception as e:
             # Log error but don't fail the expedite request
             print(f"Priority assignment failed for expedited order {order_id}: {e}")

@@ -188,10 +188,10 @@ class TableBase:
         query = Select(session=session).from_(cls)
         
         if args and len(args) == 1 and len(pk_columns) == 1:
-            query.where(Condition.eq(pk_columns[0], args[0]))
+            query.filter(Condition.eq(pk_columns[0], args[0]))
         elif kwargs:
             for column, value in kwargs.items():
-                query.where(Condition.eq(column, value))
+                query.filter(Condition.eq(column, value))
         else:
             raise ValueError("Please provide primary key value(s)")
             

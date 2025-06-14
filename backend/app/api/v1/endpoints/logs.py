@@ -4,6 +4,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.dbrm import Session
 
+from app.core.database import get_db
 from app.services import WorkerService
 from app.api import deps
 from app.schemas import Log, Worker, LogCreate
@@ -13,7 +14,7 @@ router = APIRouter()
 @router.post("/", response_model=Log, status_code=status.HTTP_201_CREATED)
 def create_maintenance_log(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     log_in: LogCreate,
     current_user: Worker = Depends(deps.get_current_worker),
 ) -> Any:
@@ -32,7 +33,7 @@ def create_maintenance_log(
 @router.get("/", response_model=List[Log])
 def get_worker_logs(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: Worker = Depends(deps.get_current_worker),

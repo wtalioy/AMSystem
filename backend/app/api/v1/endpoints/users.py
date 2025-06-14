@@ -3,6 +3,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
 
+from app.core.database import get_db
 from app.services import UserService
 from app.api import deps
 from app.schemas import User, UserUpdate, UserCreate
@@ -11,7 +12,7 @@ router = APIRouter()
 
 @router.get("/worker-types", response_model=List[str])
 def get_worker_types(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
 ) -> Any:
     """
     Get all worker types
@@ -22,7 +23,7 @@ def get_worker_types(
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 def register_user(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     user_in: UserCreate,
     response: Response
 ) -> Any:
@@ -52,7 +53,7 @@ def register_user(
 # Current user profile management
 @router.get("/me", response_model=User)
 def get_current_user(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -70,7 +71,7 @@ def get_current_user(
 @router.put("/me", response_model=User)
 def update_current_user(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     user_in: UserUpdate,
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
@@ -85,7 +86,7 @@ def update_current_user(
 @router.get("/{user_id}", response_model=User)
 def get_user_by_id(
     user_id: str,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
@@ -103,7 +104,7 @@ def get_user_by_id(
 @router.get("/", response_model=List[User])
 def get_users(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(deps.get_current_admin),
@@ -119,7 +120,7 @@ def get_users(
 @router.put("/{user_id}", response_model=User)
 def update_user(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     user_id: str,
     user_in: UserUpdate,
     current_user: User = Depends(deps.get_current_admin),
@@ -140,7 +141,7 @@ def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     user_id: str,
     current_user: User = Depends(deps.get_current_admin),
 ) -> None:

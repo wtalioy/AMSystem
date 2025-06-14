@@ -36,7 +36,7 @@ class CRUDLog:
             ServiceOrder, on=(ServiceOrder.order_id, LogModel.order_id)
         ).join(
             Car, on=(Car.car_id, ServiceOrder.car_id)
-        ).where(
+        ).filter(
             Condition.eq(Car.car_type, car_type)
         ).scalar()
         
@@ -50,7 +50,7 @@ class CRUDLog:
             ServiceOrder, on=(ServiceOrder.order_id, LogModel.order_id)
         ).join(
             Car, on=(Car.car_id, ServiceOrder.car_id)
-        ).where(
+        ).filter(
             Condition.eq(Car.car_type, car_type)
         ).all()
 
@@ -60,7 +60,7 @@ class CRUDLog:
         
         return db.query(func.count(LogModel.id)).join(
             Worker, on=(Worker.user_id, LogModel.worker_id)
-        ).where(
+        ).filter(
             Condition.eq(Worker.worker_type, worker_type),
             Condition.gte(LogModel.log_time, start_time),
             Condition.lte(LogModel.log_time, end_time)
@@ -72,7 +72,7 @@ class CRUDLog:
 
         hours_result = db.query(func.sum(LogModel.duration)).join(
             Worker, on=(Worker.user_id, LogModel.worker_id)
-        ).where(
+        ).filter(
             Condition.eq(Worker.worker_type, worker_type),
             Condition.gte(LogModel.log_time, start_time),
             Condition.lte(LogModel.log_time, end_time)

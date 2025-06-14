@@ -147,12 +147,8 @@ class Select:
             self.from_table = table
         return self
     
-    def where(self, condition):
-        if isinstance(condition, str):
-            self.where_clauses.append(condition)
-        elif isinstance(condition, tuple):
-            for cond in condition:
-                self.where_clauses.append(cond)
+    def filter(self, *conditions):
+        self.where_clauses.extend(conditions)
         return self
         
     def filter_by(self, **kwargs):

@@ -170,7 +170,7 @@ class CRUDOrder:
         from app.dbrm import Condition
         return db.query(func.count(ServiceOrderModel.order_id)).join(
             Car, on=(Car.car_id, ServiceOrderModel.car_id)
-        ).where(
+        ).filter(
             Condition.eq(Car.car_type, car_type)
         ).scalar() or 0
     
@@ -239,7 +239,7 @@ class CRUDOrder:
     ) -> Optional[float]:
         """Get average rating for completed orders by worker in a specific period"""
         from app.dbrm import Condition
-        result = db.query(func.avg(ServiceOrderModel.rating)).where(
+        result = db.query(func.avg(ServiceOrderModel.rating)).filter(
             Condition.eq(ServiceOrderModel.worker_id, worker_id),
             Condition.gte(ServiceOrderModel.end_time, start_date),
             Condition.lte(ServiceOrderModel.end_time, end_date),
@@ -275,6 +275,17 @@ class CRUDOrder:
         
         return breakdown
     
+    def get_stale_assigned_orders(self, db: Session, cutoff_time: datetime) -> List[Order]:
+        """Get orders that have been assigned but not accepted for too long"""
+        from app.dbrm import Condition
+        objs = db.query(ServiceOrderModel).filter(
+            Condition.eq(ServiceOrderModel.status, OrderStatus.ASSIGNED),
+            Condition.lte(ServiceOrderModel.last_assignment_at, cutoff_time)
+        ).all()
+        if not objs:
+            return []
+        return [Order.model_validate(obj) for obj in objs]
+
     def remove(self, db: Session, order_id: str) -> bool:
         db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
         if db_obj:

@@ -3,6 +3,7 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, Query
 from app.dbrm import Session
 
+from app.core.database import get_db
 from app.services import AdminService, OrderService
 from app.api import deps
 from app.schemas import (
@@ -22,7 +23,7 @@ router = APIRouter()
 @router.get("/orders", response_model=List[OrderToAdmin])
 def get_orders(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     status_filter: Optional[int] = Query(None, description="Filter by order status"),
@@ -40,7 +41,7 @@ def get_orders(
 
 @router.get("/cars", response_model=List[CarTypeStatistics])
 def get_car_statistics(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
@@ -51,7 +52,7 @@ def get_car_statistics(
 
 @router.get("/vehicles/failure-patterns", response_model=List[VehicleFailurePattern])
 def get_vehicle_failure_patterns(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """
@@ -63,7 +64,7 @@ def get_vehicle_failure_patterns(
 @router.get("/costs/analysis", response_model=CostAnalysisByPeriod)
 def get_cost_analysis(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     period_type: str = Query("month", description="Period type: month or quarter"),
@@ -80,7 +81,7 @@ def get_cost_analysis(
 @router.get("/feedback/negative", response_model=NegativeFeedbackAnalysis)
 def get_negative_feedback_analysis(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     rating_threshold: int = Query(3, ge=1, le=5, description="Rating threshold (orders below this rating)"),
     current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
@@ -93,7 +94,7 @@ def get_negative_feedback_analysis(
 @router.get("/workers/productivity", response_model=List[WorkerProductivityAnalysis])
 def get_worker_productivity_analysis(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: User = Depends(deps.get_current_admin),
@@ -109,7 +110,7 @@ def get_worker_productivity_analysis(
 @router.get("/workers", response_model=List[WorkerStatistics])
 def get_worker_statistics(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     start_time: str,
     end_time: str,
     current_user: User = Depends(deps.get_current_admin),
@@ -122,7 +123,7 @@ def get_worker_statistics(
 
 @router.get("/incomplete-orders", response_model=List[IncompleteOrderStatistics])
 def get_incomplete_orders_statistics(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
     """

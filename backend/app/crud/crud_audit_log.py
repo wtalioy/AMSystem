@@ -71,7 +71,7 @@ class CRUDAuditLog:
         from datetime import timedelta
         since = datetime.now() - timedelta(hours=hours)
         
-        objs = db.query(AuditLogModel).where(
+        objs = db.query(AuditLogModel).filter(
             Condition.gte(AuditLogModel.timestamp, since)
         ).order_by_desc(AuditLogModel.timestamp).offset(skip).limit(limit).all()
         
@@ -104,7 +104,7 @@ class CRUDAuditLog:
         self, db: Session, start_date: datetime, end_date: datetime
     ) -> AuditLogSummary:
         """Get summary of changes in a date range"""
-        objs = db.query(AuditLogModel).where(
+        objs = db.query(AuditLogModel).filter(
             Condition.gte(AuditLogModel.timestamp, start_date),
             Condition.lte(AuditLogModel.timestamp, end_date)
         ).all()

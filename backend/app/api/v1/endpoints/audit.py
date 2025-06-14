@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
 from app.dbrm import Session
 
 from app.api import deps
+from app.core.database import get_db
 from app.services import AuditService
 from app.schemas.audit_log import AuditLog, AuditLogSummary
 from app.schemas import Admin
@@ -13,7 +14,7 @@ router = APIRouter()
 @router.get("/summary", response_model=AuditLogSummary)
 def get_change_summary(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     current_user: Admin = Depends(deps.get_current_admin),
@@ -56,7 +57,7 @@ def get_change_summary(
 @router.get("/recent", response_model=List[AuditLog])
 def get_recent_changes(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     hours: int = Query(24, ge=1, le=168, description="Number of hours to look back"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
@@ -73,7 +74,7 @@ def get_recent_changes(
 @router.post("/rollback", response_model=dict)
 def get_rollback_data(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     target_audit_id: str = Body(..., embed=True),
     current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:

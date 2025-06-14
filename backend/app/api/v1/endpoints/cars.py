@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from app.dbrm import Session
 
 from app.api import deps
+from app.core.database import get_db
 from app.services import CarService
 from app.schemas import Car, CarCreate, CarUpdate, User, Customer, CarType
 
@@ -11,7 +12,7 @@ router = APIRouter()
 @router.get("/types", response_model=List[str])
 def get_car_types(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
@@ -23,7 +24,7 @@ def get_car_types(
 @router.post("/types", response_model=CarType)
 def create_car_type(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     car_type: CarType,
     current_user: User = Depends(deps.get_current_admin),
 ) -> Any:
@@ -44,7 +45,7 @@ def create_car_type(
 @router.post("/", response_model=Car, status_code=status.HTTP_201_CREATED)
 def create_car(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     car_in: CarCreate,
     current_user: Customer = Depends(deps.get_current_customer),
     response: Response
@@ -76,7 +77,7 @@ def create_car(
 @router.get("/", response_model=List[Car])
 def get_cars(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(deps.get_current_user),
@@ -107,7 +108,7 @@ def get_cars(
 @router.get("/{car_id}", response_model=Car)
 def get_car(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     car_id: str,
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
@@ -133,7 +134,7 @@ def get_car(
 @router.put("/{car_id}", response_model=Car)
 def update_car(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     car_id: str,
     car_in: CarUpdate,
     current_user: User = Depends(deps.get_current_user),
@@ -169,7 +170,7 @@ def update_car(
 @router.delete("/{car_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_car(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     car_id: str,
     current_user: User = Depends(deps.get_current_user),
 ) -> None:
@@ -203,7 +204,7 @@ def delete_car(
 @router.get("/{car_id}/maintenance-history", response_model=List[Dict[str, Any]])
 def get_car_maintenance_history(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     car_id: str,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),

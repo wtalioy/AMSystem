@@ -4,6 +4,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Resp
 from app.dbrm import Session
 
 from app.api import deps
+from app.core.database import get_db
 from app.services import CarService, OrderService
 from app.schemas import User, OrderCreate, OrderToCustomer, OrderToAdmin
 from app.core.enum import OrderStatus
@@ -14,7 +15,7 @@ router = APIRouter()
 @router.post("/", response_model=OrderToCustomer, status_code=status.HTTP_201_CREATED)
 def create_order(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_in: OrderCreate,
     current_user: User = Depends(deps.get_current_customer),
     response: Response
@@ -48,7 +49,7 @@ def create_order(
 @router.get("/", response_model=List[OrderToCustomer])
 def get_owned_orders(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     status_filter: Optional[int] = Query(None, description="Filter by order status"),
@@ -67,7 +68,7 @@ def get_owned_orders(
 @router.get("/all", response_model=List[OrderToAdmin])
 def get_all_orders(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     status_filter: Optional[int] = Query(None, description="Filter by order status"),
@@ -87,7 +88,7 @@ def get_all_orders(
 @router.post("/feedback", response_model=OrderToCustomer)
 def add_order_feedback(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_id: str = Body(...),
     rating: int = Body(..., ge=1, le=5),
     comment: Optional[str] = Body(None),
@@ -127,7 +128,7 @@ def add_order_feedback(
 @router.post("/{order_id}/expedite", response_model=OrderToCustomer)
 def expedite_order(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_id: str,
     current_user: User = Depends(deps.get_current_customer),
 ) -> Any:
@@ -147,7 +148,7 @@ def expedite_order(
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 def cancel_order(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     order_id: str,
     current_user: User = Depends(deps.get_current_user),
 ) -> None:

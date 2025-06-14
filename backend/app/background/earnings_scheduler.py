@@ -4,11 +4,15 @@ from typing import Optional, Dict, Any
 import threading
 import time
 
-from app.api.deps import get_db
+from app.dbrm import Session
+from app.core.database import get_db
 from app.services.earnings_service import EarningsService
 from app.schemas.audit_log import ChangeTrackingContext
 
 logger = logging.getLogger(__name__)
+
+# Global earnings scheduler instance
+_background_scheduler = None
 
 
 class EarningScheduler:
@@ -36,14 +40,12 @@ class EarningScheduler:
             self.running = True
             self.scheduler_thread = threading.Thread(target=self._run_scheduler, daemon=True)
             self.scheduler_thread.start()
-            logger.info("Scheduler started")
 
     def stop(self):
         """Stop the scheduler"""
         self.running = False
         if self.scheduler_thread:
             self.scheduler_thread.join()
-        logger.info("Scheduler stopped")
 
     def _run_scheduler(self):
         """Main scheduler loop"""
@@ -88,17 +90,20 @@ class EarningScheduler:
         logger.info(f"Executing scheduled task: {task_name}")
         
         try:
-            if task_name == "earnings_distribution":
-                self._run_monthly_earnings_distribution(current_time)
-            
-            # Update last run time
-            task["last_run"] = current_time
-            logger.info(f"Successfully completed task: {task_name}")
+            # Get database session for the task
+            for db in get_db():
+                if task_name == "earnings_distribution":
+                    self._run_monthly_earnings_distribution(db, current_time)
+                
+                # Update last run time
+                task["last_run"] = current_time
+                logger.info(f"Successfully completed task: {task_name}")
+                break
             
         except Exception as e:
             logger.error(f"Error executing task {task_name}: {e}")
 
-    def _run_monthly_earnings_distribution(self, current_time: datetime):
+    def _run_monthly_earnings_distribution(self, db: Session, current_time: datetime):
         """Run the monthly earnings distribution for the previous month"""
         # Calculate previous month
         if current_time.month == 1:
@@ -107,9 +112,6 @@ class EarningScheduler:
         else:
             prev_month = current_time.month - 1
             prev_year = current_time.year
-        
-        # Get database session
-        db = next(get_db())
         
         try:
             # Create audit context for the scheduler
@@ -134,14 +136,11 @@ class EarningScheduler:
             
         except Exception as e:
             logger.error(f"Failed to run monthly earnings distribution: {e}")
-        finally:
-            db.close()
+            raise  # Re-raise to be handled by _execute_task
 
-    def run_earnings_distribution_now(self, year: int, month: int) -> Dict[str, Any]:
+    def run_earnings_distribution_now(self, db: Session, year: int, month: int) -> Dict[str, Any]:
         """Manually trigger earnings distribution for a specific month"""
         logger.info(f"Manually running earnings distribution for {year}-{month:02d}")
-        
-        db = next(get_db())
         
         try:
             audit_context = ChangeTrackingContext(
@@ -163,8 +162,6 @@ class EarningScheduler:
                 "error": str(e),
                 "status": "failed"
             }
-        finally:
-            db.close()
 
     def get_next_scheduled_run(self) -> Optional[datetime]:
         """Get the next scheduled earnings distribution run time"""
@@ -204,20 +201,31 @@ class EarningScheduler:
         }
 
 
-# Global scheduler instance
-scheduler = EarningScheduler()
-
-
 def start_scheduler():
     """Start the global scheduler instance"""
-    scheduler.start()
+    global _background_scheduler
+    if _background_scheduler is None:
+        _background_scheduler = EarningScheduler()
+    _background_scheduler.start()
 
 
 def stop_scheduler():
     """Stop the global scheduler instance"""
-    scheduler.stop()
+    global _background_scheduler
+    if _background_scheduler is not None:
+        _background_scheduler.stop()
 
 
 def get_scheduler() -> EarningScheduler:
     """Get the global scheduler instance"""
-    return scheduler 
+    global _background_scheduler
+    if _background_scheduler is None:
+        _background_scheduler = EarningScheduler()
+    return _background_scheduler
+
+
+# Convenience function for manual earnings distribution
+def run_earnings_distribution_now(db: Session, year: int, month: int) -> Dict[str, Any]:
+    """Manually trigger earnings distribution for a specific month"""
+    scheduler = get_scheduler()
+    return scheduler.run_earnings_distribution_now(db, year, month) 

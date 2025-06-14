@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.dbrm import Session
 
 from app.api import deps
+from app.core.database import get_db
 from app.services import AuthService
 from app.schemas import Token, User, UserLogin
 
@@ -10,7 +11,7 @@ router = APIRouter()
 @router.post("/login", response_model=Token)
 def login_for_access_token(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     user_login: UserLogin
 ):
     """
@@ -69,7 +70,7 @@ def logout(
 @router.post("/refresh", response_model=Token)
 def refresh_access_token(
     *,
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
     """
