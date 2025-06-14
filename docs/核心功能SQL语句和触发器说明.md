@@ -2,7 +2,7 @@
 
 ## 一、系统架构概述
 
-本车辆维修管理系统采用了**自研 ORM 框架（DBRM - Database Remote）**进行数据库操作，而非直接 SQL 语句编写。该 ORM 框架基于 [Lab1](https://github.com/wtalioy/DatabaseRemote) 实现，参考 SQLAlchemy ，提供了完整的对象关系映射功能，并通过 Python 装饰器和服务层模式实现了传统数据库触发器的功能。
+本车辆维修管理系统采用了**自研 ORM 框架（DBRM - Database Remote）**进行数据库操作，而非直接 SQL 语句编写。该 ORM 框架基于 [Lab1](https://github.com/wtalioy/DatabaseRemote) 实现，参考 SQLAlchemy ，提供了基础的对象关系映射功能，并通过 Python 装饰器和服务层模式实现了传统数据库触发器的功能。
 
 ### 技术架构特点：
 - **自定义 ORM 框架**：`app.dbrm` 包提供完整的 Table、Column、Query 等功能
@@ -10,7 +10,7 @@
 - **服务层自动化**：通过 Service 层实现复杂业务逻辑的自动触发
 - **定时调度器**：实现定期数据处理和维护任务
 
-## 二、自研ORM框架核心功能
+## 二、ORM vs SQL
 
 ### 2.1 数据模型定义
 
@@ -50,7 +50,7 @@ orders = db.query(ServiceOrderModel).filter_by(customer_id=customer_id).all()
 # 复杂条件查询
 query = db.query(ServiceOrderModel).join(
     Car, on=(Car.car_id, ServiceOrderModel.car_id)
-).where(
+).filter(
     Condition.eq(Car.car_type, car_type)
 )
 ```
@@ -60,7 +60,7 @@ query = db.query(ServiceOrderModel).join(
 -- 简单查询（ORM: db.query(ServiceOrderModel).filter_by(customer_id=customer_id).all()）
 SELECT * FROM ServiceOrder WHERE customer_id = '客户ID';
 
--- 复杂连接查询（ORM: db.query(ServiceOrderModel).join(Car, on=(Car.car_id, ServiceOrderModel.car_id)).where(...)）
+-- 复杂连接查询（ORM: db.query(ServiceOrderModel).join(Car, on=(Car.car_id, ServiceOrderModel.car_id)).filter(...)）
 SELECT ServiceOrder.* 
 FROM ServiceOrder 
 INNER JOIN Car ON Car.car_id = ServiceOrder.car_id 
@@ -115,36 +115,6 @@ def create_user(db: Session, obj_in: UserCreate, audit_context=None) -> User:
     return user_obj
 ```
 
-**等价SQL实现：**
-```sql
--- 创建用户（生成唯一ID，使用bcrypt密码哈希）
--- 注意：实际使用bcrypt哈希，这里用伪代码表示
-INSERT INTO User (user_id, user_name, user_pwd, user_type) 
-VALUES (CONCAT(LEFT(UPPER('类型'), 1), UNIX_TIMESTAMP(NOW(6)), 
-               UPPER(SUBSTRING(MD5(RAND()), 1, 3))), 
-        '用户名', '$bcrypt$hashed_password', '用户类型');
-
--- 用户认证查询（密码验证在应用层使用bcrypt进行）
-SELECT user_id, user_name, user_type, user_pwd
-FROM User 
-WHERE user_name = '输入用户名';
--- 然后在应用层使用: bcrypt.verify('输入密码', stored_hash)
-
--- 创建客户时的完整事务
-START TRANSACTION;
-INSERT INTO User (user_id, user_name, user_pwd, user_type) VALUES (...);
-INSERT INTO Customer (user_id) VALUES (LAST_INSERT_ID());
-COMMIT;
-
--- 创建维修人员时的完整事务（需要验证工种）
-START TRANSACTION;
-SELECT COUNT(*) FROM Wage WHERE worker_type = '指定工种'; -- 验证工种存在
-INSERT INTO User (user_id, user_name, user_pwd, user_type) VALUES (...);
-INSERT INTO Worker (user_id, worker_type, availability_status) 
-VALUES (LAST_INSERT_ID(), '工种', 1);
-COMMIT;
-```
-
 ### 3.2 维修工单管理
 
 **ORM实现：**
@@ -176,92 +146,22 @@ def create_order_for_customer(self, db: Session, *, obj_in: OrderCreate, custome
     db.refresh(db_obj)
     return Order.model_validate(db_obj)
 
-# Service层 - 带审计装饰器和自动分配
-@audit("Order", "CREATE")
-def create_order(db: Session, obj_in: OrderCreate, customer_id: str, audit_context=None) -> Order:
-    """Create a new service order"""
-    order_obj = order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
-    from app.services.assignment_service import AutoAssignmentService
-    AutoAssignmentService.trigger_assignment(db, order_obj.order_id)
-    return order_obj
-```
-
-**等价SQL实现：**
-```sql
--- 创建工单（对应OrderService.create_order实现）
--- 1. 生成唯一ID（基于时间戳的ID生成算法）
-SET @order_id = CONCAT('O', UNIX_TIMESTAMP(NOW(6)), UPPER(SUBSTRING(MD5(RAND()), 1, 3)));
-
--- 2. 验证客户和车辆的关联关系
-SELECT COUNT(*) as valid_car 
-FROM Car c
-JOIN Customer cu ON c.customer_id = cu.user_id
-WHERE c.car_id = '车辆ID' AND cu.user_id = '客户ID';
-
--- 3. 插入工单记录（使用事务确保数据一致性）
-START TRANSACTION;
-
-INSERT INTO ServiceOrder (
-    order_id, description, start_time, end_time, car_id, customer_id, 
-    status, rating, worker_id, comment, created_at, updated_at, total_cost
-) VALUES (
-    @order_id, '维修描述', NULL, NULL, '车辆ID', '客户ID', 
-    1, NULL, NULL, NULL, NOW(), NOW(), 0
-);
-
--- 4. 自动分配维修人员（对应AutoAssignmentService.trigger_assignment）
--- 首先获取车辆类型以确定所需工种
-SELECT c.car_type INTO @required_worker_type
-FROM ServiceOrder so
-JOIN Car c ON so.car_id = c.car_id
-WHERE so.order_id = @order_id;
-
--- 查找可用维修人员（考虑工作负载）
-SELECT w.user_id INTO @selected_worker
-FROM Worker w
-LEFT JOIN (
-    SELECT worker_id, COUNT(*) as workload
-    FROM ServiceOrder
-    WHERE status IN (1, 2)  -- 待分配或已分配
-    GROUP BY worker_id
-) wl ON w.user_id = wl.worker_id
-WHERE w.worker_type = @required_worker_type 
-    AND w.availability_status = 1
-ORDER BY COALESCE(wl.workload, 0) ASC, RAND()
-LIMIT 1;
-
--- 执行分配
-IF @selected_worker IS NOT NULL THEN
-    UPDATE ServiceOrder 
-    SET worker_id = @selected_worker, 
-        status = 2,
-        updated_at = NOW()
-    WHERE order_id = @order_id AND status = 1;
-    
-    -- 更新工人状态（基于工作负载）
-    UPDATE Worker 
-    SET availability_status = CASE 
-        WHEN (
-            SELECT COUNT(*) 
-            FROM ServiceOrder 
-            WHERE worker_id = @selected_worker AND status IN (1, 2)
-        ) >= 5 THEN 0  -- 工单数达到上限设为忙碌
-        ELSE 1
-    END
-    WHERE user_id = @selected_worker;
-END IF;
-
-COMMIT;
-
--- 5. 返回创建的工单信息
-SELECT * FROM ServiceOrder WHERE order_id = @order_id;
+    # Service层 - 带审计装饰器和自动分配
+    @audit("Order", "CREATE")
+    def create_order(db: Session, obj_in: OrderCreate, customer_id: str, audit_context=None) -> Order:
+        """Create a new service order"""
+        order_obj = order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
+        # 立即触发分配尝试
+        from app.background.assignment_processor import trigger_assignment
+        trigger_assignment(db, order_obj.order_id)
+        return order_obj
 ```
 
 ### 3.3 维修进度跟踪和费用计算
 
 **ORM实现：**
 ```python
-# CRUD
+# CRUD层
 def complete_order(self, db: Session, order_id: str, total_cost: Decimal) -> Order:
     db_obj = db.query(ServiceOrderModel).filter_by(order_id=order_id).first()
     if db_obj:
@@ -273,7 +173,7 @@ def complete_order(self, db: Session, order_id: str, total_cost: Decimal) -> Ord
         db.refresh(db_obj)
     return Order.model_validate(db_obj)
 
-# Service
+# Service层
 def complete_order(db: Session, order_id: str, worker_id: str, audit_context=None) -> Order:
     order_obj = order.get_by_order_id(db, order_id=order_id)
     if not order_obj:
@@ -289,85 +189,21 @@ def complete_order(db: Session, order_id: str, worker_id: str, audit_context=Non
     return order.complete_order(db, order_id=order_id, total_cost=total_cost)
 ```
 
-**等价SQL实现：**
-```sql
--- 完成工单前检查所有维修程序是否完成
-SELECT COUNT(*) FROM MaintenanceProcedure 
-WHERE order_id = '工单ID' AND current_status != 4;
-
--- 计算总费用（对应log.get_total_cost_by_order实现）
--- 注意：实际系统中total_cost直接由业务逻辑计算，这里展示等价SQL逻辑
-SET @total_cost = (
-    SELECT COALESCE(SUM(
-        CASE 
-            WHEN mp.current_status = 4 THEN COALESCE(mp.cost, 0)  -- 只计算已完成的维修程序费用
-            ELSE 0 
-        END
-    ), 0)
-    FROM ServiceOrder so
-    LEFT JOIN MaintenanceProcedure mp ON so.order_id = mp.order_id
-    WHERE so.order_id = '工单ID'
-);
-
--- 可选：如果系统有独立的工时费用记录
-SET @labor_cost = (
-    SELECT COALESCE(SUM(wl.hours_worked * w.wage_per_hour), 0)
-    FROM ServiceOrder so
-    LEFT JOIN WorkLog wl ON so.order_id = wl.order_id
-    LEFT JOIN Worker wk ON wl.worker_id = wk.user_id
-    LEFT JOIN Wage w ON wk.worker_type = w.worker_type
-    WHERE so.order_id = '工单ID'
-);
-
--- 实际使用中，total_cost是从业务逻辑传递的参数
-SET @final_total_cost = @total_cost + COALESCE(@labor_cost, 0);
-
--- 完成工单（对应OrderService.complete_order实现）
--- 验证工单状态和工人权限
-SELECT worker_id, status INTO @assigned_worker, @current_status
-FROM ServiceOrder 
-WHERE order_id = '工单ID';
-
--- 确保只有分配给该工人且状态正确的工单才能完成
-IF @assigned_worker = '工人ID' AND @current_status = 3 THEN
-    START TRANSACTION;
-    
-    -- 更新工单状态
-    UPDATE ServiceOrder 
-    SET status = 4, 
-        end_time = NOW(), 
-        total_cost = @final_total_cost,
-        updated_at = NOW()
-    WHERE order_id = '工单ID' AND worker_id = '工人ID';
-    
-    -- 释放维修人员（更新可用状态）
-    UPDATE Worker 
-    SET availability_status = 1
-    WHERE user_id = '工人ID';
-    
-    COMMIT;
-    
-    -- 返回更新后的工单信息
-    SELECT * FROM ServiceOrder WHERE order_id = '工单ID';
-ELSE
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Order completion validation failed';
-END IF;
-```
-
 ## 四、"触发器"功能的Python实现
 
 ### 4.1 审计装饰器 - 数据变更追踪
 
-我们通过`@audit`装饰器实现了数据库触发器的功能：
+我们通过`@audit`装饰器实现了数据库触发器的功能，自动记录所有数据变更到AuditLog表：
 
 ```python
-# 实际的审计装饰器使用示例
+# 审计装饰器使用示例
 @audit("Order", "CREATE")
 def create_order(db: Session, obj_in: OrderCreate, customer_id: str, audit_context=None) -> Order:
     """Create a new service order"""
     order_obj = order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
-    from app.services.assignment_service import AutoAssignmentService
-    AutoAssignmentService.trigger_assignment(db, order_obj.order_id)
+    # 立即触发分配尝试
+    from app.background.assignment_processor import trigger_assignment
+    trigger_assignment(db, order_obj.order_id)
     return order_obj
 
 @audit("Order", "UPDATE")
@@ -378,21 +214,42 @@ def update_order_status(db: Session, order_id: str, new_status: int, audit_conte
         raise ValueError(f"Invalid status: {new_status}")
     return order.update_order_status(db, order_id=order_id, new_status=new_status)
 
-@audit("User", "CREATE")  
-def create_user(db: Session, obj_in: UserCreate, audit_context=None) -> User:
-    """Create a new user"""
-    if obj_in.user_type == "customer":
-        user_obj = customer.create(db, obj_in=obj_in)
-    elif obj_in.user_type == "worker":
-        wage_obj = wage.get_by_type(db, obj_in.worker_type)
-        if not wage_obj:
-            raise ValueError(f"Unsupported worker type: {obj_in.worker_type}")
-        user_obj = worker.create(db, obj_in=obj_in)
-    elif obj_in.user_type == "administrator":
-        user_obj = admin.create(db, obj_in=obj_in)
-    else:
-        raise ValueError(f"Invalid user type: {obj_in.user_type}")
-    return user_obj
+# 审计日志的实际创建
+def create_audit_entry(
+    db: Session,
+    table_name: str,
+    record_id: str,
+    operation: str,
+    old_values: Optional[Dict[str, Any]] = None,
+    new_values: Optional[Dict[str, Any]] = None,
+    user_id: Optional[str] = None
+) -> AuditLog:
+    """创建审计日志记录"""
+    # 生成唯一审计ID（10位随机字符串）
+    audit_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    
+    # 计算变更字段
+    changed_fields = None
+    if old_values and new_values:
+        changed_fields = [
+            field for field, value in new_values.items()
+            if field in old_values and old_values[field] != value
+        ]
+    
+    audit_entry = AuditLogModel(
+        audit_id=audit_id,
+        table_name=table_name,
+        record_id=record_id,
+        operation=operation.upper(),
+        old_values=json.dumps(old_values) if old_values else None,
+        new_values=json.dumps(new_values) if new_values else None,
+        changed_fields=changed_fields,
+        user_id=user_id
+    )
+    
+    db.add(audit_entry)
+    db.commit()
+    return AuditLog.model_validate(audit_entry)
 ```
 
 **触发器等价功能：**
@@ -400,184 +257,136 @@ def create_user(db: Session, obj_in: UserCreate, audit_context=None) -> User:
 - **数据变更后记录**：记录新的数据状态
 - **操作审计日志**：自动记录操作者、时间、变更内容
 
-**等价SQL触发器：**
-```sql
--- 创建审计日志表
-CREATE TABLE AuditLog (
-    log_id VARCHAR(36) PRIMARY KEY,
-    table_name VARCHAR(50),
-    record_id VARCHAR(50),
-    operation VARCHAR(10),
-    old_data JSON,
-    new_data JSON,
-    changed_by VARCHAR(50),
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+### 4.2 智能工单分配系统
 
--- 订单更新触发器
-DELIMITER $$
-CREATE TRIGGER order_audit_trigger
-AFTER UPDATE ON ServiceOrder
-FOR EACH ROW
-BEGIN
-    INSERT INTO AuditLog (
-        log_id, table_name, record_id, operation, 
-        old_data, new_data, changed_by, changed_at
-    ) VALUES (
-        UUID(),
-        'ServiceOrder',
-        NEW.order_id,
-        'UPDATE',
-        JSON_OBJECT('status', OLD.status, 'end_time', OLD.end_time),
-        JSON_OBJECT('status', NEW.status, 'end_time', NEW.end_time),
-        USER(),
-        NOW()
-    );
-END$$
-DELIMITER ;
-```
-
-### 4.2 自动工单分配服务
+我们的系统采用了**后台自动分配处理器**架构，实现了智能的工单分配和管理：
 
 ```python
-class AutoAssignmentService:
-    """Service for automatic order assignment to available workers"""
+class AssignmentProcessor:
+    """统一的后台工单分配处理器，支持自动分配和失效处理"""
     
-    @staticmethod
-    def trigger_assignment(db: Session, order_id: str) -> bool:
-        """Ultra-simple random assignment - no separate tracking needed"""
+    def __init__(self, interval_seconds: int = 30):
+        self.interval_seconds = interval_seconds
+        self.running = False
+        self.thread = None
+        self._stop_event = threading.Event()
+    
+    def _run_processor(self):
+        """主处理循环 - 定期处理待分配工单和失效分配"""
+        while self.running and not self._stop_event.is_set():
+            try:
+                for db in get_db():
+                    # 处理待分配工单
+                    result = self.process_pending_assignments(db)
+                    
+                    # 只记录重要的分配活动（5+工单）
+                    if result >= 5:
+                        logger.info(f"Assignment processor assigned {result} pending orders")
+                    
+                    # 处理失效分配（已分配但超时未接受）
+                    self._handle_stale_assignments(db)
+                    break
+                
+            except Exception as e:
+                logger.error(f"Assignment processor error: {e}")
+            
+            # 等待下一个处理周期
+            self._stop_event.wait(self.interval_seconds)
+    
+    def process_pending_assignments(self, db: Session) -> int:
+        """
+        处理所有待分配工单，优先处理加急工单
+        返回成功分配的工单数量
+        """
+        pending_orders = order.get_orders_by_status(db, status=OrderStatus.PENDING_ASSIGNMENT)
+        
+        if not pending_orders:
+            return 0
+        
+        # 按加急标志排序（加急工单优先）
+        sorted_orders = sorted(pending_orders, key=lambda o: o.expedite_flag, reverse=True)
+        
+        assigned_count = 0
+        
+        for order_obj in sorted_orders:
+            if self.trigger_assignment(db, order_obj.order_id):
+                assigned_count += 1
+            else:
+                # 没有更多可用维修人员，停止处理
+                break
+        
+        return assigned_count
+    
+    def _handle_stale_assignments(self, db: Session):
+        """处理失效分配 - 已分配但超过10分钟未接受的工单"""
+        stale_cutoff = datetime.now() - timedelta(minutes=10)
+        
+        try:
+            stale_orders = order.get_stale_assigned_orders(db, cutoff_time=stale_cutoff)
+            
+            if stale_orders:
+                logger.info(f"Processing {len(stale_orders)} stale assignments")
+                
+            for stale_order in stale_orders:
+                # 重置为待分配状态
+                order.update_order_assignment(
+                    db, order_id=stale_order.order_id, 
+                    worker_id=None, status=OrderStatus.PENDING_ASSIGNMENT
+                )
+                # 释放维修人员
+                if stale_order.worker_id:
+                    worker.update_availability(
+                        db, worker_id=stale_order.worker_id, 
+                        status=WorkerAvailabilityStatus.AVAILABLE
+                    )
+                
+        except Exception as e:
+            logger.error(f"Error handling stale assignments: {e}")
+    
+    def trigger_assignment(self, db: Session, order_id: str) -> bool:
+        """即时工单分配 - 随机选择可用维修人员"""
         order_obj = order.get_by_order_id(db, order_id)
         if not order_obj or order_obj.status != OrderStatus.PENDING_ASSIGNMENT:
             return False
         
-        # Find all available workers
+        # 查找所有可用维修人员
         available_workers = worker.get_available_workers(db)
         
         if not available_workers:
+            # 无可用维修人员 - 工单保持待分配状态
             return False
         
-        # Random selection
+        # 随机选择维修人员
         selected_worker = random.choice(available_workers)
         
-        # Update order: assign worker, set status to assigned
-        order.update_order_assignment(db, order_id=order_id, worker_id=selected_worker.user_id, status=OrderStatus.ASSIGNED)
+        # 更新工单：分配维修人员，设置状态为已分配
+        order.update_order_assignment(
+            db, order_id=order_id, 
+            worker_id=selected_worker.user_id, 
+            status=OrderStatus.ASSIGNED
+        )
         
-        # Update worker's availability status
-        worker.update_availability(db, worker_id=selected_worker.user_id, status=WorkerAvailabilityStatus.BUSY)
-        
-        return True
-    
-    @staticmethod
-    def handle_rejection(db: Session, order_id: str) -> bool:
-        """Handle order rejection and trigger reassignment"""
-        order_obj = order.get_by_order_id(db, order_id)
-        if not order_obj:
-            return False
-                
-        # Update worker's availability status
-        if order_obj.worker_id:
-            worker.update_availability(db, worker_id=order_obj.worker_id, status=WorkerAvailabilityStatus.AVAILABLE)
-        
-        order.update_order_assignment(db, order_id=order_id, worker_id=None, status=OrderStatus.PENDING_ASSIGNMENT)
-        
-        # Try to reassign to another worker
-        return AutoAssignmentService.trigger_assignment(db, order_id)
-    
-    @staticmethod
-    def handle_acceptance(db: Session, order_id: str, worker_id: str) -> bool:
-        """Handle order acceptance - update status to in_progress"""
-        order_obj = order.get_by_order_id(db, order_id)
-        if not order_obj or order_obj.worker_id != worker_id:
-            return False
-        
-        order.update_order_status(db, order_id=order_id, new_status=OrderStatus.IN_PROGRESS)
+        # 更新维修人员可用状态
+        worker.update_availability(
+            db, worker_id=selected_worker.user_id, 
+            status=WorkerAvailabilityStatus.BUSY
+        )
         
         return True
+
+# 全局实例管理
+def start_background_processor(interval_seconds: int = 30):
+    """启动全局后台分配处理器"""
+    processor = get_assignment_processor()
+    processor.interval_seconds = interval_seconds
+    processor.start()
+
+def trigger_assignment(db: Session, order_id: str) -> bool:
+    """触发单个工单分配"""
+    return get_assignment_processor().trigger_assignment(db, order_id)
 ```
 
-**等价SQL存储过程：**
-```sql
-DELIMITER $$
-CREATE PROCEDURE AutoAssignOrder(IN p_order_id VARCHAR(10))
-BEGIN
-    DECLARE v_worker_id VARCHAR(10);
-    DECLARE v_worker_count INT;
-    DECLARE v_required_worker_type VARCHAR(50);
-    
-    -- 获取工单需要的工种类型
-    SELECT c.car_type INTO v_required_worker_type
-    FROM ServiceOrder so
-    JOIN Car c ON so.car_id = c.car_id
-    WHERE so.order_id = p_order_id;
-    
-    -- 查找该工种的可用维修人员（考虑工作负载）
-    SELECT COUNT(*) INTO v_worker_count 
-    FROM Worker w
-    WHERE w.worker_type = v_required_worker_type 
-        AND w.availability_status = 1;
-    
-    IF v_worker_count > 0 THEN
-        -- 选择工作负载最轻的维修人员
-        SELECT w.user_id INTO v_worker_id
-        FROM Worker w
-        LEFT JOIN (
-            SELECT worker_id, COUNT(*) as workload
-            FROM ServiceOrder
-            WHERE status IN (1, 2)  -- 待分配或已分配
-            GROUP BY worker_id
-        ) wl ON w.user_id = wl.worker_id
-        WHERE w.worker_type = v_required_worker_type 
-            AND w.availability_status = 1
-        ORDER BY COALESCE(wl.workload, 0) ASC, RAND()
-        LIMIT 1;
-        
-        -- 分配工单
-        UPDATE ServiceOrder 
-        SET worker_id = v_worker_id, status = 2, updated_at = NOW()
-        WHERE order_id = p_order_id AND status = 1;
-        
-        -- 根据工作负载更新维修人员状态
-        UPDATE Worker 
-        SET availability_status = CASE 
-            WHEN (
-                SELECT COUNT(*) 
-                FROM ServiceOrder 
-                WHERE worker_id = v_worker_id AND status IN (1, 2)
-            ) >= 5 THEN 0  -- 工单数达到上限设为忙碌
-            ELSE 1
-        END
-        WHERE user_id = v_worker_id;
-    END IF;
-END$$
-
--- 拒绝工单处理
-CREATE PROCEDURE RejectOrderAssignment(IN p_order_id VARCHAR(10), IN p_worker_id VARCHAR(10))
-BEGIN
-    -- 重置工单状态
-    UPDATE ServiceOrder 
-    SET status = 1, worker_id = NULL, updated_at = NOW()
-    WHERE order_id = p_order_id AND worker_id = p_worker_id;
-    
-    -- 更新工人可用状态
-    UPDATE Worker 
-    SET availability_status = 1
-    WHERE user_id = p_worker_id;
-    
-    -- 尝试重新分配
-    CALL AutoAssignOrder(p_order_id);
-END$$
-
--- 接受工单处理
-CREATE PROCEDURE AcceptOrderAssignment(IN p_order_id VARCHAR(10), IN p_worker_id VARCHAR(10))
-BEGIN
-    UPDATE ServiceOrder 
-    SET status = 3, start_time = NOW(), updated_at = NOW()
-    WHERE order_id = p_order_id AND worker_id = p_worker_id AND status = 2;
-END$$
-DELIMITER ;
-```
-
-### 4.3 定时工资结算调度器
+### 5.3 定时工资结算调度器
 
 ```python
 class EarningScheduler:
@@ -817,7 +626,7 @@ JOIN Car c ON so.car_id = c.car_id
 WHERE c.car_type = '指定车型';
 ```
 
-### 5.2 维修人员绩效分析
+### 6.2 维修人员绩效分析
 
 **ORM实现：**
 ```python
@@ -1043,175 +852,39 @@ WHERE ws.low_rating_count > 0
 ORDER BY low_rating_percentage DESC;
 ```
 
-## 六、数据维护和事务控制
+## 六、系统特色功能说明
 
-### 6.1 批量工单处理事务
+### 6.1 智能工单分配系统
 
-**ORM实现：**
-```python
-# 注意：我们的ORM使用隐式事务管理，每个db.commit()都是一个事务
-# 以下是批量处理的概念性示例（实际项目中主要通过单个操作实现）
-def batch_create_orders_concept(db: Session, orders_data: List[OrderCreate], customer_id: str) -> List[Order]:
-    """概念性的批量创建订单示例"""
-    created_orders = []
-    
-    try:
-        # 在我们的实现中，每个create_order调用内部都有完整的事务管理
-        for order_data in orders_data:
-            # 通过服务层创建订单（包含审计和自动分配）
-            order_obj = OrderService.create_order(db, obj_in=order_data, customer_id=customer_id)
-            created_orders.append(order_obj)
-        
-        return created_orders
-        
-    except Exception as e:
-        # 错误处理由各个服务层方法内部管理
-        raise e
+我们的系统实现了**后台自动分配处理器**架构，提供了完整的工单分配和管理功能：
 
-# 实际的创建订单方法（带事务和审计）
-@audit("Order", "CREATE")
-def create_order(db: Session, obj_in: OrderCreate, customer_id: str, audit_context=None) -> Order:
-    """Create a new service order"""
-    # CRUD层创建 + 自动分配都在一个逻辑事务中
-    order_obj = order.create_order_for_customer(db=db, obj_in=obj_in, customer_id=customer_id)
-    from app.services.assignment_service import AutoAssignmentService
-    AutoAssignmentService.trigger_assignment(db, order_obj.order_id)
-    return order_obj
-```
+#### 核心特性：
 
-**等价SQL事务：**
-```sql
-START TRANSACTION;
+1. **即时分配触发**：通过 `trigger_assignment()` 在工单创建时立即尝试分配
+2. **后台定期处理**：每30秒自动处理所有待分配工单
+3. **加急工单优先**：按 `expedite_flag` 排序，优先处理加急工单
+4. **失效分配处理**：自动处理超过10分钟未接受的分配
+5. **智能状态管理**：自动更新工单和维修人员状态
 
--- 创建多个工单
-INSERT INTO ServiceOrder (order_id, description, start_time, car_id, customer_id, status)
-VALUES 
-    ('O240101001', '描述1', NOW(), 'C001', 'U001', 1),
-    ('O240101002', '描述2', NOW(), 'C002', 'U001', 1),
-    ('O240101003', '描述3', NOW(), 'C003', 'U001', 1);
+#### 分配流程：
 
--- 为每个工单分配维修人员
-UPDATE ServiceOrder so
-JOIN (
-    SELECT 
-        so.order_id,
-        (SELECT user_id FROM Worker WHERE availability_status = 1 ORDER BY RAND() LIMIT 1) as assigned_worker
-    FROM ServiceOrder so
-    WHERE so.order_id IN ('O240101001', 'O240101002', 'O240101003')
-) assignments ON so.order_id = assignments.order_id
-SET so.worker_id = assignments.assigned_worker, so.status = 2;
+1. **工单创建** → 立即触发分配尝试
+2. **无可用人员** → 工单保持 `PENDING_ASSIGNMENT` 状态
+3. **后台处理器** → 定期扫描待分配工单
+4. **优先级排序** → 加急工单优先分配
+5. **随机选择** → 从可用维修人员中随机选择
+6. **状态更新** → 工单状态变为 `ASSIGNED`，维修人员变为 `BUSY`
+7. **失效检测** → 超时未接受的分配自动重置
 
--- 更新维修人员状态
-UPDATE Worker 
-SET availability_status = 2 
-WHERE user_id IN (
-    SELECT DISTINCT worker_id FROM ServiceOrder 
-    WHERE order_id IN ('O240101001', 'O240101002', 'O240101003')
-);
+#### 技术优势：
 
-COMMIT;
-```
+- **高可用性**：即使即时分配失败，后台处理器确保最终分配
+- **负载均衡**：随机分配策略避免工作负载集中
+- **自动恢复**：失效分配自动重置，确保工单不会丢失
+- **优先级支持**：加急工单得到优先处理
+- **监控友好**：提供详细的分配统计和状态信息
 
-### 6.2 数据变更历史追踪
-
-通过审计装饰器实现的数据变更追踪：
-
-```python
-# 审计装饰器的实际实现核心逻辑
-def _execute_with_audit(func: Callable, table_name: str, operation: str, *args, **kwargs):
-    """Core audit execution logic - separated for clarity"""
-    # 验证session
-    db = args[0] if args else kwargs.get('db')
-    if not isinstance(db, Session):
-        raise ValueError("db is not a valid session")
-    
-    # 提取上下文
-    context = kwargs.get('audit_context') or kwargs.get('context')
-    
-    # 执行前: 获取更新操作的旧数据
-    old_data = None
-    if operation == "UPDATE":
-        record_id = SimpleIdExtractor.extract_id(table_name, *args, **kwargs)
-        if record_id:
-            old_data = _get_old_data(db, table_name, record_id)
-    
-    # 执行原始函数
-    result = func(*args, **kwargs)
-    
-    # 执行后: 记录变更
-    try:
-        _args = args[1:]    
-        _kwargs = kwargs.copy()
-        _kwargs.pop('db', None)
-        _log_audit_change(db, table_name, operation, old_data, result, context, *_args, **_kwargs)
-    except Exception as e:
-        # 不要因为审计失败而影响业务操作
-        print(f"Audit logging failed: {e}")
-    
-    return result
-
-@audit("Order", "UPDATE")
-def update_order_status(db: Session, order_id: str, new_status: int, audit_context=None) -> Order:
-    """Update the status of an order"""
-    # 装饰器自动在执行前记录旧数据，执行后记录新数据
-    valid_statuses = [OrderStatus.PENDING_ASSIGNMENT, OrderStatus.IN_PROGRESS, OrderStatus.COMPLETED]
-    if new_status not in valid_statuses:
-        raise ValueError(f"Invalid status: {new_status}")
-    
-    return order.update_order_status(db, order_id=order_id, new_status=new_status)
-```
-
-**等价SQL实现：**
-```sql
--- 手动记录变更历史的存储过程
-DELIMITER $$
-CREATE PROCEDURE UpdateOrderWithAudit(
-    IN p_order_id VARCHAR(10), 
-    IN p_new_status INT,
-    IN p_user_id VARCHAR(10)
-)
-BEGIN
-    DECLARE v_old_status INT;
-    DECLARE v_old_end_time TIMESTAMP;
-    
-    -- 获取变更前数据
-    SELECT status, end_time INTO v_old_status, v_old_end_time
-    FROM ServiceOrder 
-    WHERE order_id = p_order_id;
-    
-    -- 执行更新
-    UPDATE ServiceOrder 
-    SET status = p_new_status,
-        end_time = CASE WHEN p_new_status = 4 THEN NOW() ELSE end_time END
-    WHERE order_id = p_order_id;
-    
-    -- 记录审计日志
-    INSERT INTO AuditLog (
-        log_id, table_name, record_id, operation,
-        old_data, new_data, changed_by, changed_at
-    ) VALUES (
-        UUID(), 'ServiceOrder', p_order_id, 'UPDATE',
-        JSON_OBJECT('status', v_old_status, 'end_time', v_old_end_time),
-        JSON_OBJECT('status', p_new_status, 'end_time', 
-                   CASE WHEN p_new_status = 4 THEN NOW() ELSE v_old_end_time END),
-        p_user_id, NOW()
-    );
-END$$
-DELIMITER ;
-```
-
-## 七、系统特色功能说明
-
-### 7.1 智能工单分配算法
-
-我们的系统实现了自动工单分配功能，当客户提交维修申请时，系统会：
-
-1. **自动触发分配**：通过 `AutoAssignmentService.trigger_assignment()`
-2. **检查可用维修人员**：查询 `availability_status = AVAILABLE` 的工人
-3. **随机分配策略**：当前使用随机选择，可扩展为按技能匹配
-4. **状态自动更新**：同时更新工单状态和维修人员可用性
-
-### 7.2 实时数据一致性保证
+### 6.2 实时数据一致性保证
 
 通过服务层模式确保数据操作的原子性：
 
