@@ -55,10 +55,8 @@
         carApi.getCars(),
         ordersApi.getOrders({ status: 0 })
       ])
-      carCount.value = carsRes.data?.results?.length || 0
-      pendingOrders.value = ordersRes.data?.results?.filter(
-        order => order.status === 0
-      ).length || 0
+      carCount.value = carsRes.data?.length || 0
+      pendingOrders.value = ordersRes.data?.results?.length || 0
     } catch (error) {
       console.error('获取仪表盘数据失败:', error)
     }

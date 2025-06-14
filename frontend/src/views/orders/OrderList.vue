@@ -81,6 +81,22 @@ const pageSize = ref(10)
 const currentPage = ref(1)
 const filterStatus = ref('all')
 
+// 添加状态映射关系
+const statusMap = {
+  pending: 0,
+  processing: 1,
+  completed: 2,
+  cancelled: 3
+}
+
+// 反向映射用于显示
+const reverseStatusMap = {
+  0: 'pending',
+  1: 'processing',
+  2: 'completed',
+  3: 'cancelled'
+}
+
 const statusOptions = [
   { value: 'all', label: '全部状态' },
   { value: 'pending', label: '待处理' },
@@ -109,12 +125,16 @@ const fetchOrders = async () => {
     const params = {
       page: currentPage.value,
       page_size: pageSize.value,
-      status: filterStatus.value === 'all' ? undefined : filterStatus.value
+      status_filter: filterStatus.value === 'all' ? undefined : statusMap[filterStatus.value]
     }
     
     const response = await ordersAPI.getOrders(params)
-    orderList.value = response.data.items
-    total.value = response.data.total
+    // 添加状态映射转换
+orderList.value = response.data.map(order => ({
+  ...order,
+  displayStatus: reverseStatusMap[order.status] || 'unknown'
+}))
+    total.value = response.data.length
   } catch (error) {
     ElMessage.error('获取订单列表失败')
   } finally {
