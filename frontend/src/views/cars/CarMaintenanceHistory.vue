@@ -35,7 +35,7 @@
   import { ref, onMounted, computed } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { ElMessage } from 'element-plus'
-  import { getMaintenanceHistory } from '@/api/cars'
+  import carsAPI from '@/api/cars'
   
   const route = useRoute()
   const router = useRouter()
@@ -69,7 +69,7 @@
       }
       
       // 调用API获取维护历史
-      const response = await getMaintenanceHistory(carId.value, params)
+      const response = await carsAPI.getMaintenanceHistory(carId.value, params)
       history.value = response.data.items || []
       totalItems.value = response.data.total || 0
     } catch (error) {

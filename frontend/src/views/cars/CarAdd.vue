@@ -42,7 +42,7 @@
   import { ref, onMounted } from 'vue'
   import { useRouter } from 'vue-router'
   import { ElMessage } from 'element-plus'
-  import { getCarTypes, createCar } from '@/api/cars'
+  import carsAPI from '@/api/cars'
   
   const router = useRouter()
   const carForm = ref(null)
@@ -70,7 +70,7 @@
   // 获取车辆类型列表
   const fetchCarTypes = async () => {
     try {
-      const response = await getCarTypes()
+      const response = await carsAPI.getCarTypes()
       carTypes.value = response.data
     } catch (error) {
       ElMessage.error('获取车辆类型失败: ' + error.message)
@@ -84,7 +84,7 @@
       loading.value = true
       
       // 调用API创建新车
-      await createCar(form.value)
+      await carsAPI.createCar(form.value)
       ElMessage.success('车辆添加成功')
       navigateTo('/dashboard/customer/cars')
     } catch (error) {

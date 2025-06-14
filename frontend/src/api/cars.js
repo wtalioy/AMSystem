@@ -18,8 +18,8 @@ export default {
   // 创建车辆
   async createCar(carData) {
     return axios.post(`${API_BASE}/cars/`, {
-      car_id: carData.carId,
-      car_type: carData.carType
+      car_type: carData.car_type,
+      car_id: carData.car_id
     })
   },
 

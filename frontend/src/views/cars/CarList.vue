@@ -11,7 +11,12 @@
       </el-button>
     </div>
     
-    <el-table :data="carList" style="width: 100%" v-loading="loading">
+    <el-table 
+      :data="carList" 
+      style="width: 100%" 
+      v-loading="loading"
+      empty-text="暂无车辆数据，点击按钮添加新车"
+    >
       <el-table-column prop="car_id" label="车牌号" width="150" />
       <el-table-column prop="car_type" label="车辆类型" />
       <el-table-column label="操作" width="180">
@@ -33,8 +38,7 @@
       </el-table-column>
     </el-table>
 
-    <!-- ✅ 添加 router-view 用于加载 add / :id 页面 -->
-    <router-view></router-view>
+    
   </div>
 </template>
 
@@ -42,7 +46,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import carAPI from '@/api/cars' // 假设有封装好的axios实例
+import carAPI from '@/api/cars'
 
 const router = useRouter()
 const carList = ref([])
@@ -55,11 +59,13 @@ const navigateTo = (path) => {
 const fetchCars = async () => {
   try {
     loading.value = true
-    // 调用API获取车辆列表
-    const response = await carAPI.getCars()
-    carList.value = response.data
+    const { data } = await carAPI.getCars()
+    carList.value = data
   } catch (error) {
-    ElMessage.error('获取车辆列表失败: ' + error.message)
+    ElMessage.error({
+      message: '加载车辆失败: ' + error.response?.data?.detail || error.message,
+      duration: 3000
+    })
   } finally {
     loading.value = false
   }
@@ -67,19 +73,21 @@ const fetchCars = async () => {
 
 const handleDelete = async (carId) => {
   try {
-    await ElMessageBox.confirm('确定要删除这辆车吗？', '警告', {
-      confirmButtonText: '确定',
+    await ElMessageBox.confirm('此操作将永久删除该车辆，是否继续？', '警告', {
+      confirmButtonText: '确认',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      distinguishCancelAndClose: true
     })
-    
-    // 调用API删除车辆
+
     await carAPI.deleteCar(carId)
     ElMessage.success('车辆删除成功')
-    await fetchCars() // 重新加载列表
+    await fetchCars()
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败: ' + error.message)
+    if (error === 'cancel') {
+      ElMessage.info('已取消删除')
+    } else {
+      ElMessage.error(`删除失败: ${error.message}`)
     }
   }
 }
