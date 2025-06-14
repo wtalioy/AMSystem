@@ -6,11 +6,12 @@
         <el-select v-model="form.car_id" placeholder="请选择车辆">
           <el-option
             v-for="car in cars"
-            :key="car.id"
-            :label="car.license"
-            :value="car.id"
+            :key="car.car_id"
+            :label="car.car_id"
+            :value="car.car_id"
           />
         </el-select>
+        <p v-if="cars.length === 0">暂无车辆信息，请先添加车辆</p>
       </el-form-item>
 
       <el-form-item label="预约时间" required>
@@ -41,7 +42,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/store/authStore'
 import ordersApi from '@/api/orders'  // 新增API导入
 import { ElMessage } from 'element-plus'  // 新增消息提示
 import carsAPI from '@/api/cars'  // 新增导入
@@ -50,7 +50,6 @@ import carsAPI from '@/api/cars'  // 新增导入
 
 const router = useRouter()
 const loading = ref(true)
-const authStore = useAuthStore()
 const cars = ref([])
 const form = ref({
   car_id: null,
@@ -80,11 +79,8 @@ const submitForm = async () => {
 const fetchCars = async () => {
   try {
     loading.value = true
-    // 更规范的响应解构（假设接口返回分页数据）
-    const response = await carsAPI.getCars()
-    
-    // 根据接口实际返回结构调整（假设返回 data.data）
-    cars.value = response.data.data || []
+    const {data} = await carsAPI.getCars()
+    cars.value = data
   } catch (error) {
     ElMessage.error({
       message: '加载失败: ' + (error.response?.data?.detail || error.message),
@@ -97,8 +93,7 @@ const fetchCars = async () => {
 
 const resetForm = () => {
   form.value = {
-    carId: null,
-    services: [],
+    car_id: null,
     appointment: null,
     description: ''
   }
