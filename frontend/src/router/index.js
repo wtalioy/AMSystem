@@ -98,7 +98,7 @@ const routes = [
     {
       path: 'admin',
       component: () => import('@/views/dashboard/Admin.vue'),
-      meta: { role: 'admin' },
+      meta: { role: 'administrator' },
       children: [
         { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
         { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
