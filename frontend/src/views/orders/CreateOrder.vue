@@ -3,7 +3,7 @@
     <h2>新建维修订单</h2>
     <el-form :model="form" label-width="120px" ref="formRef">
       <el-form-item label="选择车辆" required>
-        <el-select v-model="form.carId" placeholder="请选择车辆">
+        <el-select v-model="form.car_id" placeholder="请选择车辆">
           <el-option
             v-for="car in cars"
             :key="car.id"
@@ -13,19 +13,11 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="服务类型" required>
-        <el-checkbox-group v-model="form.services">
-          <el-checkbox label="保养"></el-checkbox>
-          <el-checkbox label="维修"></el-checkbox>
-          <el-checkbox label="检测"></el-checkbox>
-        </el-checkbox-group>
-      </el-form-item>
-
       <el-form-item label="预约时间" required>
         <el-date-picker
           v-model="form.appointment"
           type="datetime"
-          placeholder="选择预约时间"
+          placeholder="填写预约时间"
         />
       </el-form-item>
 
@@ -52,25 +44,25 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
 import ordersApi from '@/api/orders'  // 新增API导入
 import { ElMessage } from 'element-plus'  // 新增消息提示
+import carsAPI from '@/api/cars'  // 新增导入
 
 // ... 已有代码保持不变 ...
 
 const router = useRouter()
+const loading = ref(true)
 const authStore = useAuthStore()
 const cars = ref([])
 const form = ref({
-  carId: null,
-  services: [],
+  car_id: null,
   appointment: null,
   description: ''
 })
 
 
-
 const submitForm = async () => {
   try {
     const payload = {
-      car_id: form.value.carId,
+      car_id: form.value.car_id,
       description: form.value.description,
       start_time: form.value.appointment
     }
@@ -84,6 +76,24 @@ const submitForm = async () => {
   }
 }
 
+//获取车辆信息
+const fetchCars = async () => {
+  try {
+    loading.value = true
+    // 更规范的响应解构（假设接口返回分页数据）
+    const response = await carsAPI.getCars()
+    
+    // 根据接口实际返回结构调整（假设返回 data.data）
+    cars.value = response.data.data || []
+  } catch (error) {
+    ElMessage.error({
+      message: '加载失败: ' + (error.response?.data?.detail || error.message),
+      duration: 3000
+    })
+  } finally {
+    loading.value = false
+  }
+}
 
 const resetForm = () => {
   form.value = {

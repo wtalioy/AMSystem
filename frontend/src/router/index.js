@@ -73,24 +73,54 @@ const routes = [
       ]
     },
 
-    // 技师专属路由
     {
       path: 'worker',
       component: () => import('@/views/dashboard/Worker.vue'),
       meta: { role: 'worker' },
       children: [
-        { path: 'orders', component: () => import('@/views/worker/MyOrders.vue') },
-        { path: 'orders/pending', component: () => import('@/views/worker/PendingOrders.vue') },
-        { path: 'logs', component: () => import('@/views/worker/WorkLogs.vue') },
+        // 👇 默认子路由：工人欢迎页
+        { 
+          path: '', 
+          component: () => import('@/views/dashboard/WorkerWelcome.vue'),
+          name: 'WorkerDashboard'
+        },
+        
+        // 订单相关
+        { 
+          path: 'orders', 
+          component: () => import('@/views/worker/MyOrders.vue'),
+          name: 'WorkerOrders'
+        },
+        { 
+          path: 'orders/pending', 
+          component: () => import('@/views/worker/PendingOrders.vue'),
+          name: 'PendingOrders'
+        },
         {
           path: 'orders/:order_id/procedures',
-          component: () => import('@/views/orders/OrderProcedures.vue'), // 👈 创建这个新页面
-          meta: { role: 'worker' }
+          component: () => import('@/views/orders/OrderProcedures.vue'),
+          name: 'OrderProcedures',
+          props: true
         },
-         // 收入历史
-    { path: 'earnings', component: () => import('@/views/worker/EarningsHistory.vue') },
-    { path: 'earnings/monthly', component: () => import('@/views/worker/MonthlyEarnings.vue') },
-
+        
+        // 收入相关
+        { 
+          path: 'earnings', 
+          component: () => import('@/views/worker/EarningsHistory.vue'),
+          name: 'EarningsHistory'
+        },
+        { 
+          path: 'earnings/monthly', 
+          component: () => import('@/views/worker/MonthlyEarnings.vue'),
+          name: 'MonthlyEarnings'
+        },
+        
+        // 工作日志
+        { 
+          path: 'logs', 
+          component: () => import('@/views/worker/WorkLogs.vue'),
+          name: 'WorkLogs'
+        }
       ]
     },
 
