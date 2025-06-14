@@ -47,13 +47,6 @@ const navigateTo = (path) => {
 
 onMounted(async () => {
   userName.value = authStore.user?.name || '技师'
-  try {
-    const res = await workerOrdersAPI.getDashboardStats()
-    pendingOrders.value = res.pending
-    completedOrders.value = res.completed
-  } catch (error) {
-    console.error('获取仪表盘数据失败:', error)
-  }
 })
 </script>
 

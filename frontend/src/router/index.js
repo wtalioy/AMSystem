@@ -130,9 +130,21 @@ const routes = [
       component: () => import('@/views/dashboard/Admin.vue'),
       meta: { role: 'administrator' },
       children: [
+        { path: '', component: () => import('@/views/dashboard/AdminWelcome.vue') },
+    
+        // 用户与工资管理
         { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
         { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
-        { path: 'stats/cars', component: () => import('@/views/admin/CarStatistics.vue') }
+    
+        // 各类统计页面
+        { path: 'stats/orders', component: () => import('@/views/admin/OrderStatistics.vue') },
+        { path: 'stats/cars', component: () => import('@/views/admin/CarStatistics.vue') },
+        { path: 'stats/failures', component: () => import('@/views/admin/FailurePatterns.vue') },
+        { path: 'stats/costs', component: () => import('@/views/admin/CostAnalysis.vue') },
+        { path: 'stats/feedback', component: () => import('@/views/admin/NegativeFeedback.vue') },
+        { path: 'stats/productivity', component: () => import('@/views/admin/WorkerProductivity.vue') },
+        { path: 'stats/workers', component: () => import('@/views/admin/WorkerStatistics.vue') },
+        { path: 'stats/incomplete-orders', component: () => import('@/views/admin/IncompleteOrders.vue') }
       ]
     }
   ]

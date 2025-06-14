@@ -1,8 +1,8 @@
 <template>
     <div>
-      <h2>车辆统计</h2>
-      <el-table :data="cars" style="width: 100%">
-        <el-table-column prop="brand" label="品牌"/>
+      <h2>订单统计</h2>
+      <el-table :data="orders" style="width: 100%">
+        <el-table-column prop="status" label="订单状态"/>
         <el-table-column prop="count" label="数量"/>
       </el-table>
     </div>
@@ -12,16 +12,16 @@
   import { ref, onMounted } from 'vue'
   import statsAPI from '@/api/adminStats'
   
-  const cars = ref([])
+  const orders = ref([])
   
   onMounted(async () => {
-    const res = await statsAPI.getCarStatistics()
-    cars.value = res.data || []
+    const res = await statsAPI.getOrderStatistics()
+    orders.value = res.data || []
   })
   </script>
   
   <style scoped>
-  .car-statistics {
+  .order-statistics {
     padding: 20px;
   }
   </style>
