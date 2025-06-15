@@ -10,7 +10,6 @@ from app.schemas import (
     User,
     OrderToAdmin,
     CarTypeStatistics,
-    VehicleFailurePattern,
     CostAnalysisByPeriod,
     NegativeFeedbackAnalysis,
     WorkerProductivityAnalysis,
@@ -48,17 +47,6 @@ def get_car_statistics(
     Get statistics about car types, repairs, and costs
     """
     return AdminService.get_car_type_statistics(db)
-
-
-@router.get("/vehicles/failure-patterns", response_model=List[VehicleFailurePattern])
-def get_vehicle_failure_patterns(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_admin),
-) -> Any:
-    """
-    Analyze most common failure types by vehicle type
-    """
-    return AdminService.get_vehicle_failure_patterns(db)
 
 
 @router.get("/costs/analysis", response_model=CostAnalysisByPeriod)

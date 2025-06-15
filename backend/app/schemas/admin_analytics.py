@@ -16,17 +16,6 @@ class PeriodCostBreakdown(BaseModel):
         from_attributes = True
 
 
-class VehicleFailurePattern(BaseModel):
-    """Schema for vehicle failure pattern analysis"""
-    car_type: str
-    total_repairs: int
-    common_issues: List[str]
-    repair_frequency: int
-
-    class Config:
-        from_attributes = True
-
-
 class CostAnalysisByPeriod(BaseModel):
     """Schema for cost analysis by time period"""
     period_start: str  # ISO format datetime

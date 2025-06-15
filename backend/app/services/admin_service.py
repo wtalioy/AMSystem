@@ -3,11 +3,10 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from app.dbrm import Session
 
-from app.crud import car, order, log, user, procedure, distribute, worker, wage
+from app.crud import car, order, log, procedure, distribute, worker, wage
 from app.schemas import (
     Distribute, Order, DistributeCreate,
     PeriodCostBreakdown,
-    VehicleFailurePattern,
     CostAnalysisByPeriod,
     LowRatedOrderData,
     WorkerPerformanceSummary,
@@ -69,30 +68,6 @@ class AdminService:
             )
             result.append(stats)
 
-        return result
-
-
-    @staticmethod
-    def get_vehicle_failure_patterns(db: Session) -> List[VehicleFailurePattern]:
-        """
-        Analyze most common failure types by vehicle type
-        """
-        # Get all car types
-        car_types = car.get_all_car_types(db)
-        
-        result = []
-        for car_type, in car_types:
-            # Get most common descriptions/issues for this car type
-            failure_patterns = order.get_failure_patterns_by_car_type(db, car_type)
-            
-            pattern = VehicleFailurePattern(
-                car_type=car_type,
-                total_repairs=len(failure_patterns),
-                common_issues=failure_patterns[:5],  # Top 5 most common
-                repair_frequency=order.count_orders_by_car_type(db, car_type)
-            )
-            result.append(pattern)
-        
         return result
 
 
@@ -236,10 +211,10 @@ class AdminService:
         else:
             end_dt = datetime.now()
         
-        worker_types = user.get_all_worker_types(db)
+        worker_types = worker.get_all_worker_types(db)
         
         result = []
-        for worker_type, in worker_types:
+        for worker_type in worker_types:
             # Get productivity metrics for this worker type
             completion_rate = order.get_completion_rate_by_worker_type(db, worker_type, start_dt, end_dt)
             avg_completion_time = order.get_average_completion_time_by_worker_type(db, worker_type, start_dt, end_dt)
