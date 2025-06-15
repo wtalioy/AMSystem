@@ -54,7 +54,7 @@ class AdminService:
         car_types = car.get_all_car_types(db)
 
         result = []
-        for car_type, in car_types:
+        for car_type in car_types:
             car_count = car.count_cars_by_type(db, car_type)
             order_count = order.count_orders_by_car_type(db, car_type)
             avg_cost = log.calculate_avg_cost_by_car_type(db, car_type)
