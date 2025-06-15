@@ -179,7 +179,7 @@ class Select:
         return self
     
     def group_by(self, *columns):
-        columns = [f"{col.parent.__tablename__}.{col.name}" for col in columns if hasattr(col, 'parent')]
+        columns = [str(col) for col in columns]
         self.group_by_columns.extend(columns)
         return self
     
@@ -252,7 +252,7 @@ class Select:
         sql = self.build()
         return session.execute(sql)
         
-    def first(self, session=None):
+    def first(self, session=None, to_model=True):
         session = session or self._session
         if not session:
             raise ValueError("No session provided for query execution")
@@ -263,18 +263,18 @@ class Select:
         if not row:
             return None
             
-        if self._model_class and hasattr(self._model_class, '_from_row'):
+        if to_model and self._model_class and hasattr(self._model_class, '_from_row'):
             return self._model_class._from_row(row)
         return row
         
-    def all(self, session=None):
+    def all(self, session=None, to_model=True):
         session = session or self._session
         if not session:
             raise ValueError("No session provided for query execution")
         self.execute(session)
         rows = session.fetchall()
         
-        if self._model_class and hasattr(self._model_class, '_from_row'):
+        if to_model and self._model_class and hasattr(self._model_class, '_from_row'):
             return [self._model_class._from_row(row) for row in rows]
         return rows
     

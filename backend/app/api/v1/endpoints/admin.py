@@ -38,7 +38,7 @@ def get_orders(
     )
 
 
-@router.get("/cars", response_model=List[CarTypeStatistics])
+@router.get("/car-statistics", response_model=List[CarTypeStatistics])
 def get_car_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin),

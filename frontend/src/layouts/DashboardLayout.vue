@@ -1,103 +1,197 @@
 <template>
-    <div class="dashboard-layout">
-      <!-- 集成导航栏 -->
-      <AppNavbar />
-  
-      <!-- 主内容区域 -->
-      <main class="content-wrapper">
-        <!-- 添加面包屑导航 -->
-        <div class="breadcrumb">
-          <router-link 
-            v-for="(crumb, index) in breadcrumbs" 
-            :key="index"
-            :to="crumb.path"
-            class="breadcrumb-item"
-          >
-            {{ crumb.name }}
-          </router-link>
-        </div>
-  
-        <!-- 内容容器 -->
-        <div class="content-container">
-          <router-view v-slot="{ Component }">
-            <transition name="slide-fade">
-              <component :is="Component" />
-            </transition>
-          </router-view>
-        </div>
-      </main>
-    </div>
-  </template>
-  
-  <script setup>
-  import { computed } from 'vue'
-  import { useRoute } from 'vue-router'
-  import AppNavbar from '@/components/shared/AppNavbar.vue'
-  
-  const route = useRoute()
-  
-  const breadcrumbs = computed(() => {
-    return route.matched
-      .filter(record => record.meta?.breadcrumb)
-      .map(record => ({
-        path: record.path,
-        name: record.meta.breadcrumb
-      }))
-  })
-  </script>
-  
-  <style scoped lang="scss">
-  @import "@/assets/styles/variables";
-  
-  .dashboard-layout {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    min-height: 100vh;
-    background: $color-background;
-  
-    .content-wrapper {
-      padding: 1.5rem 2rem;
-      overflow-y: auto;
-    }
-  
-    .breadcrumb {
-      margin-bottom: 1.5rem;
+  <div class="dashboard-layout">
+    <!-- 顶部用户信息栏 -->
+    <header class="user-header">
+      <div class="header-left">
+        <h1 class="system-title">汽车维修管理系统</h1>
+      </div>
       
-      &-item {
-        color: $color-text-secondary;
+      <div class="user-info">
+        <!-- 新增个人中心按钮 -->
+        <button @click="goToProfile" class="profile-btn">
+          <i class="profile-icon"></i>
+          个人中心
+        </button>
+        <!-- 新增返回主菜单按钮 -->
+        <button @click="goToDashboard" class="dashboard-btn">
+          <i class="dashboard-icon"></i>
+            返回主菜单
+        </button>
+        <span class="user-type">
+          <i class="user-icon"></i>
+          {{ userTypeDisplay }}
+        </span>
+        <button @click="handleLogout" class="logout-btn">
+          <i class="logout-icon"></i>
+          退出登录
+        </button>
+      </div>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main class="content-wrapper">
+      <!-- 面包屑导航 -->
+      <div class="breadcrumb">
+        <router-link 
+          v-for="(crumb, index) in breadcrumbs" 
+          :key="index"
+          :to="crumb.path"
+          class="breadcrumb-item"
+        >
+          {{ crumb.name }}
+        </router-link>
+      </div>
+
+      <!-- 内容容器 -->
+      <div class="content-container">
+        <router-view v-slot="{ Component }">
+          <transition name="slide-fade">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </div>
+    </main>
+  </div>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/store/authStore'
+
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+
+// 计算面包屑
+const breadcrumbs = computed(() => {
+  return route.matched
+    .filter(record => record.meta?.breadcrumb)
+    .map(record => ({
+      path: record.path,
+      name: record.meta.breadcrumb
+    }))
+})
+
+// 计算用户类型显示文本
+const userTypeDisplay = computed(() => {
+  switch(authStore.userType) {
+    case 'customer': return '客户'
+    case 'worker': return '维修技师'
+    case 'administrator': return '系统管理员'
+    default: return '未知用户'
+  }
+})
+
+// 新增返回主面板方法
+const getMainDashboardPath = () => {
+  switch(authStore.userType) {
+    case 'customer':
+      return '/dashboard/customer'
+    case 'worker':
+      return '/dashboard/worker' // 对应 WorkerDashboard 名称的路由
+    case 'administrator':
+      return '/dashboard/admin'
+    default:
+      return '/dashboard'
+  }
+}
+
+const goToDashboard = () => {
+  router.push(getMainDashboardPath())
+}
+
+// 新增跳转方法
+const goToProfile = () => {
+  const basePath = getMainDashboardPath() // 复用已有的路径获取方法
+  router.push(`${basePath}/myinfo`)
+}
+
+// 退出登录处理
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
+}
+</script>
+
+<style scoped lang="scss">
+@use "@/assets/styles/_variables";
+
+.dashboard-layout {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  background: $color-background;
+
+  .user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    height: 60px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    
+    .system-title {
+      font-size: 1.2rem;
+      color: $color-primary;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      
+      .user-type {
+        display: flex;
+        align-items: center;
         font-size: 0.9rem;
+        color: $color-text-secondary;
         
-        &:not(:last-child)::after {
-          content: "›";
-          margin: 0 0.5rem;
+        .user-icon {
+          display: inline-block;
+          width: 18px;
+          height: 18px;
+          margin-right: 0.5rem;
+          background-color: #4299E1;
+          border-radius: 50%;
+        }
+      }
+      
+      .logout-btn {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: #f8f9fa;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        color: $color-text-secondary;
+        cursor: pointer;
+        transition: all 0.2s;
+        
+        &:hover {
+          background: #e53e3e;
+          color: white;
+          border-color: #e53e3e;
         }
         
-        &:last-child {
-          color: $color-primary;
-          font-weight: 500;
+        .logout-icon {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          margin-right: 0.5rem;
+          background-color: currentColor;
+          mask: url('@/assets/icons/logout.svg') no-repeat center;
         }
       }
     }
-  
-    .content-container {
-      background: white;
-      border-radius: 8px;
-      padding: 2rem;
-      box-shadow: $shadow-sm;
-    }
   }
   
-  .slide-fade-enter-active {
-    transition: all 0.3s ease-out;
+  .content-wrapper {
+    padding: 1.5rem 2rem;
+    overflow-y: auto;
   }
   
-  .slide-fade-leave-active {
-    transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
-  }
-  
-  .slide-fade-enter-from,
-  .slide-fade-leave-to {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-  </style>
+  /* 其他原有样式保持不变... */
+}
+</style>

@@ -15,9 +15,6 @@ router = APIRouter()
 def get_change_summary(
     *,
     db: Session = Depends(get_db),
-    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: Admin = Depends(deps.get_current_admin),
 ) -> Any:
     """
     Get summary of changes in a date range (Admin only)

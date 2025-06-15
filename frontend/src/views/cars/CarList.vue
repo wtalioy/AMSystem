@@ -1,51 +1,119 @@
 <template>
   <div class="car-management">
-    <h2>我的车辆</h2>
-    <el-button type="primary" @click="navigateTo('/dashboard/customer/cars/add')">添加新车</el-button>
-    <el-table :data="cars" style="width: 100%" v-loading="loading">
-      <el-table-column prop="license" label="车牌号" />
-      <el-table-column prop="brand" label="品牌" />
-      <el-table-column prop="model" label="型号" />
-      <el-table-column label="操作">
+    <div class="header-with-actions">
+      <h2>我的车辆</h2>
+      <el-button 
+      type="info" 
+      icon="el-icon-arrow-left"
+      @click="navigateTo('/dashboard/customer')"
+      style="margin-right: 10px;"
+    >
+      返回主面板
+    </el-button>
+      <el-button 
+        type="primary" 
+        icon="el-icon-plus" 
+        @click="navigateTo('/dashboard/customer/cars/add')"
+      >
+        添加新车
+      </el-button>
+    </div>
+    
+    <el-table 
+      :data="carList" 
+      style="width: 100%" 
+      v-loading="loading"
+      empty-text="暂无车辆数据，点击按钮添加新车"
+    >
+      <el-table-column prop="car_id" label="车牌号" width="150" />
+      <el-table-column prop="car_type" label="车辆类型" />
+      <el-table-column label="操作" width="180">
         <template #default="scope">
-          <el-button @click="navigateTo(`/dashboard/customer/cars/${scope.row.id}`)">详情</el-button>
+          <el-button 
+            size="small" 
+            @click="navigateTo(`/dashboard/customer/cars/${scope.row.car_id}`)"
+          >
+            详情
+          </el-button>
+          <el-button 
+            size="small" 
+            type="danger" 
+            @click="handleDelete(scope.row.car_id)"
+          >
+            删除
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
+
+    
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/store/authStore'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import carAPI from '@/api/cars'
 
 const router = useRouter()
-const authStore = useAuthStore()
-const cars = ref([])
+const carList = ref([])
 const loading = ref(true)
 
 const navigateTo = (path) => {
   router.push(path)
 }
 
-onMounted(async () => {
+const fetchCars = async () => {
   try {
-    // TODO: 调用后端API获取车辆列表
-    cars.value = [
-      { id: 1, license: '沪A12345', brand: '丰田', model: '凯美瑞' },
-      { id: 2, license: '沪B67890', brand: '本田', model: '雅阁' }
-    ]
+    loading.value = true
+    const { data } = await carAPI.getCars()
+    carList.value = data
   } catch (error) {
-    console.error('获取车辆列表失败:', error)
+    ElMessage.error({
+      message: '加载车辆失败: ' + error.response?.data?.detail || error.message,
+      duration: 3000
+    })
   } finally {
     loading.value = false
   }
+}
+
+const handleDelete = async (carId) => {
+  try {
+    await ElMessageBox.confirm('此操作将永久删除该车辆，是否继续？', '警告', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'warning',
+      distinguishCancelAndClose: true
+    })
+
+    await carAPI.deleteCar(carId)
+    ElMessage.success('车辆删除成功')
+    await fetchCars()
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消删除')
+    } else {
+      ElMessage.error(`删除失败: ${error.message}`)
+    }
+  }
+}
+
+onMounted(() => {
+  fetchCars()
 })
 </script>
 
 <style scoped>
 .car-management {
   padding: 20px;
+}
+
+.header-with-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 </style>

@@ -144,6 +144,26 @@ class Function:
         """Create arithmetic expression: func.arithmetic(column, '/', 3)"""
         return ArithmeticExpression(left, operator, right)
     
+    def sum(self, column):
+        """SUM function: func.sum(column)"""
+        return FunctionExpression("SUM", column)
+    
+    def count(self, column):
+        """COUNT function: func.count(column)"""
+        return FunctionExpression("COUNT", column)
+    
+    def avg(self, column):
+        """AVG function: func.avg(column)"""
+        return FunctionExpression("AVG", column)
+    
+    def max(self, column):
+        """MAX function: func.max(column)"""
+        return FunctionExpression("MAX", column)
+    
+    def min(self, column):
+        """MIN function: func.min(column)"""
+        return FunctionExpression("MIN", column)
+    
     def __getattr__(self, name):
         def function_generator(col, *args):
             if args:

@@ -3,29 +3,22 @@
     <h2>新建维修订单</h2>
     <el-form :model="form" label-width="120px" ref="formRef">
       <el-form-item label="选择车辆" required>
-        <el-select v-model="form.carId" placeholder="请选择车辆">
+        <el-select v-model="form.car_id" placeholder="请选择车辆">
           <el-option
             v-for="car in cars"
-            :key="car.id"
-            :label="car.license"
-            :value="car.id"
+            :key="car.car_id"
+            :label="car.car_id"
+            :value="car.car_id"
           />
         </el-select>
-      </el-form-item>
-
-      <el-form-item label="服务类型" required>
-        <el-checkbox-group v-model="form.services">
-          <el-checkbox label="保养"></el-checkbox>
-          <el-checkbox label="维修"></el-checkbox>
-          <el-checkbox label="检测"></el-checkbox>
-        </el-checkbox-group>
+        <p v-if="cars.length === 0">暂无车辆信息，请先添加车辆</p>
       </el-form-item>
 
       <el-form-item label="预约时间" required>
         <el-date-picker
           v-model="form.appointment"
           type="datetime"
-          placeholder="选择预约时间"
+          placeholder="填写预约时间"
         />
       </el-form-item>
 
@@ -49,44 +42,58 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/store/authStore'
+import ordersApi from '@/api/orders'  // 新增API导入
+import { ElMessage } from 'element-plus'  // 新增消息提示
+import carsAPI from '@/api/cars'  // 新增导入
+
+// ... 已有代码保持不变 ...
 
 const router = useRouter()
-const authStore = useAuthStore()
+const loading = ref(true)
 const cars = ref([])
 const form = ref({
-  carId: null,
-  services: [],
+  car_id: null,
   appointment: null,
   description: ''
 })
 
-const fetchCars = async () => {
-  try {
-    // TODO: 调用API获取用户车辆列表
-    cars.value = [
-      { id: 1, license: '沪A12345' },
-      { id: 2, license: '沪B67890' }
-    ]
-  } catch (error) {
-    console.error('获取车辆列表失败:', error)
-  }
-}
 
 const submitForm = async () => {
   try {
-    // TODO: 调用API创建订单
-    console.log('提交订单:', form.value)
-    router.push('/dashboard/customer')
+    const payload = {
+      car_id: form.value.car_id,
+      description: form.value.description,
+      start_time: form.value.appointment
+    }
+
+    await ordersApi.createOrder(payload)
+    ElMessage.success('订单创建成功')
+    router.push('/dashboard/customer/orders') // 或你跳转的目标页
   } catch (error) {
     console.error('订单创建失败:', error)
+    ElMessage.error('订单创建失败，请检查输入信息')
+  }
+}
+
+//获取车辆信息
+const fetchCars = async () => {
+  try {
+    loading.value = true
+    const {data} = await carsAPI.getCars()
+    cars.value = data
+  } catch (error) {
+    ElMessage.error({
+      message: '加载失败: ' + (error.response?.data?.detail || error.message),
+      duration: 3000
+    })
+  } finally {
+    loading.value = false
   }
 }
 
 const resetForm = () => {
   form.value = {
-    carId: null,
-    services: [],
+    car_id: null,
     appointment: null,
     description: ''
   }

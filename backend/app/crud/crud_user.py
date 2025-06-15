@@ -69,16 +69,20 @@ class CRUDUser:
         for field, value in obj_in.model_dump(exclude_unset=True).items():
             if hasattr(obj_old, field):
                 setattr(obj_old, field, value)
-
-        if hasattr(obj_old, "user_pwd"):
-            obj_old.user_pwd = get_password_hash(obj_old.user_pwd)
-
-        db_obj = UserModel(
-            user_id=obj_old.user_id,
-            user_name=obj_old.user_name,
-            user_pwd=obj_old.user_pwd,
-            user_type=obj_old.user_type
-        )
+        
+        if hasattr(obj_in, "user_pwd"):
+            db_obj = UserModel(
+                user_id=obj_old.user_id,
+                user_name=obj_old.user_name,
+                user_pwd=get_password_hash(obj_in.user_pwd),
+                user_type=obj_old.user_type
+            )
+        else:
+            db_obj = UserModel(
+                user_id=obj_old.user_id,
+                user_name=obj_old.user_name,
+                user_type=obj_old.user_type
+            )
         
         db.add(db_obj)
         db.commit()

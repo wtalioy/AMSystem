@@ -62,7 +62,7 @@ class CRUDDistribute:
         else:
             date_part = func.date_format(DistributeModel.distribute_time, '%Y-%m')
         
-        labor_query = db.query(date_part, func.sum(DistributeModel.amount)).where(
+        labor_query = db.query(date_part, func.sum(DistributeModel.amount)).filter(
             Condition.gte(DistributeModel.distribute_time, start_date),
             Condition.lte(DistributeModel.distribute_time, end_date)
         ).group_by(date_part)

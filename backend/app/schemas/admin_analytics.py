@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel
@@ -11,6 +11,17 @@ class PeriodCostBreakdown(BaseModel):
     labor_cost: float
     total_cost: float
     labor_material_ratio: float
+
+    class Config:
+        from_attributes = True
+
+
+class VehicleFailurePattern(BaseModel):
+    """Schema for vehicle failure pattern analysis"""
+    car_type: str
+    total_repairs: int
+    common_issues: List[str]
+    repair_frequency: int
 
     class Config:
         from_attributes = True
