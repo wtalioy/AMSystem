@@ -4,7 +4,7 @@ const API_BASE = 'http://localhost:8000/api/v1'
 
 export default {
   // 1. 获取订单列表（带分页与状态过滤）
-  async getOrders({ page = 1, page_size = 20, status_filter = null } = {}) {
+  async getOrderStatistics({ page = 1, page_size = 20, status_filter = null } = {}) {
     return axios.get(`${API_BASE}/admin/orders`, {
       params: { page, page_size, status_filter }
     })

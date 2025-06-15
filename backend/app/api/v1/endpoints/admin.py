@@ -34,7 +34,7 @@ def get_orders(
     skip = (page - 1) * page_size
     
     return OrderService.get_all_orders(
-        db=db, skip=skip, limit=page_size, status=status_filter
+        db=db, skip=skip, limit=page_size
     )
 
 
