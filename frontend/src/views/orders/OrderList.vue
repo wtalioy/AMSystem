@@ -23,10 +23,10 @@
     >
       <el-table-column prop="order_id" label="订单号" width="180" />
       <el-table-column prop="car_id" label="车牌号" width="150" />
-      <el-table-column prop="status" label="状态" width="120">
+      <el-table-column prop="displayStatus" label="状态" width="120">
         <template #default="scope">
-          <el-tag :type="statusTagType(scope.row.status)">
-            {{ scope.row.status }}
+          <el-tag :type="statusTagType(scope.row.displayStatus)">
+            {{ scope.row.displayStatus }}
           </el-tag>
         </template>
       </el-table-column>
@@ -38,7 +38,7 @@
       <el-table-column label="操作" width="220">
         <template #default="scope">
           <el-button
-            v-if="scope.row.status === 'pending'"
+            v-if="scope.row.displayStatus === 'pending'"
             type="warning"
             size="small"
             @click="handleUrgent(scope.row.order_id)"
@@ -46,7 +46,7 @@
             加急
           </el-button>
           <el-button
-            v-if="['pending', 'processing'].includes(scope.row.status)"
+            v-if="['pending', 'processing'].includes(scope.row.displayStatus)"
             type="danger"
             size="small"
             @click="handleCancel(scope.row.order_id)"
