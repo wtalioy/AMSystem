@@ -118,7 +118,7 @@ const routes = [
         // 工作日志
         { 
           path: 'logs', 
-          component: () => import('@/views/worker/WorkLogs.vue'),
+          component: () => import('@/views/worker/WorkerLogs.vue'),
           name: 'WorkLogs'
         }
       ]

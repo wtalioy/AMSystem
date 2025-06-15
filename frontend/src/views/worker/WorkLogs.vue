@@ -1,42 +1,57 @@
 <template>
-    <div class="work-logs">
-      <h2>本月收入</h2>
-      <el-date-picker
-        v-model="selectedDate"
-        type="month"
-        format="YYYY-MM"
-        placeholder="选择月份"
-        @change="fetchEarnings"
-      />
-      <el-card v-if="earnings">
-        <p>基础收入：¥{{ earnings.earnings.base_earnings }}</p>
-        <p>绩效奖金：¥{{ earnings.earnings.performance_bonus }}</p>
-        <p><strong>总收入：¥{{ earnings.earnings.total_earnings }}</strong></p>
-        <p>本月工时：{{ earnings.work_summary.total_hours }} 小时</p>
-        <p>完成订单数：{{ earnings.work_summary.total_orders }} 单</p>
-      </el-card>
-    </div>
-  </template>
-  
-  <script setup>
-  import { ref, onMounted } from 'vue'
-  import workerOrdersAPI from '@/api/workerOrders'
-  import dayjs from 'dayjs'
-  import { ElMessage } from 'element-plus'
-  
-  const selectedDate = ref(dayjs())
-  const earnings = ref(null)
-  
-  const fetchEarnings = async () => {
-    try {
-      const year = selectedDate.value.year()
-      const month = selectedDate.value.month() + 1
-      earnings.value = await workerOrdersAPI.getMonthlyEarnings(year, month)
-    } catch {
-      ElMessage.error('获取收入失败')
-    }
+  <div class="work-logs">
+    <h2>维修记录</h2>
+    <el-table :data="logs" style="width: 100%; margin-top: 20px">
+      <el-table-column prop="order_id" label="工单号" width="180" />
+      <el-table-column prop="consumption" label="耗材使用" />
+      <el-table-column prop="cost" label="成本（元）" />
+      <el-table-column prop="duration" label="维修时长（小时）" />
+      <el-table-column prop="log_time" label="记录时间" :formatter="formatDate" />
+    </el-table>
+    
+    <el-pagination
+      layout="prev, pager, next"
+      :total="total"
+      :page-size="pageSize"
+      @current-change="handlePageChange"
+      style="margin-top: 20px"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import logsAPI from '@/api/logs'
+
+const logs = ref([])
+const total = ref(0)
+const pageSize = ref(20)
+const currentPage = ref(1)
+
+const fetchData = async () => {
+  try {
+    const res = await logsAPI.getWorkerLogs(currentPage.value, pageSize.value)
+    logs.value = res.data || []
+    total.value = res.headers['x-total-count'] || 0
+  } catch (error) {
+    console.error('获取日志失败:', error)
   }
-  
-  onMounted(fetchEarnings)
-  </script>
-  
+}
+
+const handlePageChange = (newPage) => {
+  currentPage.value = newPage
+  fetchData()
+}
+
+const formatDate = (row) => {
+  return new Date(row.log_time).toLocaleString()
+}
+
+onMounted(fetchData)
+</script>
+
+<style scoped>
+.work-logs {
+  padding: 20px;
+}
+</style>

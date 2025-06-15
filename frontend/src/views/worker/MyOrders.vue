@@ -8,6 +8,9 @@
         <el-table-column label="操作">
           <template #default="{ row }">
             <el-button type="success" @click="completeOrder(row.order_id)" v-if="row.status === 1">完成订单</el-button>
+            <router-link :to="`/worker/orders/${row.order_id}/logs`">
+              <el-button type="info">维护日志</el-button>
+            </router-link>
           </template>
         </el-table-column>
       </el-table>
@@ -46,4 +49,3 @@
   
   onMounted(fetchOrders)
   </script>
-  
