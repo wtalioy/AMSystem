@@ -81,7 +81,7 @@ class AdminService:
         car_types = car.get_all_car_types(db)
         
         result = []
-        for car_type, in car_types:
+        for car_type in car_types:
             # Get most common descriptions/issues for this car type
             failure_patterns = order.get_failure_patterns_by_car_type(db, car_type)
             
