@@ -63,5 +63,104 @@ async getAllUsers({ page = 1, page_size = 20 } = {}) {
 
 async deleteUser(user_id) {
   return axios.delete(`${API_BASE}/users/${user_id}`)
-}
+},
+
+  // 以下是工资管理相关接口
+
+  // ================== 工资管理相关接口 ==================
+  
+  // 1. 获取单个工人月度收入
+  /**
+   * 获取指定工人的月度收入详情
+   * @param {string} worker_id 工人ID
+   * @param {number} year 年份
+   * @param {number} month 月份 (1-12)
+   * @returns {Promise} Axios响应对象
+   */
+  async getWorkerMonthlyEarnings(worker_id, year, month) {
+    return axios.get(`${API_BASE}/earnings/${worker_id}/monthly`, {
+      params: { year, month }
+    })
+  },
+
+  // 2. 获取工人收入历史
+  /**
+   * 获取指定工人的收入历史记录
+   * @param {string} worker_id 工人ID
+   * @param {number} [months_back=12] 回溯月份数 (1-24，默认12)
+   * @returns {Promise} Axios响应对象
+   */
+  async getWorkerEarningsHistory(worker_id, months_back = 12) {
+    return axios.get(`${API_BASE}/earnings/${worker_id}/history`, {
+      params: { months_back }
+    })
+  },
+
+  // 3. 获取所有工人月度收入
+  /**
+   * 获取所有工人的月度收入数据
+   * @param {number} year 年份
+   * @param {number} month 月份 (1-12)
+   * @returns {Promise} Axios响应对象
+   */
+  async getAllWorkersMonthlyEarnings(year, month) {
+    return axios.get(`${API_BASE}/earnings/all-workers/monthly`, {
+      params: { year, month }
+    })
+  },
+
+  // 4. 获取收入汇总报告
+  /**
+   * 获取月度收入汇总报告
+   * @param {number} year 年份
+   * @param {number} month 月份 (1-12)
+   * @returns {Promise} Axios响应对象
+   */
+  async getEarningsSummaryReport(year, month) {
+    return axios.get(`${API_BASE}/earnings/summary-report`, {
+      params: { year, month }
+    })
+  },
+
+  // 5. 执行月度工资发放
+  /**
+   * 手动触发月度工资发放
+   * @param {number} year 年份
+   * @param {number} month 月份 (1-12)
+   * @returns {Promise} Axios响应对象
+   */
+  async runMonthlyDistribution(year, month) {
+    return axios.post(`${API_BASE}/earnings/distribute/monthly`, null, {
+      params: { year, month }
+    })
+  },
+
+  // 6. 获取调度器状态
+  /**
+   * 获取工资发放调度器状态
+   * @returns {Promise} Axios响应对象
+   */
+  async getSchedulerStatus() {
+    return axios.get(`${API_BASE}/earnings/scheduler/status`)
+  },
+
+  // 7. 启动调度器
+  /**
+   * 启动工资发放调度器
+   * @returns {Promise} Axios响应对象
+   */
+  async startScheduler() {
+    return axios.post(`${API_BASE}/earnings/scheduler/start`)
+  },
+
+  // 8. 停止调度器
+  /**
+   * 停止工资发放调度器
+   * @returns {Promise} Axios响应对象
+   */
+  async stopScheduler() {
+    return axios.post(`${API_BASE}/earnings/scheduler/stop`)
+  }
+
+
 }
