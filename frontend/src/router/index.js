@@ -102,6 +102,12 @@ const routes = [
           name: 'OrderProcedures',
           props: true
         },
+        {
+          path: 'orders/:order_id/logs',
+          component: () => import('@/views/worker/WorkLogs.vue'),
+          name: 'OrderProcedures',
+          props: true
+        },
         
         // 收入相关
         { 
