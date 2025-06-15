@@ -12,7 +12,7 @@ export default {
 
   // 2. 获取车辆统计信息
   async getCarStatistics() {
-    return axios.get(`${API_BASE}/admin/cars`)
+    return axios.get(`${API_BASE}/admin/car-statistics`)
   },
 
   // 3. 获取常见故障模式分析

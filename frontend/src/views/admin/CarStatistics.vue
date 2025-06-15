@@ -48,17 +48,26 @@ const getFrequencyType = (frequency) => {
 onMounted(async () => {
   try {
     const res = await statsAPI.getCarStatistics()
+    console.log('完整响应:', res)
     
-    // 更健壮的数据处理
-    cars.value = Array.isArray(res?.data?.data) 
-      ? res.data.data 
+    const rawData = res?.data || []
+    console.log('原始数据:', rawData)  // 添加这行
+    
+    cars.value = Array.isArray(rawData) 
+      ? rawData.map(item => ({
+          ...item,
+          // 确保数字类型正确
+          car_count: Number(item.car_count) || 0,
+          repair_count: Number(item.repair_count) || 0,
+          repair_frequency: Number(item.repair_frequency) || 0
+          // 移除 average_repair_cost 的转换
+        }))
       : []
     
-    // 调试输出
-    console.log('车辆统计数据:', cars.value)
+    console.log('处理后的数据:', cars.value)
   } catch (error) {
-    console.error('获取车辆统计失败:', error)
-    ElMessage.error('数据加载失败')
+    console.error('请求失败:', error)
+    ElMessage.error('数据加载失败: ' + error.message)
   }
 })
 </script>
