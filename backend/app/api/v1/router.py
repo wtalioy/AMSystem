@@ -8,7 +8,6 @@ from app.api.v1.endpoints import (
     logs, 
     wage, 
     procedures, 
-    payments,
     workers,
     audit,
     earnings,
@@ -32,5 +31,4 @@ api_router.include_router(logs.router, prefix="/logs", tags=["Maintenance Logs"]
 api_router.include_router(wage.router, prefix="/wage", tags=["Wage & Income"])
 api_router.include_router(earnings.router, prefix="/earnings", tags=["Earnings & Distribution"])
 api_router.include_router(admin.router, prefix="/admin", tags=["Super power"])
-api_router.include_router(payments.router, prefix="/payments", tags=["Payments"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit & Rollback"])
