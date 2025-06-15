@@ -154,6 +154,20 @@ class EarningScheduler:
                 audit_context=audit_context
             )
             
+            # Update the scheduled task's last_run time to prevent duplicate automatic execution
+            for task in self.tasks:
+                if task["name"] == "earnings_distribution":
+                    if month == 12:
+                        next_month = 1
+                        next_year = year + 1
+                    else:
+                        next_month = month + 1
+                        next_year = year
+                    
+                    task["last_run"] = datetime(next_year, next_month, 1, task["hour"], task["minute"])
+                    logger.info(f"Updated scheduled task last_run to prevent duplicate execution for {year}-{month:02d}")
+                    break
+            
             return result
             
         except Exception as e:
