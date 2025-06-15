@@ -64,7 +64,7 @@ const fetchUsers = async () => {
       page_size: pageSize.value
     })
     users.value = res.data || []
-    totalUsers.value = res.headers['x-total-count'] || 0
+    totalUsers.value = res.data?.total || res.data?.length || 0
   } catch (error) {
     ElMessage.error('获取用户数据失败: ' + error.message)
   }

@@ -35,6 +35,17 @@
           {{ formatTime(scope.row.create_time) }}
         </template>
       </el-table-column>
+      <el-table-column label="查看进度" width="120">
+        <template #default="scope">
+          <el-button
+            type="primary"
+            size="small"
+            @click="handleViewProgress(scope.row.order_id)"
+          >
+            查看进度
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="220">
         <template #default="scope">
           <el-button
@@ -73,7 +84,9 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import ordersAPI from '@/api/orders'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const orderList = ref([])
 const loading = ref(true)
 const total = ref(0)
@@ -183,6 +196,9 @@ const handleCancel = async (orderId) => {
   }
 }
 
+const handleViewProgress = (orderId) => {
+  router.push(`/dashboard/customer/orders/${orderId}/procedures`)
+}
 onMounted(() => {
   fetchOrders()
 })
