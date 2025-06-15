@@ -7,6 +7,11 @@
       </div>
       
       <div class="user-info">
+        <!-- 新增返回主菜单按钮 -->
+        <button @click="goToDashboard" class="dashboard-btn">
+          <i class="dashboard-icon"></i>
+            返回主菜单
+        </button>
         <span class="user-type">
           <i class="user-icon"></i>
           {{ userTypeDisplay }}
@@ -72,6 +77,24 @@ const userTypeDisplay = computed(() => {
     default: return '未知用户'
   }
 })
+
+// 新增返回主面板方法
+const getMainDashboardPath = () => {
+  switch(authStore.userType) {
+    case 'customer':
+      return '/dashboard/customer'
+    case 'worker':
+      return '/dashboard/worker' // 对应 WorkerDashboard 名称的路由
+    case 'administrator':
+      return '/dashboard/admin'
+    default:
+      return '/dashboard'
+  }
+}
+
+const goToDashboard = () => {
+  router.push(getMainDashboardPath())
+}
 
 // 退出登录处理
 const handleLogout = () => {

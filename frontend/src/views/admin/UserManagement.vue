@@ -8,7 +8,7 @@
       <el-table-column prop="worker_type" label="工人类型" v-if="showWorkerColumn"/>
       <el-table-column prop="availability_status" label="状态">
         <template #default="{ row }">
-          {{ statusMap[row.availability_status] || '未知' }}
+          {{ statusMap[row.availability_status] || ' ' }}
         </template>
       </el-table-column>
       <el-table-column label="操作" width="120">
