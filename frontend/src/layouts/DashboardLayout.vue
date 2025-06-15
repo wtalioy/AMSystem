@@ -68,7 +68,7 @@ const userTypeDisplay = computed(() => {
   switch(authStore.userType) {
     case 'customer': return '客户'
     case 'worker': return '维修技师'
-    case 'admin': return '系统管理员'
+    case 'administrator': return '系统管理员'
     default: return '未知用户'
   }
 })

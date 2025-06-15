@@ -51,5 +51,17 @@ export default {
   // 8. 获取未完成订单统计
   async getIncompleteOrders() {
     return axios.get(`${API_BASE}/admin/incomplete-orders`)
-  }
+  },
+
+  // 9. 新增用户管理相关接口
+  // 新增用户管理接口
+async getAllUsers({ page = 1, page_size = 20 } = {}) {
+  return axios.get(`${API_BASE}/users/`, {
+    params: { page, page_size }
+  })
+},
+
+async deleteUser(user_id) {
+  return axios.delete(`${API_BASE}/users/${user_id}`)
+}
 }
