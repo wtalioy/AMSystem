@@ -250,7 +250,7 @@ class CRUDOrder:
 
     def get_material_cost_breakdown_by_period(self, db: Session, start_date: datetime, end_date: datetime, period_type: str = "month") -> dict:
         """Get material cost breakdown by period from order total_cost"""
-        from app.dbrm import Condition, func
+        from app.dbrm import Condition, func, Select
         
         if period_type == "quarter":
             date_part = func.concat(
@@ -261,13 +261,13 @@ class CRUDOrder:
         else:
             date_part = func.date_format(ServiceOrderModel.end_time, '%Y-%m')
         
-        material_query = db.query(date_part, func.sum(ServiceOrderModel.total_cost)).where(
+        material_query = Select(date_part, func.sum(ServiceOrderModel.total_cost), session=db).from_(ServiceOrderModel).where(
             Condition.gte(ServiceOrderModel.end_time, start_date),
             Condition.lte(ServiceOrderModel.end_time, end_date),
             Condition.not_null(ServiceOrderModel.total_cost)
         ).group_by(date_part)
         
-        material_results = material_query.all()
+        material_results = material_query.all(to_model=False)
         
         breakdown = {}
         for period, material_cost in material_results:

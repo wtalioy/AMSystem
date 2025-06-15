@@ -51,7 +51,7 @@ class CRUDDistribute:
 
     def get_labor_cost_breakdown_by_period(self, db: Session, start_date: datetime, end_date: datetime, period_type: str = "month") -> dict:
         """Get labor cost breakdown by period from distribute payments"""
-        from app.dbrm import Condition, func
+        from app.dbrm import Condition, func, Select
         
         if period_type == "quarter":
             date_part = func.concat(
@@ -62,12 +62,12 @@ class CRUDDistribute:
         else:
             date_part = func.date_format(DistributeModel.distribute_time, '%Y-%m')
         
-        labor_query = db.query(date_part, func.sum(DistributeModel.amount)).where(
+        labor_query = Select(date_part, func.sum(DistributeModel.amount), session=db).from_(DistributeModel).where(
             Condition.gte(DistributeModel.distribute_time, start_date),
             Condition.lte(DistributeModel.distribute_time, end_date)
         ).group_by(date_part)
         
-        labor_results = labor_query.all()
+        labor_results = labor_query.all(to_model=False)
         
         breakdown = {}
         for period, labor_cost in labor_results:
