@@ -126,8 +126,8 @@ class AssignmentProcessor:
         if not pending_orders:
             return 0
         
-        # Sort pending orders by expedite flag
-        sorted_orders = sorted(pending_orders, key=lambda o: o.expedite_flag)
+        # Sort pending orders by start_time
+        sorted_orders = sorted(pending_orders, key=lambda o: o.start_time)
         
         assigned_count = 0
         
