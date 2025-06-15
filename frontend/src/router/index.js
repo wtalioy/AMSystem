@@ -69,6 +69,11 @@ const routes = [
           path: 'orders/:order_id/procedures',
           component: () => import('@/views/orders/OrderProcedures.vue'), // 👈 创建这个新页面
           meta: { role: 'customer' }
+        },
+        { 
+          path: 'myinfo', 
+          component: () => import('@/views/auth/Myinfo.vue'),
+          meta: { title: '个人信息' }
         }
       ]
     },
@@ -126,6 +131,12 @@ const routes = [
           path: 'logs', 
           component: () => import('@/views/worker/WorkerLogs.vue'),
           name: 'WorkLogs'
+        },
+
+        { 
+          path: 'myinfo', 
+          component: () => import('@/views/auth/Myinfo.vue'),
+          meta: { title: '个人信息' }
         }
       ]
     },
@@ -150,7 +161,12 @@ const routes = [
         { path: 'stats/feedback', component: () => import('@/views/admin/NegativeFeedback.vue') },
         { path: 'stats/productivity', component: () => import('@/views/admin/WorkerProductivity.vue') },
         { path: 'stats/workers', component: () => import('@/views/admin/WorkerStatistics.vue') },
-        { path: 'stats/incomplete-orders', component: () => import('@/views/admin/IncompleteOrders.vue') }
+        { path: 'stats/incomplete-orders', component: () => import('@/views/admin/IncompleteOrders.vue') },
+        { 
+          path: 'myinfo', 
+          component: () => import('@/views/auth/Myinfo.vue'),
+          meta: { title: '个人信息' }
+        }
       ]
     }
   ]

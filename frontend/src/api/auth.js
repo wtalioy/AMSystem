@@ -48,6 +48,51 @@ export default {
     })
   },
 
+  // 新增接口：
+  
+  /**
+   * 获取当前用户信息
+   * @param {string} token - 用户认证令牌
+   * @returns {Promise<Object>} 用户信息对象
+   * 响应结构：
+   * {
+   *   "user_id": "string",
+   *   "user_name": "string",
+   *   "user_type": "string",
+   *   "worker_type": "string",
+   *   "availability_status": 0
+   * }
+   */
+  async getCurrentUser(token) {
+    const response = await axios.get(`${API_BASE}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  },
+
+  /**
+   * 更新当前用户信息
+   * @param {string} token - 用户认证令牌
+   * @param {Object} updateData - 要更新的用户数据
+   * @param {string} [updateData.user_name] - 新用户名（可选）
+   * @param {string} [updateData.user_pwd] - 新密码（可选）
+   * @param {string} [updateData.worker_type] - 工人类型（可选，仅对工人用户有效）
+   * @returns {Promise<Object>} 更新后的用户信息
+   * 请求体示例：
+   * {
+   *   "user_name": "string",
+   *   "user_pwd": "string",
+   *   "worker_type": "string"
+   * }
+   * 响应结构同getCurrentUser
+   */
+  async updateCurrentUser(token, updateData) {
+    const response = await axios.put(`${API_BASE}/users/me`, updateData, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    return response.data
+  },
+
   // 测试令牌接口
   async testToken(token) {
     return axios.get(`${API_BASE}/auth/verify`, null, {

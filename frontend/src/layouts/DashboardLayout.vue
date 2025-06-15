@@ -7,6 +7,11 @@
       </div>
       
       <div class="user-info">
+        <!-- 新增个人中心按钮 -->
+        <button @click="goToProfile" class="profile-btn">
+          <i class="profile-icon"></i>
+          个人中心
+        </button>
         <!-- 新增返回主菜单按钮 -->
         <button @click="goToDashboard" class="dashboard-btn">
           <i class="dashboard-icon"></i>
@@ -94,6 +99,12 @@ const getMainDashboardPath = () => {
 
 const goToDashboard = () => {
   router.push(getMainDashboardPath())
+}
+
+// 新增跳转方法
+const goToProfile = () => {
+  const basePath = getMainDashboardPath() // 复用已有的路径获取方法
+  router.push(`${basePath}/myinfo`)
 }
 
 // 退出登录处理
