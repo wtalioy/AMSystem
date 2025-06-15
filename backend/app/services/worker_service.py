@@ -92,11 +92,15 @@ class WorkerService:
 
     @staticmethod
     def get_assigned_orders(
-        db: Session, worker_id: str, skip: int = 0, limit: int = 100, status: Optional[int] = None
+        db: Session, worker_id: str, skip: int = 0, limit: int = 100
     ) -> List[Order]:
-        """Get orders assigned to a specific worker"""
-        return order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=status)
+        return order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit, status=OrderStatus.ASSIGNED)
     
+    @staticmethod
+    def get_all_orders(
+        db: Session, worker_id: str, skip: int = 0, limit: int = 100
+    ):
+        return order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
 
     @staticmethod
     @audit("Order", "UPDATE")

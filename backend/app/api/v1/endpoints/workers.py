@@ -77,7 +77,6 @@ def get_assigned_orders(
     db: Session = Depends(deps.get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    status_filter: Optional[int] = Query(None, description="Filter by order status"),
     current_user: User = Depends(deps.get_current_worker),
 ) -> Any:
     """
@@ -85,7 +84,20 @@ def get_assigned_orders(
     """
     skip = (page - 1) * page_size
     return WorkerService.get_assigned_orders(
-        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size, status=status_filter
+        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size
+    )
+
+@router.get("/orders", response_model=List[OrderToWorker])
+def get_orders(
+    *,
+    db: Session = Depends(deps.get_db),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    current_user: User = Depends(deps.get_current_worker),
+) -> Any:
+    skip = (page - 1) * page_size
+    return WorkerService.get_all_orders(
+        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size
     )
 
     
