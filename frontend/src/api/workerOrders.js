@@ -10,11 +10,11 @@ export default {
     })
   },
 
-  async getAllOrders({ page = 1, page_size = 20 }) {
+  /*async getAllOrders({ page = 1, page_size = 20 }) {
     return axios.get(`${API_BASE}/workers/orders`, {
       params: { page, page_size }
     })
-  },
+  },*/
 
   // 2. 接受订单
   async acceptOrder(order_id) {

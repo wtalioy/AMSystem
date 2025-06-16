@@ -25,7 +25,7 @@
     try {
       const res = await workerOrdersAPI.getAssignedOrders({
         page: 1,
-        page_size: 20
+        page_size: 100
       })
       orders.value = res.data
     } catch (err) {
