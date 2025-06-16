@@ -219,6 +219,23 @@ class CRUDOrder:
             db.refresh(db_obj)
         return Order.model_validate(db_obj)
     
+    def count_completed_orders_by_worker(self, db: Session, worker_id: str) -> int:
+        """Count completed orders by worker"""
+        from app.dbrm import Condition
+        return db.query(func.count(ServiceOrderModel.order_id)).filter(
+            Condition.eq(ServiceOrderModel.worker_id, worker_id),
+            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED)
+        ).scalar() or 0
+    
+    def get_average_rating_by_worker(self, db: Session, worker_id: str) -> Optional[float]:
+        """Get average rating for completed orders by worker"""
+        from app.dbrm import Condition
+        result = db.query(func.avg(ServiceOrderModel.rating)).filter(
+            Condition.eq(ServiceOrderModel.worker_id, worker_id),
+            Condition.eq(ServiceOrderModel.status, OrderStatus.COMPLETED)
+        ).scalar()
+        return float(result) if result else None
+    
     def get_completed_orders_by_worker_period(
         self, db: Session, worker_id: str, start_date: datetime, end_date: datetime
     ) -> List[Order]:
@@ -250,7 +267,7 @@ class CRUDOrder:
 
     def get_material_cost_breakdown_by_period(self, db: Session, start_date: datetime, end_date: datetime, period_type: str = "month") -> dict:
         """Get material cost breakdown by period from order total_cost"""
-        from app.dbrm import Condition, func
+        from app.dbrm import Condition, func, Select
         
         if period_type == "quarter":
             date_part = func.concat(
@@ -261,13 +278,11 @@ class CRUDOrder:
         else:
             date_part = func.date_format(ServiceOrderModel.end_time, '%Y-%m')
         
-        material_query = db.query(date_part, func.sum(ServiceOrderModel.total_cost)).where(
+        material_results = Select(date_part, func.sum(ServiceOrderModel.total_cost)).from_(ServiceOrderModel).filter(
             Condition.gte(ServiceOrderModel.end_time, start_date),
             Condition.lte(ServiceOrderModel.end_time, end_date),
             Condition.not_null(ServiceOrderModel.total_cost)
-        ).group_by(date_part)
-        
-        material_results = material_query.all()
+        ).group_by(date_part).all(to_model=False, session=db)
         
         breakdown = {}
         for period, material_cost in material_results:
@@ -293,6 +308,38 @@ class CRUDOrder:
             db.commit()
             return True
         return False
+    
+    def get_orders_by_rating_threshold(self, db: Session, rating_threshold: int) -> List[Order]:
+        """Get orders with ratings below a threshold"""
+        from app.dbrm import Condition
+        objs = db.query(ServiceOrderModel).filter(
+            Condition.lt(ServiceOrderModel.rating, rating_threshold)
+        ).all()
+        if not objs:
+            return []
+        return [Order.model_validate(obj) for obj in objs]
+    
+    def get_orders_by_worker_type_period(
+        self, db: Session, worker_type: str, start_date: datetime, end_date: datetime
+    ) -> List[Order]:
+        """
+        Get all orders for a specific worker type within a date range.
+        This single query replaces multiple separate queries for efficiency.
+        """
+        from app.models import Worker
+        from app.dbrm import Condition
+        
+        objs = db.query(ServiceOrderModel).join(
+            Worker, on=(Worker.user_id, ServiceOrderModel.worker_id)
+        ).filter(
+            Condition.eq(Worker.worker_type, worker_type),
+            Condition.gte(ServiceOrderModel.start_time, start_date),
+            Condition.lte(ServiceOrderModel.start_time, end_date)
+        ).all()
+        
+        if not objs:
+            return []
+        return [Order.model_validate(obj) for obj in objs]
 
 
 order = CRUDOrder()

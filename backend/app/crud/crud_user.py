@@ -196,7 +196,7 @@ class CRUDWorker:
         objs = db.query(func.distinct(WorkerModel.worker_type)).all()
         if not objs:
             return []
-        return [obj[0] for obj in objs]
+        return [obj.worker_type for obj in objs]
 
     def count_workers_by_type(self, db: Session, worker_type: str) -> int:
         return db.query(func.count(WorkerModel.user_id)).filter_by(worker_type=worker_type).scalar() or 0

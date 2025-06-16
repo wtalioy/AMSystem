@@ -58,7 +58,7 @@ class CRUDLog:
         from app.models import Worker
         from app.dbrm import Condition
         
-        return db.query(func.count(LogModel.id)).join(
+        return db.query(func.count(LogModel.log_time)).join(
             Worker, on=(Worker.user_id, LogModel.worker_id)
         ).filter(
             Condition.eq(Worker.worker_type, worker_type),
