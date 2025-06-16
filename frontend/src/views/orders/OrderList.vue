@@ -64,6 +64,16 @@
           >
             取消
           </el-button>
+
+          <!-- 新增反馈按钮 -->
+        <el-button
+          v-if="scope.row.displayStatus === 'completed'"
+          type="success"
+          size="small"
+          @click="handleFeedback(scope.row.order_id)"
+        >
+          我要反馈
+        </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -194,6 +204,11 @@ const handleCancel = async (orderId) => {
       ElMessage.error('取消失败')
     }
   }
+}
+
+// 在脚本中添加handleFeedback方法
+const handleFeedback = (orderId) => {
+  router.push(`/dashboard/customer/orders/${orderId}/feedback`)
 }
 
 const handleViewProgress = (orderId) => {

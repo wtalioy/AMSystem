@@ -70,6 +70,14 @@ const routes = [
           component: () => import('@/views/orders/OrderProcedures.vue'), // 👈 创建这个新页面
           meta: { role: 'customer' }
         },
+
+        // 订单反馈路由
+        { 
+          path: 'orders/:order_id/feedback', 
+          component: () => import('@/views/orders/Feedback.vue'),
+          meta: { role: 'customer', title: '订单反馈' }
+        },
+        // 个人信息
         { 
           path: 'myinfo', 
           component: () => import('@/views/auth/Myinfo.vue'),
