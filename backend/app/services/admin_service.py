@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from app.dbrm import Session
 
 from app.crud import car, order, log, procedure, distribute, worker, wage
+from app.core.enum import OrderStatus
 from app.schemas import (
     Distribute, Order, DistributeCreate,
     PeriodCostBreakdown,
@@ -215,14 +216,30 @@ class AdminService:
         
         result = []
         for worker_type in worker_types:
-            # Get productivity metrics for this worker type
-            completion_rate = order.get_completion_rate_by_worker_type(db, worker_type, start_dt, end_dt)
-            avg_completion_time = order.get_average_completion_time_by_worker_type(db, worker_type, start_dt, end_dt)
-            customer_satisfaction = order.get_average_rating_by_worker_type(db, worker_type, start_dt, end_dt)
+            # Get all orders for this worker type in one efficient query
+            orders = order.get_orders_by_worker_type_period(db, worker_type, start_dt, end_dt)
             
-            # Get task distribution
-            total_tasks = order.count_orders_by_worker_type(db, worker_type, start_dt, end_dt)
-            completed_tasks = order.count_completed_orders_by_worker_type(db, worker_type, start_dt, end_dt)
+            # Calculate all metrics from the single dataset
+            total_tasks = len(orders)
+            completed_tasks = sum(1 for o in orders if o.status == OrderStatus.COMPLETED)
+            
+            # Calculate completion rate
+            completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+            
+            # Calculate average completion time for completed orders
+            completed_orders = [o for o in orders if o.status == OrderStatus.COMPLETED and o.end_time and o.start_time]
+            if completed_orders:
+                total_completion_time = sum(
+                    (o.end_time - o.start_time).total_seconds() / 3600  # Convert to hours
+                    for o in completed_orders
+                )
+                avg_completion_time = total_completion_time / len(completed_orders)
+            else:
+                avg_completion_time = 0
+            
+            # Calculate average customer rating for completed orders with ratings
+            rated_orders = [o for o in completed_orders if o.rating is not None]
+            customer_satisfaction = sum(o.rating for o in rated_orders) / len(rated_orders) if rated_orders else 0
             
             productivity = WorkerProductivityAnalysis(
                 worker_type=worker_type,
@@ -231,7 +248,7 @@ class AdminService:
                 completion_rate_percentage=completion_rate,
                 average_completion_time_hours=avg_completion_time,
                 average_customer_rating=customer_satisfaction,
-                productivity_score=(completion_rate * customer_satisfaction) / 5 if customer_satisfaction else 0
+                productivity_score=(completion_rate * customer_satisfaction) / 5
             )
             result.append(productivity)
         
