@@ -107,22 +107,25 @@ const filterStatus = ref('all')
 // 添加状态映射关系
 const statusMap = {
   pending: 0,
-  processing: 1,
-  completed: 2,
-  cancelled: 3
+  distributed: 1,
+  processing: 2,
+  completed: 3,
+  cancelled: 4
 }
 
 // 反向映射用于显示
 const reverseStatusMap = {
   0: 'pending',
-  1: 'processing',
-  2: 'completed',
-  3: 'cancelled'
+  1: 'distributed',
+  2: 'processing',
+  3: 'completed',
+  4: 'cancelled'
 }
 
 const statusOptions = [
   { value: 'all', label: '全部状态' },
   { value: 'pending', label: '待处理' },
+  { value: 'distributed', label: '已分配'},
   { value: 'processing', label: '处理中' },
   { value: 'completed', label: '已完成' },
   { value: 'cancelled', label: '已取消' }
@@ -131,6 +134,7 @@ const statusOptions = [
 const statusTagType = (status) => {
   const types = {
     pending: 'warning',
+    distributed: 'pending',
     processing: 'primary',
     completed: 'success',
     cancelled: 'info'
@@ -178,7 +182,7 @@ const handleUrgent = async (orderId) => {
       type: 'warning'
     })
     
-    await ordersAPI.urgentOrder(orderId)
+    await ordersAPI.expediteOrder(orderId)
     ElMessage.success('订单已加急')
     fetchOrders()
   } catch (error) {

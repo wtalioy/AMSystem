@@ -12,13 +12,16 @@ const newProcedureDialog = ref(false)
 const newProcedureText = ref('')
 
 const userStore = useAuthStore()
-const isWorker = ref(userStore.usertype === 'worker')
+const isWorker = ref(localStorage.getItem('userType')  === 'worker')
+// 检查 localStorage 中 userType 的实际值
+//console.log('当前存储的用户类型:', localStorage.getItem('userType'))
+//console.log('当前用户类型:', userStore.usertype)
 
 // 状态映射表
 const statusMap = {
   0: { text: '未开始', color: 'info' },
-  1: { text: '进行中', color: 'primary' },
-  2: { text: '已完成', color: 'success' }
+  1: { text: '已分配', color: 'primary' },
+  2: { text: '进行中', color: 'processing' }
 }
 
 onMounted(async () => {
@@ -97,6 +100,15 @@ async function updateProcedureStatus(procedure, newStatus) {
 </script>
 
 <template>
+  <div class="procedures-container">
+    <!-- 添加用户身份标识 -->
+    <div class="user-identity">
+      <el-tag :type="isWorker ? 'primary' : 'success'" effect="dark">
+        {{ isWorker ? '维修工人' : '客户' }}
+      </el-tag>
+      <span class="user-id">当前订单号：{{ orderId }}</span>
+    </div>
+  </div>
   <div class="procedures-container">
     <!-- 添加新流程按钮 -->
     <div class="action-bar">
