@@ -39,11 +39,11 @@
   
   const fetchOrders = async () => {
     try {
-      const res = await workerOrdersAPI.getAssignedOrders({
-  page: 1,
-  page_size: 20,
-})
-      orders.value = res.data
+      const res = await workerOrdersAPI.getAllOrders({
+          page: 1,
+          page_size: 20,
+      })
+      orders.value = res.data.filter(item => [2, 3].includes(item.status))
     } catch (err) {
       ElMessage.error('获取订单失败')
     }
@@ -60,7 +60,7 @@
   }
   
   const formatStatus = (row, column, value) => {
-    return ['待处理', '进行中', '已完成'][value] || '未知'
+    return ['待处理', '已分配', '进行中','已完成'][value] || '未知'
   }
   
   onMounted(fetchOrders)

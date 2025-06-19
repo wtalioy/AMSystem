@@ -4,8 +4,8 @@ const API_BASE = 'http://localhost:8000/api/v1'
 
 export default {
   // 1. 获取当前工人已分配订单
-  async getAssignedOrders({ page = 1, page_size = 20 }) {
-    return axios.get(`${API_BASE}/workers/orders/assigned`, {
+  async getAllOrders({ page = 1, page_size = 20 }) {
+    return axios.get(`${API_BASE}/workers/orders/all`, {
       params: { page, page_size }
     })
   },

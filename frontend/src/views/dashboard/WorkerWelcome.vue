@@ -48,7 +48,7 @@ const navigateTo = (path) => {
 const fetchPendingOrders = async () => {
   try {
     // 获取所有已分配订单
-    const response = await workerOrdersAPI.getAssignedOrders({ 
+    const response = await workerOrdersAPI.getAllOrders({ 
       page: 1, 
       page_size: 100 // 假设待处理订单不会超过1000条
     })
