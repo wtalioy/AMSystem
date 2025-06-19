@@ -12,7 +12,7 @@ const newProcedureDialog = ref(false)
 const newProcedureText = ref('')
 
 const userStore = useAuthStore()
-const isWorker = userStore.usertype === 'worker'
+const isWorker = ref(userStore.usertype === 'worker')
 
 // 状态映射表
 const statusMap = {
@@ -36,8 +36,21 @@ onMounted(async () => {
 
 // 加载维修流程
 async function loadProcedures() {
-  const res = await procedureAPI.getProcedures(orderId.value)
-  procedures.value = res.data
+  try {
+    // 添加加载状态
+    const res = await procedureAPI.getProcedures(orderId.value)
+    
+    // 响应数据校验
+    if (!res?.data || !Array.isArray(res.data)) {
+      throw new Error('无效的接口响应格式')
+    }
+    
+    procedures.value = res.data
+  } catch (error) {
+    ElMessage.error(`加载失败: ${error.message}`)
+    console.error('加载流程错误:', error)
+    procedures.value = [] // 清空数据防止信息泄露
+  }
 }
 
 // 添加新维修流程

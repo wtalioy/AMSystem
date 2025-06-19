@@ -25,10 +25,10 @@ class ProcedureService:
         procedures = procedure.get_procedures_by_order(db, order_id=order_id)
         
         # Check if there are any procedures
-        if not procedures:
-            raise ValueError("No procedures found for this order")
+        # if not procedures:
+        #    raise ValueError("No procedures found for this order")
         
-        return procedures
+        return procedures or []
 
 
     @staticmethod

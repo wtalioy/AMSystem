@@ -112,13 +112,14 @@ const routes = [
         {
           path: 'orders/:order_id/procedures',
           component: () => import('@/views/orders/OrderProcedures.vue'),
+          meta: { role: 'worker' },
           name: 'OrderProcedures',
           props: true
         },
         {
           path: 'orders/:order_id/logs',
           component: () => import('@/views/worker/WorkLogs.vue'),
-          name: 'OrderProcedures',
+          name: 'Orderlogs',
           props: true
         },
         

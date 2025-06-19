@@ -16,12 +16,12 @@
           </el-button>
           
           <!-- 填写进度按钮（新增） -->
-          <router-link :to="`/worker/orders/${row.order_id}/procedures`">
+          <router-link :to="`/dashboard/worker/orders/${row.order_id}/procedures`">
             <el-button type="primary">填写进度</el-button>
           </router-link>
           
           <!-- 维护日志按钮 -->
-          <router-link :to="`/worker/orders/${row.order_id}/logs`">
+          <router-link :to="`/dashboard/worker/orders/${row.order_id}/logs`">
             <el-button type="info">维护日志</el-button>
           </router-link>
         </template>
@@ -42,7 +42,6 @@
       const res = await workerOrdersAPI.getAssignedOrders({
   page: 1,
   page_size: 20,
-  status_filter: null // 明确表示获取所有状态
 })
       orders.value = res.data
     } catch (err) {
