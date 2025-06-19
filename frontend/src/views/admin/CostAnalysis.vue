@@ -1,6 +1,6 @@
 <template>
   <div class="wage-management">
-    <h2>工资管理</h2>
+    <h2>成本分析</h2>
     
     <!-- 查询条件区域 -->
     <el-card shadow="hover" class="query-card">
