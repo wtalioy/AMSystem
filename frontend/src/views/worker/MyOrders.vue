@@ -11,19 +11,15 @@
           <el-button 
             type="success" 
             @click="completeOrder(row.order_id)" 
-            v-if="row.status === 1">
+            v-if="row.status === 2">
             完成订单
           </el-button>
           
           <!-- 填写进度按钮（新增） -->
           <router-link :to="`/dashboard/worker/orders/${row.order_id}/procedures`">
-            <el-button type="primary">填写进度</el-button>
+            <el-button type="primary">进度与日志</el-button>
           </router-link>
           
-          <!-- 维护日志按钮 -->
-          <router-link :to="`/dashboard/worker/orders/${row.order_id}/logs`">
-            <el-button type="info">维护日志</el-button>
-          </router-link>
         </template>
       </el-table-column>
       </el-table>
