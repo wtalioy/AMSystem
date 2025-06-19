@@ -8,6 +8,7 @@
       <el-date-picker
         v-model="startDate"
         type="date"
+        value-format="YYYY-MM-DD"
         placeholder="开始日期"
         style="margin-right: 10px"
       />
@@ -15,6 +16,7 @@
       <el-date-picker
         v-model="endDate"
         type="date"
+        value-format="YYYY-MM-DD"
         placeholder="结束日期"
         style="margin-right: 10px"
       />
