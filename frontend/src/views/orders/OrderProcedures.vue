@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import procedureAPI from '@/api/procedures'
 import { useAuthStore } from '@/store/authStore'
+// 新增导入
+import logsAPI from '@/api/logs'
 import { ElMessage, ElNotification, ElDialog, ElInput } from 'element-plus'
 
 const route = useRoute()
@@ -24,6 +26,50 @@ const statusMap = {
   2: { text: '进行中', color: 'processing' }
 }
 
+// 新增响应式变量
+const logDialogVisible = ref(false)
+const logForm = ref({
+  consumption: '',
+  cost: 0,
+  duration: 0
+})
+const currentWorkerId = ref('')
+
+// 获取当前工人ID
+const getWorkerId = async () => {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (token) {
+      const userInfo = await authAPI.getCurrentUser(token)
+      currentWorkerId.value = userInfo.user_id
+    }
+  } catch (error) {
+    ElMessage.error('获取用户信息失败')
+  }
+}
+
+// 显示日志对话框
+const showLogDialog = async () => {
+  await getWorkerId()
+  logDialogVisible.value = true
+}
+
+// 提交日志
+const submitLog = async () => {
+  try {
+    await logsAPI.createMaintenanceLog({
+      order_id: orderId.value,
+      worker_id: currentWorkerId.value,
+      ...logForm.value
+    })
+    
+    ElMessage.success('日志记录成功')
+    logDialogVisible.value = false
+    logForm.value = { consumption: '', cost: 0, duration: 0 }
+  } catch (error) {
+    ElMessage.error(`日志提交失败: ${error.response?.data?.detail || error.message}`)
+  }
+}
 onMounted(async () => {
   if (!orderId.value) {
     ElNotification.error('缺少订单ID参数')
@@ -118,6 +164,13 @@ async function updateProcedureStatus(procedure, newStatus) {
         v-if="isWorker">
         添加维修流程
       </el-button>
+       <!-- 新增日志按钮 -->
+       <el-button 
+        type="warning" 
+        @click="showLogDialog"
+        v-if="isWorker">
+        记录日志
+      </el-button>
     </div>
     
     <!-- 维修流程表格 -->
@@ -164,6 +217,25 @@ async function updateProcedureStatus(procedure, newStatus) {
       <template #footer>
         <el-button @click="newProcedureDialog = false">取消</el-button>
         <el-button type="primary" @click="addNewProcedure">添加</el-button>
+      </template>
+    </el-dialog>
+
+     <!-- 新增日志对话框 -->
+     <el-dialog v-model="logDialogVisible" title="填写维护日志">
+      <el-form :model="logForm" label-width="100px">
+        <el-form-item label="消耗材料" required>
+          <el-input v-model="logForm.consumption" placeholder="例如：机油1L" />
+        </el-form-item>
+        <el-form-item label="费用(元)" required>
+          <el-input-number v-model="logForm.cost" :min="0" :precision="2" />
+        </el-form-item>
+        <el-form-item label="耗时(小时)" required>
+          <el-input-number v-model="logForm.duration" :min="0" :precision="1" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="logDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitLog">提交</el-button>
       </template>
     </el-dialog>
   </div>
