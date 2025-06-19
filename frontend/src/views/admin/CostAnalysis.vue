@@ -61,8 +61,6 @@
     <!-- 数据表格区域 -->
     <el-card shadow="hover" class="data-card">
       <el-table :data="wages" v-loading="loading" style="width: 100%">
-        <el-table-column prop="worker_id" label="工人ID" width="120" />
-        <el-table-column prop="worker_name" label="姓名" width="150" />
         <el-table-column prop="period" label="统计周期" />
         <el-table-column prop="amount" label="工资" width="120">
           <template #default="{ row }">
