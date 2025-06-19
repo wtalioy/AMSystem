@@ -34,6 +34,8 @@ const logForm = ref({
   duration: 0
 })
 const currentWorkerId = ref('')
+// 新增响应式变量
+const logs = ref([])
 
 // 获取当前工人ID
 const getWorkerId = async () => {
@@ -52,6 +54,17 @@ const getWorkerId = async () => {
 const showLogDialog = async () => {
   await getWorkerId()
   logDialogVisible.value = true
+}
+
+// 加载日志方法
+const loadLogs = async () => {
+  try {
+    const res = await logsAPI.getWorkerLogs(1, 100) // 获取第一页，每页100条
+    // 过滤当前订单的日志
+    logs.value = res.data.filter(log => log.order_id === orderId.value)
+  } catch (error) {
+    ElMessage.error(`获取日志失败: ${error.message}`)
+  }
 }
 
 // 提交日志
@@ -78,6 +91,7 @@ onMounted(async () => {
   
   try {
     await loadProcedures()
+    await loadLogs() // 新增日志加载
   } catch (error) {
     ElMessage.error(`获取流程失败: ${error.message}`)
   }
@@ -205,6 +219,22 @@ async function updateProcedureStatus(procedure, newStatus) {
         </template>
       </el-table-column>
     </el-table>
+    <!-- 在现有流程表格下方添加日志表格 -->
+  <div class="log-section" v-if="isWorker">
+    <h3>维护日志记录</h3>
+    <el-table :data="logs" style="width: 100%" border>
+      <el-table-column prop="consumption" label="消耗材料" />
+      <el-table-column label="费用(元)" width="120">
+        <template #default="{ row }">¥{{ row.cost }}</template>
+      </el-table-column>
+      <el-table-column prop="duration" label="耗时(小时)" width="120" />
+      <el-table-column label="记录时间" width="180">
+        <template #default="{ row }">
+          {{ new Date(row.log_time).toLocaleString() }}
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
     
     <!-- 添加新流程对话框 -->
     <el-dialog v-model="newProcedureDialog" title="添加维修流程">
