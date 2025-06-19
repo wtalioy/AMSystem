@@ -99,6 +99,14 @@ class WorkerService:
     
 
     @staticmethod
+    def get_all_orders(
+        db: Session, worker_id: str, skip: int = 0, limit: int = 100
+    ) -> List[Order]:
+        """Get all orders for a specific worker"""
+        return order.get_orders_by_worker(db, worker_id=worker_id, skip=skip, limit=limit)
+    
+
+    @staticmethod
     @audit("Order", "UPDATE")
     def complete_order(db: Session, order_id: str, worker_id: str, audit_context=None) -> Order:
         """Mark an order as completed"""

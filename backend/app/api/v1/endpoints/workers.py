@@ -88,6 +88,21 @@ def get_assigned_orders(
         db=db, worker_id=current_user.user_id, skip=skip, limit=page_size
     )
 
+@router.get("/orders/all", response_model=List[OrderToWorker])
+def get_all_orders_for_worker(
+    *,
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    current_user: User = Depends(deps.get_current_worker),
+) -> Any:
+    """
+    Get all orders for the current worker
+    """
+    skip = (page - 1) * page_size
+    return WorkerService.get_all_orders(
+        db=db, worker_id=current_user.user_id, skip=skip, limit=page_size
+    )
     
 @router.get("/my-earnings/monthly", response_model=WorkerMonthlyEarnings)
 def get_my_monthly_earnings(
