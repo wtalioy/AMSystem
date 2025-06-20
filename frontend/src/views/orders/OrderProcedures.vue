@@ -23,8 +23,8 @@ const isWorker = ref(localStorage.getItem('userType')  === 'worker')
 // 状态映射表
 const statusMap = {
   0: { text: '未开始', color: 'info' },
-  1: { text: '已分配', color: 'primary' },
-  2: { text: '进行中', color: 'processing' }
+  1: { text: '进行中', color: 'processing' },
+  2: { text: '已完成', color: 'success' }
 }
 
 // 新增响应式变量
@@ -174,7 +174,7 @@ async function updateProcedureStatus(procedure, newStatus) {
       <el-tag :type="isWorker ? 'primary' : 'success'" effect="dark">
         {{ isWorker ? '维修工人' : '客户' }}
       </el-tag>
-      <span class="user-id">当前订单号：{{ orderId }}</span>
+      <h3 class="user-id">当前订单号：{{ orderId }}</h3>
     </div>
   </div>
   <div class="procedures-container">
