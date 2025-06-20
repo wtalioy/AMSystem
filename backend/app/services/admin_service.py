@@ -49,16 +49,21 @@ class AdminService:
     @staticmethod
     def get_car_type_statistics(db: Session) -> List[CarTypeStatistics]:
         """
-        Get statistics about car types, repairs, and costs
+        Get statistics about car types, repairs, and costs in the past year
         """
+        # Analyze past 12 months
+        end_dt = datetime.now()
+        start_dt = end_dt - timedelta(days=365)
+        months_diff = 12  # Fixed 12 months
+        
         car_types = car.get_all_car_types(db)
 
         result = []
         for car_type in car_types:
             car_count = car.count_cars_by_type(db, car_type)
-            order_count = order.count_orders_by_car_type(db, car_type)
-            avg_cost = log.calculate_avg_cost_by_car_type(db, car_type)
-            repair_frequency = (order_count / car_count) * 100 if car_count > 0 else 0
+            order_count = order.count_orders_by_car_type_period(db, car_type, start_dt, end_dt)
+            avg_cost = log.calculate_avg_cost_by_car_type_period(db, car_type, start_dt, end_dt)
+            repair_frequency = order_count / months_diff  # Orders per month
 
             stats = CarTypeStatistics(
                 car_type=car_type,
