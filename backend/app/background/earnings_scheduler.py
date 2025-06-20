@@ -22,6 +22,7 @@ class EarningScheduler:
         self.running = False
         self.scheduler_thread: Optional[threading.Thread] = None
         self.tasks = []
+        self._stop_event = threading.Event()
 
     def add_monthly_task(self, task_name: str, day_of_month: int, hour: int = 0, minute: int = 0):
         """Add a task to run monthly on a specific day"""
@@ -38,21 +39,30 @@ class EarningScheduler:
         """Start the scheduler"""
         if not self.running:
             self.running = True
+            self._stop_event.clear()
             self.scheduler_thread = threading.Thread(target=self._run_scheduler, daemon=True)
             self.scheduler_thread.start()
 
     def stop(self):
         """Stop the scheduler"""
+        if not self.running:
+            return
+        
         self.running = False
+        self._stop_event.set()
         if self.scheduler_thread:
-            self.scheduler_thread.join()
+            self.scheduler_thread.join(timeout=5)
+    
+    def is_running(self) -> bool:
+        """Check if the scheduler is running"""
+        return self.running
 
     def _run_scheduler(self):
         """Main scheduler loop"""
         # Add default monthly earnings distribution task
         self.add_monthly_task("earnings_distribution", day_of_month=1, hour=2, minute=0)
         
-        while self.running:
+        while self.running and not self._stop_event.is_set():
             try:
                 current_time = datetime.now()
                 
@@ -60,12 +70,13 @@ class EarningScheduler:
                     if self._should_run_task(task, current_time):
                         self._execute_task(task, current_time)
                 
-                # Sleep for 60 seconds before checking again
-                time.sleep(60)
+                # Wait for 60 seconds or until stop signal
+                self._stop_event.wait(60)
                 
             except Exception as e:
                 logger.error(f"Error in scheduler loop: {e}")
-                time.sleep(60)  # Continue after error
+                # Wait briefly before continuing after error
+                self._stop_event.wait(60)
 
     def _should_run_task(self, task: Dict, current_time: datetime) -> bool:
         """Determine if a task should run based on its schedule"""

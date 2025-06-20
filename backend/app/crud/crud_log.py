@@ -1,5 +1,6 @@
 from typing import List
 from decimal import Decimal
+from datetime import datetime
 
 from app.dbrm import Session, func
 
@@ -38,6 +39,22 @@ class CRUDLog:
             Car, on=(Car.car_id, ServiceOrder.car_id)
         ).filter(
             Condition.eq(Car.car_type, car_type)
+        ).scalar()
+        
+        return float(cost_result) if cost_result else 0
+    
+    def calculate_avg_cost_by_car_type_period(self, db: Session, car_type: int, start_date: datetime, end_date: datetime) -> float:
+        from app.models import ServiceOrder, Car
+        from app.dbrm import Condition
+        
+        cost_result = db.query(func.avg(LogModel.cost)).join(
+            ServiceOrder, on=(ServiceOrder.order_id, LogModel.order_id)
+        ).join(
+            Car, on=(Car.car_id, ServiceOrder.car_id)
+        ).filter(
+            Condition.eq(Car.car_type, car_type),
+            Condition.gte(ServiceOrder.start_time, start_date),
+            Condition.lte(ServiceOrder.start_time, end_date)
         ).scalar()
         
         return float(cost_result) if cost_result else 0

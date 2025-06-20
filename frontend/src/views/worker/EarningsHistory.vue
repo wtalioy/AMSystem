@@ -60,7 +60,7 @@
             disabled 
             :max="5"
             show-score
-            :score-template="`${row.work_summary.average_rating.toFixed(1)}`"
+            :score-template="`${row.work_summary.average_rating}`"
           />
         </template>
       </el-table-column>
@@ -142,6 +142,7 @@ const fetchHistory = async () => {
       
       return dateB - dateA
     })
+    console.log(records.value)
     
   } catch (error) {
     handleApiError(error)

@@ -174,6 +174,17 @@ class CRUDOrder:
             Condition.eq(Car.car_type, car_type)
         ).scalar() or 0
     
+    def count_orders_by_car_type_period(self, db: Session, car_type: int, start_date: datetime, end_date: datetime) -> int:
+        from app.models.car import Car
+        from app.dbrm import Condition
+        return db.query(func.count(ServiceOrderModel.order_id)).join(
+            Car, on=(Car.car_id, ServiceOrderModel.car_id)
+        ).filter(
+            Condition.eq(Car.car_type, car_type),
+            Condition.gte(ServiceOrderModel.start_time, start_date),
+            Condition.lte(ServiceOrderModel.start_time, end_date)
+        ).scalar() or 0
+    
     def count_orders_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
         from app.models import Worker
         from app.dbrm import Condition
