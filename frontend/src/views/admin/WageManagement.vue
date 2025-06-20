@@ -41,7 +41,9 @@
           <el-form-item label="月份">
             <el-input-number v-model="filters.month" :min="1" :max="12" />
           </el-form-item>
-          <el-button type="primary" @click="fetchWorkerMonthly">查询</el-button>
+          <el-form-item>
+            <el-button type="primary" @click="fetchWorkerMonthly">查询</el-button>
+          </el-form-item>
         </el-form>
 
         <el-card v-if="workerMonthlyData">
@@ -58,7 +60,9 @@
           <el-form-item label="回溯月数">
             <el-input-number v-model="filters.months_back" :min="1" :max="24" />
           </el-form-item>
-          <el-button type="primary" @click="fetchWorkerHistory">查询</el-button>
+          <el-form-item>
+            <el-button type="primary" @click="fetchWorkerHistory">查询</el-button>
+          </el-form-item>
         </el-form>
 
         <el-table :data="historyData" v-if="historyData.length">
@@ -79,7 +83,9 @@
           <el-form-item label="月份">
             <el-input-number v-model="filters.month" :min="1" :max="12" />
           </el-form-item>
-          <el-button type="primary" @click="fetchAllWorkers">查询</el-button>
+          <el-form-item>
+            <el-button type="primary" @click="fetchAllWorkers">查询</el-button>
+          </el-form-item>
         </el-form>
 
         <el-table :data="allWorkersData" v-if="allWorkersData.length">
@@ -99,7 +105,9 @@
         <el-form-item label="月份">
           <el-input-number v-model="filters.month" :min="1" :max="12" />
         </el-form-item>
-        <el-button type="primary" @click="fetchSummary">查看汇总</el-button>
+        <el-form-item>
+          <el-button type="primary" @click="fetchSummary">查看汇总</el-button>
+        </el-form-item>
       </el-form>
 
       <el-card v-if="summaryData" class="summary-card">
@@ -156,13 +164,15 @@
         <el-form-item label="月份">
           <el-input-number v-model="filters.month" :min="1" :max="12" />
         </el-form-item>
-        <el-button 
-          type="success" 
-          @click="runDistribution"
-          :loading="distributing"
-        >
-          手动发放工资
-        </el-button>
+        <el-form-item>
+          <el-button 
+            type="success" 
+            @click="runDistribution"
+            :loading="distributing"
+          >
+            手动发放工资
+          </el-button>
+        </el-form-item>
       </el-form>
 
       <el-card v-if="distributionResult" class="distribution-card">
