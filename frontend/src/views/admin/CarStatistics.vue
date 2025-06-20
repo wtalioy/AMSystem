@@ -13,7 +13,7 @@
       <el-table-column label="维修频率" align="center">
         <template #default="{ row }">
           <el-tag :type="getFrequencyType(row.repair_frequency)">
-            {{ row.repair_frequency.toFixed(2) }}次/年
+            {{ row.repair_frequency.toFixed(2) }}次/月
           </el-tag>
         </template>
       </el-table-column>
