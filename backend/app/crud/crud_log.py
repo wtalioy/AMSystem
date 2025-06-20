@@ -54,18 +54,6 @@ class CRUDLog:
             Condition.eq(Car.car_type, car_type)
         ).all()
 
-    def count_tasks_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> int:
-        from app.models import Worker
-        from app.dbrm import Condition
-        
-        return db.query(func.count(LogModel.log_time)).join(
-            Worker, on=(Worker.user_id, LogModel.worker_id)
-        ).filter(
-            Condition.eq(Worker.worker_type, worker_type),
-            Condition.gte(LogModel.log_time, start_time),
-            Condition.lte(LogModel.log_time, end_time)
-        ).scalar() or 0
-
     def calculate_total_hours_by_worker_type(self, db: Session, worker_type: int, start_time: str, end_time: str) -> float:
         from app.models import Worker
         from app.dbrm import Condition
