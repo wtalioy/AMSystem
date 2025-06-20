@@ -358,7 +358,7 @@ const runDistribution = async () => {
 const checkSchedulerStatus = async () => {
   try {
     const res = await wageAPI.getSchedulerStatus()
-    schedulerStatus.value = res.data.is_running || false
+    schedulerStatus.value = res.data.running || false
     ElMessage.info(`调度器状态: ${schedulerStatus.value ? '运行中' : '已停止'}`)
   } catch (error) {
     ElMessage.error('获取调度器状态失败: ' + error.message)
