@@ -34,7 +34,10 @@ class DateExtractExpression(FunctionExpression):
         super().__init__("EXTRACT")
     
     def __str__(self):
-        column_str = f"{self.column.parent.__tablename__}.{self.column.name}" if hasattr(self.column, 'parent') else str(self.column)
+        if hasattr(self.column, 'parent') and hasattr(self.column, 'name') and self.column.parent is not None:
+            column_str = f"{self.column.parent.__tablename__}.{self.column.name}"
+        else:
+            column_str = str(self.column)
         return f"EXTRACT({self.part} FROM {column_str})"
 
 
@@ -47,7 +50,10 @@ class DateFormatExpression(FunctionExpression):
         super().__init__("DATE_FORMAT")
     
     def __str__(self):
-        column_str = f"{self.column.parent.__tablename__}.{self.column.name}" if hasattr(self.column, 'parent') else str(self.column)
+        if hasattr(self.column, 'parent') and hasattr(self.column, 'name') and self.column.parent is not None:
+            column_str = f"{self.column.parent.__tablename__}.{self.column.name}"
+        else:
+            column_str = str(self.column)
         return f"DATE_FORMAT({column_str}, '{self.format_str}')"
 
 
@@ -61,10 +67,10 @@ class ConcatExpression(FunctionExpression):
     def __str__(self):
         formatted_args = []
         for arg in self.concat_args:
-            if hasattr(arg, 'parent') and hasattr(arg, 'name'):
-                # It's a column
+            if hasattr(arg, 'parent') and hasattr(arg, 'name') and arg.parent is not None:
+                # It's a column with a valid parent
                 formatted_args.append(f"{arg.parent.__tablename__}.{arg.name}")
-            elif isinstance(arg, (FunctionExpression, DateExtractExpression, ArithmeticExpression)):
+            elif isinstance(arg, (FunctionExpression, DateExtractExpression, ArithmeticExpression, CeilExpression)):
                 # It's another function or arithmetic expression
                 formatted_args.append(str(arg))
             elif isinstance(arg, str):
