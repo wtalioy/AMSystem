@@ -29,6 +29,12 @@
           <h3>车辆统计</h3>
           <p>车辆品牌与类型分布</p>
         </el-card>
+        
+        <el-card class="action-card" @click="navigateTo('/dashboard/admin/cars')">
+          <i class="el-icon-truck"></i>
+          <h3>车辆管理</h3>
+          <p>查看并管理车辆信息</p>
+        </el-card>
   
         <el-card class="action-card" @click="navigateTo('/dashboard/admin/stats/costs')">
           <i class="el-icon-s-data"></i>

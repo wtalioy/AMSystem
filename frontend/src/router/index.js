@@ -161,6 +161,7 @@ const routes = [
         // 用户与工资管理
         { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
         { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
+        { path: 'cars', component: () => import('@/views/cars/CarList.vue') },
     
         // 各类统计页面
         { path: 'stats/orders', component: () => import('@/views/admin/OrderStatistics.vue') },
