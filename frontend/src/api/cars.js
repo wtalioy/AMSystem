@@ -41,7 +41,7 @@ export default {
   // 更新车辆信息
   async updateCar(carId, updateData) {
     return axios.put(`${API_BASE}/cars/${carId}`, {
-      car_type: updateData.carType
+      car_type: updateData.car_type
     })
   },
 
