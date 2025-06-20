@@ -210,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref , computed} from 'vue'
+import { ref , computed , onMounted} from 'vue'
 import { ElMessage } from 'element-plus'
 import wageAPI from '@/api/adminStats'
 
@@ -327,6 +327,11 @@ const stopScheduler = async () => {
     ElMessage.error('停止失败')
   }
 }
+
+// 添加挂载时获取状态
+onMounted(() => {
+  getSchedulerStatus()
+})
 
 </script>
 
