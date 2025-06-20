@@ -2,22 +2,12 @@
   <div class="dashboard-layout">
     <!-- 顶部用户信息栏 -->
     <header class="user-header">
-      <div class="header-left">
+      <div class="header-left" @click="goToDashboard">
         <h1 class="system-title">汽车维修管理系统</h1>
       </div>
       
       <div class="user-info">
-        <!-- 新增个人中心按钮 -->
-        <button @click="goToProfile" class="profile-btn">
-          <i class="profile-icon"></i>
-          个人中心
-        </button>
-        <!-- 新增返回主菜单按钮 -->
-        <button @click="goToDashboard" class="dashboard-btn">
-          <i class="dashboard-icon"></i>
-            返回主菜单
-        </button>
-        <span class="user-type">
+        <span class="user-type" @click="goToProfile">
           <i class="user-icon"></i>
           {{ userTypeDisplay }}
         </span>
@@ -131,6 +121,10 @@ const handleLogout = () => {
     height: 60px;
     background: white;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+    .header-left {
+      cursor: pointer;
+    }
     
     .system-title {
       font-size: 1.2rem;
@@ -147,6 +141,7 @@ const handleLogout = () => {
         align-items: center;
         font-size: 0.9rem;
         color: $color-text-secondary;
+        cursor: pointer;
         
         .user-icon {
           display: inline-block;
