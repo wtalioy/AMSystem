@@ -5,6 +5,7 @@ import procedureAPI from '@/api/procedures'
 import { useAuthStore } from '@/store/authStore'
 // 新增导入
 import logsAPI from '@/api/logs'
+import authAPI from '@/api/auth'
 import { ElMessage, ElNotification, ElDialog, ElInput } from 'element-plus'
 
 const route = useRoute()
@@ -41,12 +42,17 @@ const logs = ref([])
 const getWorkerId = async () => {
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    console.log('getWorkerId 中 token:', token)
     if (token) {
       const userInfo = await authAPI.getCurrentUser(token)
+      console.log('userInfo 返回值：', userInfo)
+      console.log('返回的 userInfo 键：', Object.keys(userInfo))
       currentWorkerId.value = userInfo.user_id
+      console.log('当前 worker ID:', currentWorkerId.value)
     }
   } catch (error) {
-    ElMessage.error('获取用户信息失败')
+    console.error('getWorkerId 捕获到错误:', error)
+    ElMessage.error(`获取用户信息失败: ${error?.response?.data?.detail || error.message}`)
   }
 }
 
@@ -91,7 +97,9 @@ onMounted(async () => {
   
   try {
     await loadProcedures()
-    await loadLogs() // 新增日志加载
+    if (isWorker.value) {
+      await loadLogs() // 仅工人才加载日志
+    }
   } catch (error) {
     ElMessage.error(`获取流程失败: ${error.message}`)
   }
