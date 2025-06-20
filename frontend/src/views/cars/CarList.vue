@@ -3,14 +3,6 @@
     <div class="header-with-actions">
       <h2>我的车辆</h2>
       <el-button 
-      type="info" 
-      icon="el-icon-arrow-left"
-      @click="navigateTo('/dashboard/customer')"
-      style="margin-right: 10px;"
-    >
-      返回主面板
-    </el-button>
-      <el-button 
         type="primary" 
         icon="el-icon-plus" 
         @click="navigateTo('/dashboard/customer/cars/add')"
