@@ -32,6 +32,12 @@ class CRUDCar:
         db.refresh(db_obj)
         return CarType.model_validate(db_obj)
     
+    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[Car]:
+        objs = db.query(CarModel).offset(skip).limit(limit).all()
+        if not objs:
+            return []
+        return [Car.model_validate(obj) for obj in objs]
+    
     def create_car_with_owner(
         self, db: Session, *, obj_in: CarCreate, customer_id: str
     ) -> Car:

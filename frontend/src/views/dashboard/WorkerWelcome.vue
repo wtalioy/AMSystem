@@ -3,7 +3,7 @@
   <div class="worker-welcome">
     <div class="dashboard-header">
       <h1>欢迎回来，{{ userName }}</h1>
-      <p>您有 {{ pendingOrders }} 个待处理订单，本月已完成 {{ completedOrders }} 个订单</p>
+      <p>您有 {{ pendingOrders }} 个待处理订单</p>
     </div>
 
     <div class="quick-actions">
@@ -39,14 +39,34 @@ const authStore = useAuthStore()
 
 const userName = ref('技师')
 const pendingOrders = ref(0)
-const completedOrders = ref(0)
 
 const navigateTo = (path) => {
   router.push(path)
 }
 
+// 获取待处理订单数量
+const fetchPendingOrders = async () => {
+  try {
+    // 获取所有已分配订单
+    const response = await workerOrdersAPI.getAllOrders({ 
+      page: 1, 
+      page_size: 100 // 假设待处理订单不会超过1000条
+    })
+    
+    // 过滤出待处理订单（状态1为待处理）
+    const pending = response.data.filter(order => order.status === 1)
+    
+    pendingOrders.value = pending.length
+  } catch (error) {
+    console.error('获取待处理订单失败:', error)
+    // 在实际应用中，这里可以添加用户通知
+    pendingOrders.value = 0
+  }
+}
+
 onMounted(async () => {
   userName.value = authStore.user?.name || '技师'
+  await fetchPendingOrders()
 })
 </script>
 

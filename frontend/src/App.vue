@@ -1,6 +1,6 @@
 <script setup>
 import { RouterView } from 'vue-router'
-import AppNavbar from '@/components/shared/AppNavbar.vue'
+
 import { useAuthStore } from '@/store/authStore'
 
 const authStore = useAuthStore()
@@ -11,7 +11,7 @@ const authStore = useAuthStore()
   <RouterView v-slot="{ Component }">
     <template v-if="$route.meta.requiresAuth">
       <DashboardLayout>
-        <AppNavbar />  <!-- 集成导航栏 -->
+          <!-- 集成导航栏 -->
         <component :is="Component" />
       </DashboardLayout>
     </template>
@@ -30,7 +30,6 @@ const authStore = useAuthStore()
 @import '@/assets/styles/main.scss';
 
 #app {
-  max-width: 1280px;
   margin: 0 auto;
   font-weight: normal;
 }

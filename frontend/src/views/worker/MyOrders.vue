@@ -11,19 +11,15 @@
           <el-button 
             type="success" 
             @click="completeOrder(row.order_id)" 
-            v-if="row.status === 1">
+            v-if="row.status === 2">
             完成订单
           </el-button>
           
           <!-- 填写进度按钮（新增） -->
-          <router-link :to="`/worker/orders/${row.order_id}/procedures`">
-            <el-button type="primary">填写进度</el-button>
+          <router-link :to="`/dashboard/worker/orders/${row.order_id}/procedures`">
+            <el-button type="primary">进度与日志</el-button>
           </router-link>
           
-          <!-- 维护日志按钮 -->
-          <router-link :to="`/worker/orders/${row.order_id}/logs`">
-            <el-button type="info">维护日志</el-button>
-          </router-link>
         </template>
       </el-table-column>
       </el-table>
@@ -39,12 +35,11 @@
   
   const fetchOrders = async () => {
     try {
-      const res = await workerOrdersAPI.getAssignedOrders({
-  page: 1,
-  page_size: 20,
-  status_filter: null // 明确表示获取所有状态
-})
-      orders.value = res.data
+      const res = await workerOrdersAPI.getAllOrders({
+          page: 1,
+          page_size: 20,
+      })
+      orders.value = res.data.filter(item => [2, 3].includes(item.status))
     } catch (err) {
       ElMessage.error('获取订单失败')
     }
@@ -61,7 +56,7 @@
   }
   
   const formatStatus = (row, column, value) => {
-    return ['待处理', '进行中', '已完成'][value] || '未知'
+    return ['待处理', '已分配', '进行中','已完成'][value] || '未知'
   }
   
   onMounted(fetchOrders)

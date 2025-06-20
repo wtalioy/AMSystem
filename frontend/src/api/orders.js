@@ -22,10 +22,19 @@ export default {
   },
 
   // 添加订单反馈
+  // 添加订单反馈 (优化版)
   async addFeedback(feedbackData) {
-    return axios.post(`${API_BASE}/orders/feedback`, {
-      ...feedbackData
-    })
+    try {
+      const response = await axios.post(`${API_BASE}/orders/feedback`, feedbackData)
+      return response.data
+    } catch (error) {
+      // 统一处理422验证错误
+      if (error.response && error.response.status === 422) {
+        const errors = error.response.data.detail.map(e => e.msg).join(', ')
+        throw new Error(`验证失败: ${errors}`)
+      }
+      throw new Error('提交反馈失败，请稍后重试')
+    }
   },
 
   // 加急订单

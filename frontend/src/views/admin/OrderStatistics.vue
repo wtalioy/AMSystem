@@ -104,9 +104,10 @@ const formatDateTime = (dateString) => {
 const getStatusText = (statusCode) => {
   const statusMap = {
     0: '待处理',
-    1: '进行中',
-    2: '已完成',
-    3: '已取消'
+    1: '已分配',
+    2: '进行中',
+    3: '已完成',
+    4: '已取消'
     // 添加更多状态映射
   }
   return statusMap[statusCode] || `状态${statusCode}`

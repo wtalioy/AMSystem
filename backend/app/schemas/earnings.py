@@ -49,7 +49,7 @@ class OrderDetail(BaseModel):
 class WorkerMonthlyEarnings(BaseModel):
     """Schema for worker monthly earnings calculation"""
     worker_id: str
-    worker_type: int
+    worker_type: str
     period: EarningsPeriod
     work_summary: WorkSummary
     earnings: EarningsBreakdown
@@ -122,7 +122,7 @@ class EarningsReport(BaseModel):
     period: str
     total_workers: int
     summary: Optional[EarningsSummary] = None
-    worker_type_breakdown: Optional[dict[int, WorkerTypeSummary]] = None
+    worker_type_breakdown: Optional[dict[str, WorkerTypeSummary]] = None
 
     class Config:
         from_attributes = True

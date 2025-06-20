@@ -15,7 +15,7 @@ export default {
     return axios.get(`${API_BASE}/admin/car-statistics`)
   },
 
-  // 3. 获取常见故障模式分析
+  // 3. 获取常见故障模式分析 // 已经被删除
   async getFailurePatterns() {
     return axios.get(`${API_BASE}/admin/vehicles/failure-patterns`)
   },
@@ -78,7 +78,7 @@ async deleteUser(user_id) {
    * @returns {Promise} Axios响应对象
    */
   async getWorkerMonthlyEarnings(worker_id, year, month) {
-    return axios.get(`${API_BASE}/earnings/${worker_id}/monthly`, {
+    return axios.get(`${API_BASE}/earnings/individual/${worker_id}/monthly`, {
       params: { year, month }
     })
   },
@@ -91,7 +91,7 @@ async deleteUser(user_id) {
    * @returns {Promise} Axios响应对象
    */
   async getWorkerEarningsHistory(worker_id, months_back = 12) {
-    return axios.get(`${API_BASE}/earnings/${worker_id}/history`, {
+    return axios.get(`${API_BASE}/earnings/individual/${worker_id}/history`, {
       params: { months_back }
     })
   },
@@ -104,7 +104,7 @@ async deleteUser(user_id) {
    * @returns {Promise} Axios响应对象
    */
   async getAllWorkersMonthlyEarnings(year, month) {
-    return axios.get(`${API_BASE}/earnings/all-workers/monthly`, {
+    return axios.get(`${API_BASE}/earnings/all`, {
       params: { year, month }
     })
   },
@@ -117,7 +117,7 @@ async deleteUser(user_id) {
    * @returns {Promise} Axios响应对象
    */
   async getEarningsSummaryReport(year, month) {
-    return axios.get(`${API_BASE}/earnings/summary-report`, {
+    return axios.get(`${API_BASE}/earnings/summary`, {
       params: { year, month }
     })
   },
@@ -130,7 +130,7 @@ async deleteUser(user_id) {
    * @returns {Promise} Axios响应对象
    */
   async runMonthlyDistribution(year, month) {
-    return axios.post(`${API_BASE}/earnings/distribute/monthly`, null, {
+    return axios.post(`${API_BASE}/earnings/distribute`, null, {
       params: { year, month }
     })
   },

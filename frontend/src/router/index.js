@@ -70,6 +70,14 @@ const routes = [
           component: () => import('@/views/orders/OrderProcedures.vue'), // 👈 创建这个新页面
           meta: { role: 'customer' }
         },
+
+        // 订单反馈路由
+        { 
+          path: 'orders/:order_id/feedback', 
+          component: () => import('@/views/orders/Feedback.vue'),
+          meta: { role: 'customer', title: '订单反馈' }
+        },
+        // 个人信息
         { 
           path: 'myinfo', 
           component: () => import('@/views/auth/Myinfo.vue'),
@@ -104,13 +112,14 @@ const routes = [
         {
           path: 'orders/:order_id/procedures',
           component: () => import('@/views/orders/OrderProcedures.vue'),
+          meta: { role: 'worker' },
           name: 'OrderProcedures',
           props: true
         },
         {
           path: 'orders/:order_id/logs',
           component: () => import('@/views/worker/WorkLogs.vue'),
-          name: 'OrderProcedures',
+          name: 'Orderlogs',
           props: true
         },
         
@@ -152,11 +161,11 @@ const routes = [
         // 用户与工资管理
         { path: 'users', component: () => import('@/views/admin/UserManagement.vue') },
         { path: 'wages', component: () => import('@/views/admin/WageManagement.vue') },
+        { path: 'cars', component: () => import('@/views/cars/CarList.vue') },
     
         // 各类统计页面
         { path: 'stats/orders', component: () => import('@/views/admin/OrderStatistics.vue') },
         { path: 'stats/cars', component: () => import('@/views/admin/CarStatistics.vue') },
-        { path: 'stats/failures', component: () => import('@/views/admin/FailurePatterns.vue') },
         { path: 'stats/costs', component: () => import('@/views/admin/CostAnalysis.vue') },
         { path: 'stats/feedback', component: () => import('@/views/admin/NegativeFeedback.vue') },
         { path: 'stats/productivity', component: () => import('@/views/admin/WorkerProductivity.vue') },

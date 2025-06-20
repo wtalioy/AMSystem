@@ -60,7 +60,7 @@ class CarService:
         car_obj = car.get_by_car_id(db, car_id=car_id)
         if not car_obj:
             return None
-        return car.update(db, db_obj=car_obj, obj_in=obj_in)
+        return car.update(db, obj_old=car_obj, obj_in=obj_in)
 
 
     @staticmethod

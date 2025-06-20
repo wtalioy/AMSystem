@@ -15,7 +15,7 @@ from app.schemas import (
 router = APIRouter()
 
 
-@router.get("/{worker_id}/monthly", response_model=WorkerMonthlyEarnings)
+@router.get("/individual/{worker_id}/monthly", response_model=WorkerMonthlyEarnings)
 def get_worker_monthly_earnings(
     *,
     db: Session = Depends(get_db),
@@ -39,7 +39,7 @@ def get_worker_monthly_earnings(
         )
 
 
-@router.get("/{worker_id}/history", response_model=List[WorkerMonthlyEarnings])
+@router.get("/individual/{worker_id}/history", response_model=List[WorkerMonthlyEarnings])
 def get_worker_earnings_history(
     *,
     db: Session = Depends(get_db),
@@ -62,7 +62,7 @@ def get_worker_earnings_history(
         )
 
 
-@router.get("/all-workers/monthly", response_model=List[Union[WorkerMonthlyEarnings, FailedEarningsCalculation]])
+@router.get("/all", response_model=List[Union[WorkerMonthlyEarnings, FailedEarningsCalculation]])
 def get_all_workers_monthly_earnings(
     *,
     db: Session = Depends(get_db),
@@ -85,7 +85,7 @@ def get_all_workers_monthly_earnings(
         )
 
 
-@router.get("/summary-report", response_model=EarningsReport)
+@router.get("/summary", response_model=EarningsReport)
 def get_earnings_summary_report(
     *,
     db: Session = Depends(get_db),
@@ -108,7 +108,7 @@ def get_earnings_summary_report(
         )
 
 
-@router.post("/distribute/monthly", response_model=MonthlyDistributionResults)
+@router.post("/distribute", response_model=MonthlyDistributionResults)
 def run_monthly_distribution(
     *,
     db: Session = Depends(get_db),

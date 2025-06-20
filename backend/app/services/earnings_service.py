@@ -116,7 +116,7 @@ class EarningsService:
         """Calculate monthly earnings for all workers"""
         
         # Get all active workers
-        all_workers = worker.get_all_active_workers(db)
+        all_workers = worker.get_all_workers(db)
         
         earnings_results = []
         for worker_obj in all_workers:
@@ -137,24 +137,16 @@ class EarningsService:
         return earnings_results
 
     @staticmethod
-    @audit("Distribute", "CREATE")
     def distribute_worker_earnings(
         db: Session, 
         worker_id: str, 
         amount: Decimal, 
+        year: int,
+        month: int,
         audit_context=None
     ) -> bool:
         """
         Distribute (record payment) to a worker
-        
-        Args:
-            db: Database session
-            worker_id: Worker's user ID
-            amount: Amount to distribute
-            audit_context: Audit context for logging
-            
-        Returns:
-            True if successful, False otherwise
         """
         try:
             # Verify worker exists
@@ -162,6 +154,22 @@ class EarningsService:
             if not worker_obj:
                 logger.error(f"Worker {worker_id} not found for distribution")
                 return False
+            
+            # Check for existing distribution for this worker in this period
+            from datetime import datetime
+            from calendar import monthrange
+            
+            start_date = datetime(year, month, 1)
+            _, last_day = monthrange(year, month)
+            end_date = datetime(year, month, last_day, 23, 59, 59)
+            
+            existing_distributions = distribute.get_distributions_by_worker_period(
+                db, worker_id, start_date, end_date
+            )
+            
+            if existing_distributions:
+                logger.warning(f"Distribution already exists for worker {worker_id} in {year}-{month:02d}")
+                return True  # Consider it successful since distribution already exists
             
             # Create distribution record
             distribute_data = DistributeCreate(
@@ -219,7 +227,7 @@ class EarningsService:
             # Only distribute if there are earnings
             if total_earnings > 0:
                 success = EarningsService.distribute_worker_earnings(
-                    db, worker_id, total_earnings, audit_context
+                    db, worker_id, total_earnings, year, month, audit_context
                 )
                 
                 if success:

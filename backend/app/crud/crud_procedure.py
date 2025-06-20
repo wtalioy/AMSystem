@@ -27,14 +27,17 @@ class CRUDProcedure:
     def create_procedures(
         self, db: Session, *, obj_in_list: List[ProcedureCreate]
     ) -> List[Procedure]:
-        db_objs = []
+        from app.dbrm import func
+        order_id = obj_in_list[0].order_id
+        last_procedure_id = db.query(func.max(ServiceProcedureModel.procedure_id)).filter_by(order_id=order_id).scalar() or 0
         
+        db_objs = []
         for i, obj_in in enumerate(obj_in_list):
             db_obj = ServiceProcedureModel(
-                order_id=obj_in.order_id,
+                order_id=order_id,
                 procedure_text=obj_in.procedure_text,
                 current_status=ProcedureStatus.PENDING,
-                procedure_id=i
+                procedure_id=last_procedure_id + i + 1
             )
             db.add(db_obj)
             db_objs.append(db_obj)

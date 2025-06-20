@@ -23,11 +23,11 @@
   
   const fetchOrders = async () => {
     try {
-      const res = await workerOrdersAPI.getAssignedOrders({
+      const res = await workerOrdersAPI.getAllOrders({
         page: 1,
-        page_size: 20
+        page_size: 100
       })
-      orders.value = res.data
+      orders.value = res.data.filter(item => item.status === 1)
     } catch (err) {
       ElMessage.error('获取待处理订单失败')
     }
