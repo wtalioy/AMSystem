@@ -39,18 +39,24 @@ class ProcedureService:
         worker_id: str
     ) -> List[Procedure]:
         """ Create maintenance procedures for an order """
-        procedure_objs = []
-        for procedure_in in procedures:       
-            order_obj = order.get_by_order_id(db, order_id=procedure_in.order_id)
-            if not order_obj:
-                raise ValueError(f"Order with ID {procedure_in.order_id} does not exist")
-            if order_obj.worker_id != worker_id:
-                raise ValueError(f"Order {procedure_in.order_id} is not assigned to this worker")
-            procedure_objs.append(procedure_in)
+        if not procedures:
+            raise ValueError("No procedures provided")
+        
+        # Check that all procedures have the same order_id
+        order_id = procedures[0].order_id
+        for procedure_in in procedures:
+            if procedure_in.order_id != order_id:
+                raise ValueError("All procedures must belong to the same order")
+        
+        # Verify order exists and is assigned to the worker
+        order_obj = order.get_by_order_id(db, order_id=order_id)
+        if not order_obj:
+            raise ValueError(f"Order with ID {order_id} does not exist")
+        if order_obj.worker_id != worker_id:
+            raise ValueError(f"Order {order_id} is not assigned to this worker")
 
-        created_procedures = procedure.create_procedures(db=db, obj_in_list=procedure_objs)
+        created_procedures = procedure.create_procedures(db=db, obj_in_list=procedures)
         return created_procedures
-
 
     @staticmethod
     @audit("Procedure", "UPDATE")
