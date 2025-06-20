@@ -73,6 +73,7 @@ label {
 }
 
 input {
+  box-sizing: border-box;
   width: 100%;
   padding: 0.75rem;
   border: 1px solid #cbd5e0;
