@@ -33,7 +33,6 @@ class CRUDCar:
         return CarType.model_validate(db_obj)
     
     def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[Car]:
-        """获取所有车辆（带分页）"""
         objs = db.query(CarModel).offset(skip).limit(limit).all()
         if not objs:
             return []
