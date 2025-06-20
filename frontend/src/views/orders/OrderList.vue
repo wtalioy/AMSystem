@@ -36,6 +36,11 @@
           {{ formatTime(scope.row.start_time) }}
         </template>
       </el-table-column>
+      <el-table-column prop="end_time" label="结束时间" width="180">
+        <template #default="scope">
+          {{ scope.row.end_time ? formatTime(scope.row.end_time) : '' }}
+        </template>
+      </el-table-column>
       <el-table-column label="查看进度" width="120">
         <template #default="scope">
           <el-button
@@ -50,7 +55,7 @@
       <el-table-column label="操作" width="220">
         <template #default="scope">
           <el-button
-            v-if="scope.row.displayStatus === 'pending'"
+            v-if="['pending', 'distributed'].includes(scope.row.displayStatus)"
             type="warning"
             size="small"
             @click="handleUrgent(scope.row.order_id)"
@@ -133,7 +138,7 @@ const reverseStatusMap = {
 const statusOptions = [
   { value: 'all', label: '全部状态' },
   { value: 'pending', label: '待处理' },
-  { value: 'distributed', label: '已分配'},
+  { value: 'distributed', label: '待接单'},
   { value: 'processing', label: '处理中' },
   { value: 'completed', label: '已完成' },
   { value: 'cancelled', label: '已取消' }
@@ -165,10 +170,12 @@ const fetchOrders = async () => {
     const response = await ordersAPI.getOrders(params)
 
     // 添加 displayStatus 字段，便于前端展示
-    allOrders.value = response.data.map(order => ({
+    const ordersWithDisplayStatus = response.data.map(order => ({
       ...order,
       displayStatus: reverseStatusMap[order.status] || 'unknown'
     }))
+
+    allOrders.value = ordersWithDisplayStatus.sort((a, b) => a.status - b.status)
   } catch (error) {
     ElMessage.error('获取订单列表失败')
   } finally {
