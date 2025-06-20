@@ -147,7 +147,7 @@ class AssignmentProcessor:
         """
         pending_orders = order.get_orders_by_status(db, status=OrderStatus.PENDING_ASSIGNMENT)
         available_workers = worker.get_available_workers(db)
-        busy_workers = worker.get_workers_by_status(db, status=WorkerAvailabilityStatus.BUSY)
+        busy_workers = worker.get_all_workers(db, status=WorkerAvailabilityStatus.BUSY)
         
         expedited_pending = [o for o in pending_orders if o.expedite_flag]
         

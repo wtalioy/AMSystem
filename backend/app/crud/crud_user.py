@@ -210,19 +210,15 @@ class CRUDWorker:
             db.refresh(worker)
         return User.model_validate(worker)
     
-    def get_workers_by_status(self, db: Session, status: int) -> List[User]:
+    def get_all_workers(self, db: Session, status: Optional[int] = None) -> List[User]:
         """Get workers by availability status"""
-        objs = db.query(WorkerModel).filter_by(availability_status=status).all()
+        if status is None:
+            objs = db.query(WorkerModel).all()
+        else:
+            objs = db.query(WorkerModel).filter_by(availability_status=status).all()
         if not objs:
             return []
-        return [User.model_validate(obj) for obj in objs]
-    
-    def get_all_active_workers(self, db: Session) -> List[User]:
-        """Get all workers that are not deleted (active workers)"""
-        objs = db.query(WorkerModel).filter(WorkerModel.deleted_at.is_(None)).all()
-        if not objs:
-            return []
-        return [User.model_validate(obj) for obj in objs]
+        return [User.model_validate(obj) for obj in objs] 
 
 
 class CRUDAdmin:

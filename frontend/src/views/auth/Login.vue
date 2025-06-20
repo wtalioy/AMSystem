@@ -67,6 +67,7 @@
 }
 
 .form-input {
+  box-sizing: border-box;
   width: 100%;
   padding: 12px 16px;
   border: 2px solid #e2e8f0;

@@ -116,7 +116,7 @@ class EarningsService:
         """Calculate monthly earnings for all workers"""
         
         # Get all active workers
-        all_workers = worker.get_all_active_workers(db)
+        all_workers = worker.get_all_workers(db)
         
         earnings_results = []
         for worker_obj in all_workers:
