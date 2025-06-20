@@ -30,12 +30,6 @@
           <p>车辆品牌与类型分布</p>
         </el-card>
   
-        <el-card class="action-card" @click="navigateTo('/dashboard/admin/stats/failures')">
-          <i class="el-icon-warning-outline"></i>
-          <h3>故障模式分析</h3>
-          <p>车辆常见故障分类</p>
-        </el-card>
-  
         <el-card class="action-card" @click="navigateTo('/dashboard/admin/stats/costs')">
           <i class="el-icon-s-data"></i>
           <h3>成本分析</h3>

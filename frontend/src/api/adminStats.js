@@ -15,7 +15,7 @@ export default {
     return axios.get(`${API_BASE}/admin/car-statistics`)
   },
 
-  // 3. 获取常见故障模式分析
+  // 3. 获取常见故障模式分析 // 已经被删除
   async getFailurePatterns() {
     return axios.get(`${API_BASE}/admin/vehicles/failure-patterns`)
   },
