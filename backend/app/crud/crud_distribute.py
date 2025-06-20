@@ -23,6 +23,19 @@ class CRUDDistribute:
             return []
         return [Distribute.model_validate(obj) for obj in objs]
     
+    def get_distributions_by_worker_period(
+        self, db: Session, worker_id: str, start_date: datetime, end_date: datetime
+    ) -> List[Distribute]:
+        from app.dbrm import Condition
+        objs = db.query(DistributeModel).filter(
+            Condition.eq(DistributeModel.worker_id, worker_id),
+            Condition.gte(DistributeModel.distribute_time, start_date),
+            Condition.lte(DistributeModel.distribute_time, end_date)
+        ).all()
+        if not objs:
+            return []
+        return [Distribute.model_validate(obj) for obj in objs]
+    
     def create_distribution(
         self, db: Session, *, obj_in: DistributeCreate
     ) -> Distribute:

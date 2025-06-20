@@ -327,7 +327,7 @@ class AdminService:
         if not worker_obj:
             raise ValueError("Worker does not exist")
         
-        # Create distribution
+        # Create distribution (this is for manual one-time payments, not monthly distributions)
         distribute_in = DistributeCreate(
             amount=amount,
             worker_id=worker_id
