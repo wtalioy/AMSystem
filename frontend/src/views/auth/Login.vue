@@ -140,11 +140,46 @@
   })
   
   const handleLogin = async () => {
+    error.value = null
     try {
       await authStore.login(credentials.value)
       router.push('/dashboard')
     } catch (err) {
-      error.value = err.message
+      // 处理不同类型的错误
+    if (err.response) {
+      const { status, data } = err.response
+      
+      // 用户名/密码错误
+      if (status === 401) {
+        error.value = "用户名或密码不正确，请重试"
+      } 
+      // 验证错误（422）
+      else if (status === 422 && data.detail) {
+        const firstError = data.detail[0]
+        error.value = `输入错误：${firstError.msg}`
+      }
+      // 服务器错误
+      else if (status >= 500) {
+        error.value = "服务器开小差了，请稍后再试"
+      }
+      // 其他HTTP错误
+      else {
+        error.value = `请求失败（错误码 ${status}）`
+      }
+    }
+    // 网络错误
+    else if (err.request) {
+      error.value = "网络连接失败，请检查网络设置"
+    }
+    // 其他错误
+    else {
+      error.value = "登录过程出错，请稍后重试"
+    }
+    
+    // 添加友好提示
+    if (!error.value.includes("请")) {
+      error.value += "，请稍后再试"
+    }
     }
   }
   </script>
