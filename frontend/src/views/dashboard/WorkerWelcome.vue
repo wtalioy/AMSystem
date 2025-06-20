@@ -53,7 +53,7 @@ const fetchPendingOrders = async () => {
       page_size: 100 // 假设待处理订单不会超过1000条
     })
     
-    // 过滤出待处理订单（假设状态0为待处理）
+    // 过滤出待处理订单（状态1为待处理）
     const pending = response.data.filter(order => order.status === 1)
     
     pendingOrders.value = pending.length

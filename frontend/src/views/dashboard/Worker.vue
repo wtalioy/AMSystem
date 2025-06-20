@@ -1,6 +1,6 @@
 <template>
     <div class="worker-dashboard">
-      <h1>工人中心</h1>
+     
       <router-view />
     </div>
   </template>
