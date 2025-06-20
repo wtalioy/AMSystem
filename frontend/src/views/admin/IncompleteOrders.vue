@@ -5,7 +5,7 @@
       <el-table-column prop="order_id" label="订单号" width="180" />
       <el-table-column prop="car_id" label="车辆ID" />
       <el-table-column prop="car_type" label="车辆类型" />
-      <el-table-column prop="customer_id" label="客户ID" />
+      <el-table-column prop="description" label="订单描述" />
       <el-table-column label="开始时间">
         <template #default="scope">
           {{ formatDate(scope.row.start_time) }}
@@ -74,11 +74,8 @@ const getProgressStatus = (order) => {
 // 状态文本映射
 const getStatusText = (statusCode) => {
   const statusMap = {
-    0: '待处理',
-    1: '进行中',
-    2: '暂停',
-    3: '待验收',
-    // 可根据实际业务扩展
+    1: '待接单',
+    2: '进行中'
   }
   return statusMap[statusCode] || `未知状态 (${statusCode})`
 }
